@@ -68,9 +68,9 @@ The following text inputs give hints to the browser so they can be autofilled.
 
 ## 'Choose One' Inputs
 
-@docs Radio, radio, radioRow, Choice, choice, styledChoice, radioKey
+@docs Radio, radio, radioRow, Choice, choice, styledChoice, styledSelectChoice, radioKey, ChoiceState
 
-@docs select, Select, SelectWith, autocomplete, dropMenu, menu, menuAbove, selected, SelectMsg, updateSelection
+@docs select, Select, SelectWith, autocomplete, dropMenu, menu, menuAbove, selected, SelectMsg, updateSelection, clear
 
 
 ## Labels

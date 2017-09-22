@@ -1,7 +1,7 @@
 {
-    "version": "4.0.0",
-    "summary": "A different approach to creating and managing styles.",
-    "repository": "https://github.com/mdgriffith/style-elements.git",
+    "version": "2.0.0",
+    "summary": "Experimental style elements, only for testing",
+    "repository": "https://github.com/mdgriffith/stylish-elephants.git",
     "license": "BSD3",
     "source-directories": [
         "src"
