@@ -141,6 +141,7 @@ import Element.Internal.Model as Internal exposing (..)
 import Style.Internal.Model as Style
 import Style.Internal.Render.Value as StyleValue
 import Html.Attributes
+import Html
 import VirtualDom
 import Json.Decode as Json
 import Html
@@ -619,7 +620,9 @@ language str =
 
 
 {-| Convert an existing `Html.Attribute` to an `Element.Attribute`.
+
 This is useful for working with any library that returns a `Html.Attribute`.
+
 -}
 toAttr : Html.Attribute msg -> Attribute variation msg
 toAttr =

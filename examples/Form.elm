@@ -91,6 +91,11 @@ stylesheet =
             , Border.all 2
             , Border.solid
             , Color.border Color.blue
+
+            -- , focus
+            --     [ Color.border Color.blue
+            --     , prop "outline" "none"
+            --     ]
             ]
         , style Button
             [ Border.rounded 5
@@ -122,8 +127,7 @@ main =
 
 
 type Msg
-    = Log String
-    | Check Bool
+    = Check Bool
     | ChooseLunch Lunch
     | ChangeText String
     | UpdateLunches (List Lunch)
@@ -134,13 +138,6 @@ type Msg
 
 update msg model =
     case Debug.log "action" msg of
-        Log str ->
-            let
-                _ =
-                    Debug.log "form" str
-            in
-                ( model, Cmd.none )
-
         Check checkbox ->
             ( { model | checkbox = checkbox }
             , Cmd.none
@@ -181,6 +178,7 @@ type Lunch
     = Taco
     | Burrito
     | Gyro
+    | Banana
 
 
 view model =
@@ -258,17 +256,30 @@ view model =
                     , label = Input.labelAbove (text "Lunch")
                     , options = []
                     , choices =
-                        [ Input.styledChoice Burrito <|
-                            \selected ->
-                                Element.row None
-                                    [ spacing 5 ]
-                                    [ el None [] <|
-                                        if selected then
-                                            text ":D"
-                                        else
-                                            text ":("
-                                    , text "burrito"
-                                    ]
+                        [ Input.styledSelectChoice Burrito <|
+                            \state ->
+                                let
+                                    icon =
+                                        case state of
+                                            Input.Selected ->
+                                                ":)"
+
+                                            Input.Focused ->
+                                                ":/"
+
+                                            Input.Idle ->
+                                                ":("
+
+                                            Input.SelectedInBox ->
+                                                ":D"
+                                in
+                                    Element.row None
+                                        [ spacing 5 ]
+                                        [ el None
+                                            []
+                                            (text icon)
+                                        , text "burrito"
+                                        ]
                         , Input.choice Taco (text "Taco!")
                         , Input.choice Gyro (text "Gyro")
                         ]
@@ -327,24 +338,38 @@ view model =
                     ]
                     { label = Input.hiddenLabel "Lunch"
                     , with = model.search
-                    , options = [ Input.errorAbove (text "wut") ]
+                    , options = [ Input.errorAbove (el Error [] (text "wut, an error?")) ]
                     , max = 5
                     , menu =
                         Input.menu SubMenu
                             []
                             [ Input.choice Taco (text "Taco!")
                             , Input.choice Gyro (text "Gyro")
-                            , Input.styledChoice Burrito <|
-                                \selected ->
-                                    Element.row None
-                                        [ spacing 5 ]
-                                        [ el None [] <|
-                                            if selected then
-                                                text ":D"
-                                            else
-                                                text ":("
-                                        , text "burrito"
-                                        ]
+                            , Input.choice Banana (text "Banana")
+                            , Input.styledSelectChoice Burrito <|
+                                \state ->
+                                    let
+                                        icon =
+                                            case state of
+                                                Input.Selected ->
+                                                    ":)"
+
+                                                Input.Focused ->
+                                                    ":o"
+
+                                                Input.Idle ->
+                                                    ":("
+
+                                                Input.SelectedInBox ->
+                                                    ":D"
+                                    in
+                                        Element.row None
+                                            [ spacing 5 ]
+                                            [ el None
+                                                []
+                                                (text icon)
+                                            , text "burrito"
+                                            ]
                             ]
                     }
                 ]

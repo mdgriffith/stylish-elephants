@@ -1,7 +1,7 @@
 {
-    "version": "1.0.0",
-    "summary": "Experimental style elements, only for testing",
-    "repository": "https://github.com/mdgriffith/stylish-elephants.git",
+    "version": "4.0.0",
+    "summary": "A different approach to creating and managing styles.",
+    "repository": "https://github.com/mdgriffith/style-elements.git",
     "license": "BSD3",
     "source-directories": [
         "src"
@@ -21,8 +21,7 @@
         "Element.Attributes",
         "Element.Events",
         "Element.Keyed",
-        "Element.Input",
-        "Element.Location"
+        "Element.Input"
     ],
     "dependencies": {
         "Skinney/murmur3": "2.0.4 <= v < 3.0.0",

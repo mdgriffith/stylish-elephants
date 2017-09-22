@@ -56,6 +56,14 @@ module Element
         , screen
           -- , numbered
           -- , bulleted
+        , navigation
+        , navigationColumn
+        , header
+        , mainContent
+        , footer
+        , sidebar
+        , search
+        , modal
         , layout
         , viewport
         , toHtml
@@ -143,6 +151,15 @@ In CSS terms, this positions children using 'position:absolute'. So, to position
 ## Markup
 
 @docs node, button, hairline, article, section, aside, spacer, circle
+
+
+## Significant Locations
+
+@docs navigation, navigationColumn
+
+@docs header, mainContent, footer, sidebar, search
+
+@docs modal
 
 
 ## Headings
@@ -424,7 +441,7 @@ hairline style =
 
 If you're using this library, I'd encourage you to try to solve your problem without using this escape hatch.
 
-Usage of this function makes the most sense when you're dealing with `Html` from another module or package.
+Usage of this function makes the most sense when you're dealing with `Html` from another module or package or if you need to craft something "manually" yourself.
 
 -}
 html : Html msg -> Element style variation msg
@@ -438,7 +455,11 @@ node str =
     Modify.setNode str
 
 
-{-| -}
+{-| Renders as a `<button>`
+
+Also is able to receive keyboard focus.
+
+-}
 button : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
 button style attrs child =
     Element
@@ -527,7 +548,7 @@ h5 style attrs child =
 h6 : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
 h6 style attrs child =
     Element
-        { node = "h5"
+        { node = "h6"
         , style = Just style
         , attrs = attrs
         , child = child
@@ -559,7 +580,7 @@ full elem attrs child =
 
 {-| A text layout.
 
-Children that are aligned left or right will be floated left or right. Everything else if arranged in the standard 'block' layout of css, meaning a column flowing down.
+Children that are aligned left or right will be floated left or right. Everything else is arranged in the standard 'block' layout of css, meaning a column flowing down.
 
 -}
 textLayout : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
@@ -580,7 +601,7 @@ textLayout style attrs children =
 
 This is the same as a textLayout, except all of the children are set to `display:inline`.
 
-Because all the children are inline, they will not respect and width or height set on them.
+Because all the children are inline, they will not respect a width or height set on them.
 
 -}
 paragraph : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
@@ -663,8 +684,8 @@ table style attrs rows =
                                     { start = ( row, col )
                                     , width = 1
                                     , height = 1
+                                    , content = content
                                     }
-                                    content
                             )
                             columns
                     )
@@ -696,14 +717,16 @@ type alias Grid style variation msg =
                 { start = ( 0, 0 )
                 , width = 1
                 , height = 1
+                , content =
+                    el Box [] (text "box")
                 }
-                (el Box [] (text "box"))
             , cell
                 { start = ( 1, 1 )
                 , width = 1
                 , height = 2
+                , content =
+                    el Box [] (text "box")
                 }
-                (el Box [] (text "box"))
             ]
         }
 
@@ -758,7 +781,7 @@ type alias NamedGrid style variation msg =
 
 Here's an example:
 
-    namedGrid MyGridStyle
+    namedGrid MyGridStyle []
         { columns = [ px 200, px 200, px 200, fill 1 ]
         , rows =
             [ px 200 => [ spanAll "header" ]
@@ -766,13 +789,13 @@ Here's an example:
             , px 200 => [ span 3 "content", span 1 "sidebar" ]
             , px 200 => [ spanAll "footer" ]
             ]
+        , cells =
+            [ named "header"
+                (el Box [] (text "box"))
+            , named "sidebar"
+                (el Box [] (text "box"))
+            ]
         }
-        []
-        [ named "header"
-            (el Box [] (text "box"))
-        , named "sidebar"
-            (el Box [] (text "box"))
-        ]
 
 **note:** this example uses rocket(`=>`) as a synonym for creating a tuple. For more, check out the [rocket update](https://github.com/NoRedInk/rocket-update) package!
 
@@ -816,10 +839,11 @@ namedGrid style attrs config =
 
 
 {-| -}
-type alias GridPosition =
+type alias GridPosition style variation msg =
     { start : ( Int, Int )
     , width : Int
     , height : Int
+    , content : Element style variation msg
     }
 
 
@@ -835,9 +859,16 @@ type alias NamedOnGrid thing =
 
 {-| A specific position on a `grid`.
 -}
-cell : GridPosition -> Element style variation msg -> OnGrid (Element style variation msg)
-cell box el =
-    OnGrid <| Modify.addAttr (GridCoords <| Style.GridPosition box) el
+cell : GridPosition style variation msg -> OnGrid (Element style variation msg)
+cell box =
+    let
+        coords =
+            { start = box.start
+            , width = box.width
+            , height = box.height
+            }
+    in
+        OnGrid <| Modify.addAttr (GridCoords <| Style.GridPosition coords) box.content
 
 
 {-| Specify a named postion on a `namedGrid`.
@@ -892,8 +923,10 @@ link src el =
 
 Depending on the browsers configiration, it may open in a new window.
 
-    newTab "<http://zombo.com">
+    newTab "http://zombo.com"
         <| el MyStyle (text "Welcome to Zombocom")
+
+Same as `target "_blank"`
 
 -}
 newTab : String -> Element style variation msg -> Element style variation msg
@@ -935,7 +968,7 @@ download src el =
 {-| Make a link that will download a file and give it a specific filename.
 
     downloadAs
-        { src = "<http://zombo.com/schedule.pdf">
+        { src = "http://zombo.com/schedule.pdf"
         , filename = "zombocomSchedule.pdf"
         }
         <| el MyStyle (text "Welcome to Zombocom")
@@ -1071,7 +1104,9 @@ onLeft nearbys parent =
 
 {-| Position an element relative to the window.
 
-Essentially the same as `display: fixed`
+Essentially the same as `display: fixed`.
+
+If you're trying to make a modal, check out `Element.Location.modal`
 
 -}
 screen : Element style variation msg -> Element style variation msg
@@ -1120,7 +1155,7 @@ toHtml stylesheet el =
 embedStylesheet : StyleSheet style variation -> Html msg
 embedStylesheet sheet =
     -- We embed it not as a fullscreen
-    Render.embed False sheet
+    Html.div [] (Render.embed False sheet)
 
 
 {-| -}
@@ -1181,3 +1216,152 @@ An analog of `Html.map`.
 map : (a -> msg) -> Element style variation a -> Element style variation msg
 map =
     Internal.mapMsg
+
+
+{-| An area that houses the controls for running a search.
+
+While `Element.Input.search` will create a literal search input,
+this element is meant to group all the controls that are involved with searching,
+such as filters and the search button.
+
+-}
+search : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
+search style attrs child =
+    Internal.Element
+        { node = "div"
+        , style = Just style
+        , attrs = Attr.width Attr.fill :: Attr.attribute "role" "search" :: attrs
+        , child = child
+        , absolutelyPositioned = Nothing
+        }
+
+
+{-| The main navigation of the site, rendered as a row.
+
+The required `name` is used by accessibility software to describe to non-sighted users what this navigation element pertains to.
+
+Don't leave `name` blank, even if you just put *"Main Navigation"* in it.
+
+     navigation NavMenuStyle
+        []
+        { name = "Main Navigation"
+        , options =
+            [ link "/profile" (el NavLink [] (text "profile"))
+            , link "/logout" (el NavLink [] (text "logout"))
+            ]
+        }
+
+-}
+navigation : style -> List (Attribute variation msg) -> { options : List (Element style variation msg), name : String } -> Element style variation msg
+navigation style attrs { options, name } =
+    Internal.Element
+        { node = "nav"
+        , style = Nothing
+        , attrs = [ Attr.attribute "role" "navigation", Attr.attribute "aria-label" name ]
+        , child =
+            Internal.Layout
+                { node = "ul"
+                , style = Just style
+                , layout = Style.FlexLayout Style.GoRight []
+                , attrs = attrs
+                , children =
+                    options
+                        |> List.map (Modify.setNode "li")
+                        |> Internal.Normal
+                , absolutelyPositioned = Nothing
+                }
+        , absolutelyPositioned = Nothing
+        }
+
+
+{-| -}
+navigationColumn : style -> List (Attribute variation msg) -> { options : List (Element style variation msg), name : String } -> Element style variation msg
+navigationColumn style attrs { options, name } =
+    Internal.Element
+        { node = "nav"
+        , style = Nothing
+        , attrs = [ Attr.attribute "role" "navigation", Attr.attribute "aria-label" name ]
+        , child =
+            Internal.Layout
+                { node = "ul"
+                , style = Just style
+                , layout = Style.FlexLayout Style.Down []
+                , attrs = attrs
+                , children =
+                    options
+                        |> List.map (Modify.setNode "li")
+                        |> Internal.Normal
+                , absolutelyPositioned = Nothing
+                }
+        , absolutelyPositioned = Nothing
+        }
+
+
+{-| This is the main page header area.
+-}
+header : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
+header style attrs child =
+    Internal.Element
+        { node = "header"
+        , style = Just style
+        , attrs = Attr.width Attr.fill :: Attr.attribute "role" "banner" :: attrs
+        , child = child
+        , absolutelyPositioned = Nothing
+        }
+
+
+{-| This is the main page footer where your copyright and other infomation should live.
+-}
+footer : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
+footer style attrs child =
+    Internal.Element
+        { node = "footer"
+        , style = Just style
+        , attrs = Attr.width Attr.fill :: Attr.attribute "role" "contentinfo" :: attrs
+        , child = child
+        , absolutelyPositioned = Nothing
+        }
+
+
+{-| This is a sidebar which contains complementary information to your main content.
+
+It's rendered as a column.
+
+-}
+sidebar : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
+sidebar style attrs children =
+    Internal.Layout
+        { node = "aside"
+        , style = Just style
+        , layout = Style.FlexLayout Style.Down []
+        , attrs = Attr.attribute "role" "complementary" :: attrs
+        , children = Internal.Normal children
+        , absolutelyPositioned = Nothing
+        }
+
+
+{-| The main content of your page.
+-}
+mainContent : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
+mainContent style attrs child =
+    Internal.Element
+        { node = "main"
+        , style = Just style
+        , attrs = Attr.width Attr.fill :: Attr.height Attr.fill :: Attr.attribute "role" "main" :: attrs
+        , child = child
+        , absolutelyPositioned = Nothing
+        }
+
+
+{-| This is a modal
+-}
+modal : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
+modal style attrs child =
+    screen <|
+        Internal.Element
+            { node = "div"
+            , style = Just style
+            , attrs = Attr.attribute "role" "alertdialog" :: Attr.attribute "aria-modal" "true" :: attrs
+            , child = child
+            , absolutelyPositioned = Nothing
+            }

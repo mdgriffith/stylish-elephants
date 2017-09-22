@@ -6,6 +6,7 @@ import Element.Attributes exposing (..)
 import Element.Events as Events
 import Element.Keyed
 import Html
+import Html.Attributes
 import Style exposing (..)
 import Style.Background as Background
 import Style.Border as Border
@@ -177,6 +178,7 @@ view model =
                     , anchoredAboveLayout
                     , viewTextLayout
                     , [ otherTextLayout ]
+                    , [ embeddedStyledHtml ]
                     , overflowIssue
                     , [ overFlowIssue2 ]
                     , viewRowLayouts
@@ -187,9 +189,9 @@ view model =
                     , viewNamedGridLayout
 
                     -- -- , testForm
-                    -- , [ screenExample
-                    --   , screenExample2
-                    --   ]
+                    , [ screenExample
+                      , screenExample2
+                      ]
                     ]
                 )
 
@@ -813,26 +815,26 @@ viewGridLayout =
                 { start = ( 0, 0 )
                 , width = 1
                 , height = 1
+                , content = (el Box [] (text "box"))
                 }
-                (el Box [] (text "box"))
             , cell
                 { start = ( 1, 1 )
                 , width = 1
                 , height = 2
+                , content = (el Box [ spacing 100 ] (text "box"))
                 }
-                (el Box [ spacing 100 ] (text "box"))
             , cell
                 { start = ( 2, 1 )
                 , width = 2
                 , height = 2
+                , content = (el Box [] (text "box"))
                 }
-                (el Box [] (text "box"))
             , cell
                 { start = ( 1, 0 )
                 , width = 1
                 , height = 1
+                , content = (el Box [] (text "box"))
                 }
-                (el Box [] (text "box"))
             ]
         }
     ]
@@ -932,3 +934,14 @@ verticalCenterText =
             (el None [ verticalCenter ] <| text "vertical centered in box")
         , el Box [] (text "normal")
         ]
+
+
+embeddedStyledHtml =
+    el None [] <|
+        html <|
+            Html.div []
+                [ Html.node "style" [] [ Html.text ".test-style{font-family: fantasy; font-size: 80px;}" ]
+                , Html.text "Hello!"
+                , Html.b [] [ Html.text "This should be bold" ]
+                , Html.span [ Html.Attributes.class "test-style" ] [ Html.text "Fantasy Text!" ]
+                ]
