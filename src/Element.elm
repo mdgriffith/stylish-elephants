@@ -1,1367 +1,1231 @@
 module Element
     exposing
-        ( Element
-        , Attribute
-        , empty
-        , text
-        , bold
-        , italic
-        , strike
-        , underline
-        , sub
-        , super
-        , el
-        , circle
-        , spacer
-        , image
-        , decorativeImage
-        , hairline
-        , node
-        , subheading
-        , h1
-        , h2
-        , h3
-        , h4
-        , h5
-        , h6
-        , section
-        , article
-        , aside
-        , button
-        , full
-        , textLayout
-        , paragraph
-        , row
+        ( Attribute
+        , Column
+        , Element
+        , FocusStyle
+        , Length
+        , Link
+        , Option
+        , Table
+        , above
+        , alignBottom
+        , alignLeft
+        , alignRight
+        , alignTop
+        , attribute
+        , behind
+        , below
+        , center
+        , centerY
+        , clip
+        , clipX
+        , clipY
         , column
-        , wrappedRow
-        , wrappedColumn
-        , grid
-        , table
-        , namedGrid
-        , cell
-        , named
-        , span
-        , spanAll
-        , link
-        , newTab
+        , decorativeImage
+        , description
         , download
         , downloadAs
-        , when
-        , whenJust
-        , within
-        , above
-        , below
-        , onRight
-        , onLeft
-        , screen
-          -- , numbered
-          -- , bulleted
-        , navigation
-        , navigationColumn
-        , header
-        , mainContent
-        , footer
-        , sidebar
-        , search
-        , modal
-        , layout
-        , viewport
-        , toHtml
-        , embedStylesheet
-        , Device
-        , classifyDevice
-        , responsive
-        , OnGrid
-        , NamedOnGrid
-        , Grid
-        , NamedGrid
-        , GridPosition
-        , NamedGridPosition
+        , el
+        , empty
+        , fill
+        , fillPortion
+        , focusStyle
+        , forceHover
+        , height
+        , hidden
         , html
+        , image
+        , inFront
+        , layout
+        , layoutWith
+        , link
         , map
+        , mapAttribute
+        , mouseOverScale
+        , moveDown
+        , moveLeft
+        , moveRight
+        , moveUp
+        , newTabLink
+        , noHover
+        , onLeft
+        , onRight
+        , padding
+        , paddingEach
+        , paddingXY
+        , paragraph
+        , pointer
+        , px
+        , rotate
+        , row
+        , scale
+        , scrollbarX
+        , scrollbarY
+        , scrollbars
+        , shrink
+        , spaceEvenly
+        , spacing
+        , spacingXY
+        , table
+        , text
+        , textColumn
+        , width
         )
 
 {-|
 
 
-# Capture Layout in your View
-
-Think of `Elements` as `Html` with layout!
-
-By building your view with `Elements`, you have a single place to go to adjust or add to your layout, which is great because that's usually what you're doing in your view!
-
-
-## Rendering
-
-@docs layout, viewport
-
-
 ## Basic Elements
 
-@docs Element, Attribute
-
-@docs empty, text, el, when, whenJust, html, map, full
+@docs Element, Attribute, empty, text, el
 
 
-# Layout
+## Rows and Columns
 
-A layout element will explicitly define how it's children are layed out.
+Rows and columns are the most common layouts.
 
-Make sure to check out the Style Element specific attributes in `Element.Attributes` as they will help out when doing layout!
-
-
-## Linear Layouts
-
-@docs row, column, wrappedRow, wrappedColumn
+@docs row, column
 
 
 ## Text Layout
 
-@docs textLayout, paragraph
+Text needs it's own layout primitives.
+
+@docs paragraph, textColumn
 
 
-## Grid Layout
+## Data Table
 
-@docs table, Grid, NamedGrid, grid, namedGrid, GridPosition, NamedGridPosition, OnGrid, NamedOnGrid, cell, named, span, spanAll
-
-
-## Positioning
-
-It can be useful to position something near another element.
-
-In CSS terms, this positions children using 'position:absolute'. So, to position three boxes below a container, we could do the following:
-
-     el MyStyle [ width (px 200), height (px 200) ] empty
-        |> below
-            [ el Box [ width (px 40), height (px 40) ] empty
-            -- below on the right
-            , el Box [ alignRight, width (px 40), height (px 40) ] empty
-            -- below and centered
-            , el Box [ center, width (px 40), height (px 40) ] empty
-            ]
-
-@docs below, above, onRight, onLeft, within, screen
+@docs Table, Column, table
 
 
-## Linking
+## Rendering
 
-@docs link, newTab, download, downloadAs
-
-
-## Markup
-
-@docs node, button, hairline, article, section, aside, spacer, circle
+@docs layout, layoutWith, Option, forceHover, noHover, focusStyle, FocusStyle
 
 
-## Significant Locations
+# Links and Images
 
-@docs navigation, navigationColumn
-
-@docs header, mainContent, footer, sidebar, search
-
-@docs modal
-
-
-## Headings
-
-@docs h1, h2, h3, h4, h5, h6, subheading
-
-
-## Images
+@docs Link, link, newTabLink, download, downloadAs
 
 @docs image, decorativeImage
 
 
-## Text Markup
+# Attributes
 
-These elements are useful for quick text markup.
-
-@docs bold, italic, strike, underline, sub, super
+@docs Attribute, hidden, description, pointer
 
 
-## Responsive
+## Width and Height
 
-Since this library moves all layout and positioning logic to the view instead of the stylesheet, it doesn't make a ton of sense to support media queries in the stylesheet.
-
-Instead, responsiveness is controlled directly in the view.
-
-Here's how it's done:
-
-1.  Set up a subscription to `Window.resizes` from the `Window` package.
-2.  Use the `Element.classifyDevice` function which will convert `Window.width` and `Window.height` into a `Device` record, which you should store in your model.
-3.  Use the `Device` record in your view to specify how your page changes with window size.
-4.  If things get crazy, use the `responsive` function to map one range to another.
-
-@docs Device, classifyDevice, responsive
+@docs width, height, Length, px, shrink, fill, fillPortion
 
 
-## Advanced Rendering
+## Padding and Spacing
 
-@docs toHtml, embedStylesheet
+There's no concept of margin in `style-elements`, instead we have padding and spacing.
+
+Padding is what you'd expect, the distance between the outer edge and the content, and spacing is the space between children.
+
+So, if we have the following row, with some padding and spacing.
+
+    Element.row [ padding 10, spacing 7 ]
+        [ Element.el [] empty
+        , Element.el [] empty
+        , Element.el [] empty
+        ]
+
+Here's what we can expect.
+
+<img src="https://mdgriffith.gitbooks.io/style-elements/content/assets/spacing-400.png" alt="Three boxes spaced 7 pixels apart.  There's a 10 pixel distance from the edge of the parent to the boxes." />
+
+@docs padding, paddingXY, paddingEach
+
+@docs spacing, spacingXY, spaceEvenly
+
+
+## Alignment
+
+Alignment can be used to align an `Element` within another `Element`.
+
+    Element.el [ center, alignTop ] (text "I'm centered and aligned top!")
+
+If alignment is set on elements in a layout such as `row`, then the element will push the other elements in that direction. Here's an example.
+
+    Element.row []
+        [ Element.el [] Element.empty
+        , Element.el [ alignLeft ] Element.empty
+        , Element.el [ center ] Element.empty
+        , Element.el [ alignRight ] Element.empty
+        ]
+
+will result in a layout like
+
+    |-|-| |-| |-|
+
+Where there are two elements on the left, one in the center, and on on the right.
+
+@docs center, centerY, alignLeft, alignRight, alignTop, alignBottom
+
+
+## Nearby Elements
+
+It can be nice to position an element relative to another element, _without
+
+Let's say we want a dropdown menu. Essentially we want to say: _put this element below this other element, but don't affect the layout when you do_.
+
+    Elemenet.row []
+        [ Element.el
+            [ Element.below True (Element.text "I'm below!")
+            ]
+            (Element.text "I'm normal!")
+        ]
+
+This will result in
+
+    |- I'm normal! -|
+       I'm below
+
+Where `"I'm Below"` doesn't change the size of `Element.row`.
+
+This is very useful for things like dropdown menus or tooltips.
+
+@docs above, below, onRight, onLeft, inFront, behind
+
+
+## Adjustment
+
+@docs moveRight, moveUp, moveLeft, moveDown, rotate, scale, mouseOverScale
+
+
+## Clipping and Scrollbars
+
+Clip the content if it overflows.
+
+@docs clip, clipX, clipY
+
+If these are present, the element will add a scrollbar if necessary.
+
+@docs scrollbars, scrollbarY, scrollbarX
+
+
+## Mapping
+
+@docs map, mapAttribute
+
+
+## Compatibility
+
+@docs html, attribute
 
 -}
 
+import Color exposing (Color)
+import Element.Background as Background
+import Element.Font as Font
 import Html exposing (Html)
 import Html.Attributes
-import Element.Internal.Model as Internal exposing (..)
-import Element.Internal.Modify as Modify
-import Style exposing (Style, StyleSheet)
-import Style.Internal.Model as Style
-import Element.Attributes as Attr exposing (Length)
-import Element.Internal.Render as Render
-import Window
+import Internal.Model as Internal
 
 
-{-| You can think of an `Element` as `Html` with built-in layout.
+{-| The basic building block of your layout. Here we create a
 
-It has one `style` identifier, which you can think of as a CSS class.
+    import Background
+    import Element
 
-It can also have style `variations`, which are covered in the `Style` module.
+    view =
+        Element.el [] (Element.text "Hello!")
 
 -}
-type alias Element style variation msg =
-    Internal.Element style variation msg
+type alias Element msg =
+    Internal.Element msg
 
 
 {-| -}
-type alias Attribute variation msg =
-    Internal.Attribute variation msg
+type alias Attribute msg =
+    Internal.Attribute msg
 
 
 {-| -}
-empty : Element style variation msg
+html : Html msg -> Element msg
+html =
+    Internal.unstyled
+
+
+{-| -}
+attribute : Html.Attribute msg -> Attribute msg
+attribute =
+    Internal.Attr
+
+
+{-| -}
+map : (msg -> msg1) -> Element msg -> Element msg1
+map =
+    Internal.map
+
+
+{-| -}
+mapAttribute : (msg -> msg1) -> Attribute msg -> Attribute msg1
+mapAttribute =
+    Internal.mapAttr
+
+
+{-| -}
+type alias Length =
+    Internal.Length
+
+
+{-| -}
+px : Int -> Length
+px =
+    Internal.Px
+
+
+{-| -}
+shrink : Length
+shrink =
+    Internal.Content
+
+
+{-| Fill the available space. The available space will be split evenly between elements that have `width fill`.
+-}
+fill : Length
+fill =
+    Internal.Fill 1
+
+
+{-| Sometimes you may not want to split available space evenly. In this case you can use `fillPortion` to define which elements should have what portion of the available space.
+
+So, two elements, one with `width (fillPortion 2)` and one with `width (fillPortion 3)`. The first would get 2 portions of the available space, while the second would get 3.
+
+Also: `fill == fillPortion 1`
+
+-}
+fillPortion : Int -> Length
+fillPortion =
+    Internal.Fill
+
+
+{-| This is your top level node where you can turn `Element` into `Html`.
+-}
+layout : List (Attribute msg) -> Element msg -> Html msg
+layout =
+    layoutWith { options = [] }
+
+
+{-| -}
+layoutWith : { options : List Option } -> List (Attribute msg) -> Element msg -> Html msg
+layoutWith { options } attrs child =
+    Internal.renderRoot options
+        (Background.color Color.blue
+            :: Font.color Color.white
+            :: Font.size 20
+            :: Font.family
+                [ Font.typeface "Open Sans"
+                , Font.typeface "Helvetica"
+                , Font.typeface "Verdana"
+                , Font.sansSerif
+                ]
+            :: Internal.htmlClass "style-elements se el"
+            :: Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
+            :: attrs
+        )
+        child
+
+
+{-| -}
+type alias Option =
+    Internal.Option
+
+
+{-| -}
+defaultFocus :
+    { borderColor : Maybe Color
+    , backgroundColor : Maybe Color
+    , shadow :
+        Maybe
+            { color : Color
+            , offset : ( Int, Int )
+            , blur : Int
+            , size : Int
+            }
+    }
+defaultFocus =
+    Internal.focusDefaultStyle
+
+
+{-| -}
+type alias FocusStyle =
+    { borderColor : Maybe Color
+    , backgroundColor : Maybe Color
+    , shadow :
+        Maybe
+            { color : Color
+            , offset : ( Int, Int )
+            , blur : Int
+            , size : Int
+            }
+    }
+
+
+{-| -}
+focusStyle : FocusStyle -> Option
+focusStyle =
+    Internal.FocusStyleOption
+
+
+{-| Disable all `mouseOver` styles.
+-}
+noHover : Option
+noHover =
+    Internal.HoverOption Internal.NoHover
+
+
+{-| Any `hover` styles, aka attributes with `mouseOver` in the name, will be always turned on.
+
+This is useful for when you're targeting a platform that has no mouse, such as mobile.
+
+-}
+forceHover : Option
+forceHover =
+    Internal.HoverOption Internal.ForceHover
+
+
+
+-- {-| A helper function. This:
+--     when (x == 5) (text "yay, it's 5")
+-- is sugar for
+--     if (x == 5) then
+--         text "yay, it's 5"
+--     else
+--         empty
+-- -}
+-- when : Bool -> Element msg -> Element msg
+-- when bool elm =
+--     if bool then
+--         elm
+--     else
+--         empty
+-- {-| Another helper function that defaults to `empty`
+--     whenJust (Just ("Hi!")) text
+-- is sugar for
+--     case maybe of
+--         Nothing ->
+--             empty
+--         Just x ->
+--             text x
+-- -}
+-- whenJust : Maybe a -> (a -> Element msg) -> Element msg
+-- whenJust maybe view =
+--     case maybe of
+--         Nothing ->
+--             empty
+--         Just thing ->
+--             view thing
+
+
+{-| Nothing to see here!
+-}
+empty : Element msg
 empty =
-    Empty
+    Internal.Empty
 
 
-{-| -}
-text : String -> Element style variation msg
-text =
-    Text { decoration = NoDecoration, inline = False }
+{-| Create some plain text.
 
+    text "Hello, you stylish developer!"
 
-{-| -}
-bold : String -> Element style variation msg
-bold =
-    Text { decoration = Bold, inline = False }
-
-
-{-| -}
-italic : String -> Element style variation msg
-italic =
-    Text { decoration = Italic, inline = False }
-
-
-{-| -}
-strike : String -> Element style variation msg
-strike =
-    Text { decoration = Strike, inline = False }
-
-
-{-| -}
-underline : String -> Element style variation msg
-underline =
-    Text { decoration = Underline, inline = False }
-
-
-{-| -}
-sub : String -> Element style variation msg
-sub =
-    Text { decoration = Sub, inline = False }
-
-
-{-| -}
-super : String -> Element style variation msg
-super =
-    Text { decoration = Super, inline = False }
-
-
-{-| A numbered list of items, rendered as a column.
--}
-numbered : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-numbered style attrs children =
-    Layout
-        { node = "ol"
-        , style = Just style
-        , layout = Style.FlexLayout Style.Down []
-        , attrs = attrs
-        , children = Normal (List.map (Modify.setNode "li" << Modify.addAttr (Attr.inlineStyle [ ( "display", "list-item" ) ])) children)
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| A bulleted list.
--}
-bulleted : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-bulleted style attrs children =
-    Layout
-        { node = "ul"
-        , style = Just style
-        , layout = Style.FlexLayout Style.Down []
-        , attrs = attrs
-        , children = Normal (List.map (Modify.setNode "li" << Modify.addAttr (Attr.inlineStyle [ ( "display", "list-item" ) ])) children)
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| The most basic element.
-
-You need to specify a style, a list of attributes, and a single child.
-
-    -- an element with the style `MyStyle`, that is aligned left, and has one child.
-    el MyStyle [ alignLeft ] (text "Hello World!")
-
-`el` can only have one child because in order to have multiple children, we need to specify how the layout would work.
+**Note** text does not wrap by default. In order to get text to wrap, check out `paragraph`!
 
 -}
-el : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-el style attrs child =
-    Element
-        { node = "div"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
+text : String -> Element msg
+text content =
+    Internal.Text content
 
 
-{-| -}
-section : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-section style attrs child =
-    Internal.Element
-        { node = "section"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
+{-| The basic building block of your layout.
 
+    import Color exposing (blue, darkBlue)
+    import Element exposing (Element)
+    import Element.Background as Background
+    import Element.Border as Border
 
-{-| -}
-article : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-article style attrs child =
-    Internal.Element
-        { node = "article"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-aside : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-aside style attrs child =
-    Internal.Element
-        { node = "aside"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| A simple circle. Provide the radius it should have.
-
-Automatically sets the propery width, height, and corner rounded.
+    myElement : Element msg
+    myElement =
+        Element.el
+            [ Background.color blue
+            , Border.color darkBlue
+            ]
+            (Element.text "You've made a stylish element!")
 
 -}
-circle : Float -> style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-circle radius style attrs child =
-    Element
-        { node = "div"
-        , style = Just style
-        , attrs =
-            (Attr
-                (Html.Attributes.style
-                    [ ( "border-radius", toString radius ++ "px" ) ]
-                )
-                :: Width (Style.Px (2 * radius))
-                :: Height (Style.Px (2 * radius))
-                :: attrs
+el : List (Attribute msg) -> Element msg -> Element msg
+el attrs child =
+    Internal.el
+        Nothing
+        (width shrink
+            :: height shrink
+            -- :: centerY
+            :: center
+            :: Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
+            :: attrs
+        )
+        (Internal.Unkeyed [ child ])
+
+
+{-| If you want a row of elements, use `row`!
+-}
+row : List (Attribute msg) -> List (Element msg) -> Element msg
+row attrs children =
+    Internal.row
+        (Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
+            :: width fill
+            :: attrs
+        )
+        (Internal.Unkeyed <| Internal.rowEdgeFillers children)
+
+
+{-| -}
+column : List (Attribute msg) -> List (Element msg) -> Element msg
+column attrs children =
+    Internal.column
+        (Internal.Class "y-content-align" "content-top"
+            :: Internal.Class "x-content-align" "content-center-x"
+            :: height fill
+            :: width fill
+            :: attrs
+        )
+        (Internal.Unkeyed <| Internal.columnEdgeFillers children)
+
+
+{-| -}
+type alias Table records msg =
+    { data : List records
+    , columns : List (Column records msg)
+    }
+
+
+{-| -}
+type alias Column record msg =
+    { header : Element msg
+    , view : record -> Element msg
+    }
+
+
+{-| Show some tabular data.
+
+Start with a list of records and specify how each column should be rendered.
+
+So, if we have a list of `persons`:
+
+    type alias Person =
+        { firstName : String
+        , lastName : String
+        }
+
+    persons : List Person
+    persons =
+        [ { firstName = "David"
+          , lastName = "Bowie"
+          }
+        , { firstName = "Florence"
+          , lastName = "Welch"
+          }
+        ]
+
+We could render it using
+
+    Element.table []
+        { data = persons
+        , columns =
+            [ { header = Element.text "First Name"
+              , view =
+                    (\person ->
+                        Element.text person.firstName
+                    )
+              }
+            , { header = Element.text "Last Name"
+              , view =
+                     (\person ->
+                        Element.text person.lastName
+                     )
+              }
+            ]
+        }
+
+-}
+table : List (Attribute msg) -> Table data msg -> Element msg
+table attrs config =
+    let
+        ( sX, sY ) =
+            Internal.getSpacing attrs ( 0, 0 )
+
+        maybeHeaders =
+            List.map .header config.columns
+                |> (\headers ->
+                        if List.all ((==) Internal.Empty) headers then
+                            Nothing
+                        else
+                            Just (List.indexedMap (\col header -> onGrid 1 (col + 1) header) headers)
+                   )
+
+        template =
+            Internal.StyleClass <|
+                Internal.GridTemplateStyle
+                    { spacing = ( px sX, px sY )
+                    , columns = List.repeat (List.length config.columns) Internal.Content
+                    , rows = List.repeat (List.length config.data) Internal.Content
+                    }
+
+        onGrid row column el =
+            Internal.gridEl Nothing
+                [ Internal.StyleClass
+                    (Internal.GridPosition
+                        { row = row
+                        , col = column
+                        , width = 1
+                        , height = 1
+                        }
+                    )
+                ]
+                [ el ]
+
+        add cell column cursor =
+            { cursor
+                | elements =
+                    onGrid cursor.row cursor.column (column.view cell)
+                        :: cursor.elements
+                , column = cursor.column + 1
+            }
+
+        build columns rowData cursor =
+            let
+                newCursor =
+                    List.foldl (add rowData)
+                        cursor
+                        columns
+            in
+            { newCursor
+                | row = cursor.row + 1
+                , column = 1
+            }
+
+        children =
+            List.foldl (build config.columns)
+                { elements = []
+                , row =
+                    if maybeHeaders == Nothing then
+                        1
+                    else
+                        2
+                , column = 1
+                }
+                config.data
+    in
+    Internal.element Internal.asGrid
+        Nothing
+        (Internal.htmlClass "se grid"
+            :: width fill
+            :: center
+            :: template
+            :: attrs
+        )
+        (Internal.Unkeyed
+            (case maybeHeaders of
+                Nothing ->
+                    children.elements
+
+                Just renderedHeaders ->
+                    renderedHeaders ++ children.elements
             )
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
+        )
 
 
-{-| An element for adding additional spacing. The `Float` is the multiple that should be used of the spacing that's being set by the parent.
+{-| A paragraph will layout all children as wrapped, inline elements.
 
-So, if the parent element is a `column` that set spacing to `5`, and this spacer was a `2`. Then it would be a 10 pixel spacer.
+    import Element
+    import Element.Font as Font
+
+    Element.paragraph []
+        [ text "lots of text ...."
+        , el [ Font.bold ] (text "this is bold")
+        , text "lots of text ...."
+        ]
+
+This is really useful when you want to markup text by having some parts be bold, or some be links, or whatever you so desire.
+
+Also, if a child element has `alignLeft` or `alignRight`, then it will be moved to that side and the text will flow around it, (ah yes, `float` behavior).
+
+This makes it particularly easy to do something like a [dropped capital](https://en.wikipedia.org/wiki/Initial).
+
+    import Element
+    import Element.Font as Font
+
+    Element.paragraph []
+        [ el
+            [ alignLeft
+            , padding 5
+            , Font.lineHeight 1
+            ]
+            (text "S")
+        , text "lots of text ...."
+        ]
+
+Which will look something like
+
+<img src="https://mdgriffith.gitbooks.io/style-elements/content/assets/Screen%20Shot%202017-08-25%20at%209.41.52%20PM.png" />
 
 -}
-spacer : Float -> Element style variation msg
-spacer =
-    Spacer
+paragraph : List (Attribute msg) -> List (Element msg) -> Element msg
+paragraph attrs children =
+    Internal.paragraph (Internal.htmlClass "se paragraph" :: width fill :: attrs) (Internal.Unkeyed children)
 
 
-{-| For images, both a source and a caption are required. The caption will serve as the alt-text.
+{-| Now that we have a paragraph, we need someway to attach a bunch of paragraph's together.
+
+To do that we can use a `textColumn`.
+
+The main difference between a `column` and a `textColumn` is that `textColumn` will flow the text around elements that have `alignRight` or `alignLeft`, just like we just saw with paragraph.
+
+In the following example, we have a `textColumn` where one child has `alignLeft`.
+
+    Elment.textColumn [ spacing 10, padding 10 ]
+        [ paragraph [] [ text "lots of text ...." ]
+        , el [ alignLeft ] empty
+        , paragraph [] [ text "lots of text ...." ]
+        ]
+
+Which will result in something like:
+
+<img src="https://mdgriffith.gitbooks.io/style-elements/content/assets/Screen%20Shot%202017-08-25%20at%208.42.39%20PM.png" />
+
 -}
-image : style -> List (Attribute variation msg) -> { src : String, caption : String } -> Element style variation msg
-image style attrs { src, caption } =
-    Element
-        { node = "img"
-        , style = Just style
-        , attrs = (Attr (Html.Attributes.src src) :: Attr (Html.Attributes.alt caption) :: attrs)
-        , child = empty
-        , absolutelyPositioned = Nothing
-        }
+textColumn : List (Attribute msg) -> List (Element msg) -> Element msg
+textColumn attrs children =
+    Internal.textPage (width (px 650) :: attrs) (Internal.Unkeyed children)
+
+
+{-| Both a source and a description are required for images. The description is used to describe the image to screen readers.
+-}
+image : List (Attribute msg) -> { src : String, description : String } -> Element msg
+image attrs { src, description } =
+    let
+        filtered =
+            Internal.filter attrs
+
+        imageAttributes =
+            attrs
+                |> List.filter
+                    (\a ->
+                        case a of
+                            Internal.Width _ ->
+                                True
+
+                            Internal.Height _ ->
+                                True
+
+                            _ ->
+                                False
+                    )
+    in
+    Internal.el
+        Nothing
+        (clip :: attrs)
+        (Internal.Unkeyed
+            [ Internal.el
+                (Just "img")
+                (imageAttributes
+                    ++ [ Internal.Attr <| Html.Attributes.src src
+                       , Internal.Attr <| Html.Attributes.alt description
+                       ]
+                )
+                (Internal.Unkeyed [ Internal.Empty ])
+            ]
+        )
 
 
 {-| If an image is purely decorative, you can skip the caption.
 -}
-decorativeImage : style -> List (Attribute variation msg) -> { src : String } -> Element style variation msg
-decorativeImage style attrs { src } =
-    Element
-        { node = "img"
-        , style = Just style
-        , attrs = (Attr (Html.Attributes.src src) :: attrs)
-        , child = empty
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| Creates a 1 px tall horizontal line.
-
-If you want a horizontal rule that is something more specific, craft it with `el`!
-
--}
-hairline : style -> Element style variation msg
-hairline style =
-    Element
-        { node = "hr"
-        , style = Just style
-        , attrs = [ Height (Style.Px 1) ]
-        , child = empty
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| For when you want to embed `Html`.
-
-If you're using this library, I'd encourage you to try to solve your problem without using this escape hatch.
-
-Usage of this function makes the most sense when you're dealing with `Html` from another module or package or if you need to craft something "manually" yourself.
-
--}
-html : Html msg -> Element style variation msg
-html =
-    Raw
-
-
-{-| -}
-node : String -> Element style variation msg -> Element style variation msg
-node str =
-    Modify.setNode str
-
-
-{-| Renders as a `<button>`
-
-Also is able to receive keyboard focus.
-
--}
-button : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-button style attrs child =
-    Element
-        { node = "button"
-        , style = Just style
-        , attrs = Attr.class "button-focus" :: Attr.inlineStyle [ ( "cursor", "pointer" ) ] :: Attr.toAttr (Html.Attributes.tabindex 0) :: attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| Don't use a heading like `h2` if you want a subheading/subtitle, instead use this element!
--}
-subheading : style -> List (Attribute variation msg) -> String -> Element style variation msg
-subheading style attrs str =
-    Element
-        { node = "p"
-        , style = Just style
-        , attrs = attrs
-        , child = text str
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-h1 : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-h1 style attrs child =
-    Element
-        { node = "h1"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-h2 : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-h2 style attrs child =
-    Element
-        { node = "h2"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-h3 : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-h3 style attrs child =
-    Element
-        { node = "h3"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-h4 : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-h4 style attrs child =
-    Element
-        { node = "h4"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-h5 : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-h5 style attrs child =
-    Element
-        { node = "h5"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-h6 : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-h6 style attrs child =
-    Element
-        { node = "h6"
-        , style = Just style
-        , attrs = attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-
----------------------
---- Form and Input
----------------------
-
-
-{-| A `full` element will ignore the spacing set for it by the parent, and also grow to cover the parent's padding.
-
-This is mostly useful in text layouts.
-
--}
-full : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-full elem attrs child =
-    Element
-        { node = "div"
-        , style = Just elem
-        , attrs = (Expand :: attrs)
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| A text layout.
-
-Children that are aligned left or right will be floated left or right. Everything else is arranged in the standard 'block' layout of css, meaning a column flowing down.
-
--}
-textLayout : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-textLayout style attrs children =
-    Layout
-        { node = "div"
-        , style = Just style
-
-        -- True means it's clearfixed
-        , layout = Style.TextLayout True
-        , attrs = attrs
-        , children = Normal children
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| Paragraph is actually a layout if you can believe it!
-
-This is the same as a textLayout, except all of the children are set to `display:inline`.
-
-Because all the children are inline, they will not respect a width or height set on them.
-
--}
-paragraph : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-paragraph style attrs children =
-    -- Paragraph does not have clearfix, which is what the `TextLayout False` is all about
-    Layout
-        { node = "p"
-        , style = Just style
-        , layout = Style.TextLayout False
-        , attrs = attrs
-        , children = Normal <| List.map Modify.makeInline children
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-row : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-row style attrs children =
-    Layout
-        { node = "div"
-        , style = Just style
-        , layout = Style.FlexLayout Style.GoRight []
-        , attrs = attrs
-        , children = Normal children
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-column : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-column style attrs children =
-    Layout
-        { node = "div"
-        , style = Just style
-        , layout = Style.FlexLayout Style.Down []
-        , attrs = attrs
-        , children = Normal children
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-wrappedRow : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-wrappedRow style attrs children =
-    Layout
-        { node = "div"
-        , style = Just style
-        , layout = Style.FlexLayout Style.GoRight [ Style.Wrap True ]
-        , attrs = attrs
-        , children = Normal children
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| -}
-wrappedColumn : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-wrappedColumn style attrs children =
-    Layout
-        { node = "div"
-        , style = Just style
-        , layout = Style.FlexLayout Style.Down [ Style.Wrap True ]
-        , attrs = attrs
-        , children = Normal children
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| A table is a special grid
--}
-table : style -> List (Attribute variation msg) -> List (List (Element style variation msg)) -> Element style variation msg
-table style attrs rows =
+decorativeImage : List (Attribute msg) -> { src : String } -> Element msg
+decorativeImage attrs { src } =
     let
-        children =
-            List.concat <|
-                List.indexedMap
-                    (\row columns ->
-                        List.indexedMap
-                            (\col content ->
-                                cell
-                                    { start = ( row, col )
-                                    , width = 1
-                                    , height = 1
-                                    , content = content
-                                    }
-                            )
-                            columns
+        filtered =
+            Internal.filter attrs
+
+        imageAttributes =
+            attrs
+                |> List.filter
+                    (\a ->
+                        case a of
+                            Internal.Width _ ->
+                                True
+
+                            Internal.Height _ ->
+                                True
+
+                            _ ->
+                                False
                     )
-                    rows
     in
-        grid style attrs { columns = [], rows = [], cells = children }
+    Internal.el
+        Nothing
+        (clip :: attrs)
+        (Internal.Unkeyed
+            [ Internal.el
+                (Just "img")
+                (imageAttributes
+                    ++ [ Internal.Attr <| Html.Attributes.src src
+                       , Internal.Attr <| Html.Attributes.alt ""
+                       ]
+                )
+                (Internal.Unkeyed [ Internal.Empty ])
+            ]
+        )
 
 
 {-| -}
-type alias Grid style variation msg =
-    { rows : List Length
-    , columns : List Length
-    , cells : List (OnGrid (Element style variation msg))
+type alias Link msg =
+    { url : String
+    , label : Element msg
     }
 
 
-{-| An interface to css grid. Here's a basic example:
+{-|
 
-    grid MyGridStyle []
-        { columns = [ px 100, px 100, px 100, px 100 ]
-        , rows =
-            [ px 100
-            , px 100
-            , px 100
-            , px 100
-            ]
-        , cells =
-             [ cell
-                { start = ( 0, 0 )
-                , width = 1
-                , height = 1
-                , content =
-                    el Box [] (text "box")
-                }
-            , cell
-                { start = ( 1, 1 )
-                , width = 1
-                , height = 2
-                , content =
-                    el Box [] (text "box")
-                }
-            ]
+    link []
+        { url = "google.com"
+        , label = text "My Link to Google"
         }
 
 -}
-grid : style -> List (Attribute variation msg) -> Grid style variation msg -> Element style variation msg
-grid style attrs config =
-    let
-        prepare el =
-            Normal <| List.map (\(OnGrid x) -> x) el
-
-        ( spacing, notSpacingAttrs ) =
-            List.partition forSpacing attrs
-
-        forSpacing attr =
-            case attr of
-                Spacing _ _ ->
-                    True
-
-                _ ->
-                    False
-
-        gridAttributes =
-            case List.head <| List.reverse spacing of
-                Nothing ->
-                    []
-
-                Just (Spacing x y) ->
-                    [ Style.GridGap x y ]
-
-                _ ->
-                    []
-    in
-        Layout
-            { node = "div"
-            , style = Just style
-            , layout = Style.Grid (Style.GridTemplate { rows = config.rows, columns = config.columns }) gridAttributes
-            , attrs = notSpacingAttrs
-            , children = prepare config.cells
-            , absolutelyPositioned = Nothing
-            }
+link : List (Attribute msg) -> Link msg -> Element msg
+link attrs { url, label } =
+    Internal.el
+        (Just "a")
+        (Internal.Attr (Html.Attributes.href url)
+            :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
+            :: width shrink
+            :: height shrink
+            :: centerY
+            :: center
+            :: attrs
+        )
+        (Internal.Unkeyed [ label ])
 
 
 {-| -}
-type alias NamedGrid style variation msg =
-    { rows : List ( Length, List Style.NamedGridPosition )
-    , columns : List Length
-    , cells : List (NamedOnGrid (Element style variation msg))
-    }
+newTabLink : List (Attribute msg) -> Link msg -> Element msg
+newTabLink attrs { url, label } =
+    Internal.el
+        (Just "a")
+        (Internal.Attr (Html.Attributes.href url)
+            :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
+            :: Internal.Attr (Html.Attributes.target "_blank")
+            :: width shrink
+            :: height shrink
+            :: centerY
+            :: center
+            :: attrs
+        )
+        (Internal.Unkeyed [ label ])
 
 
-{-| With a named grid, you can name areas within the grid and use that name to place an element.
-
-Here's an example:
-
-    namedGrid MyGridStyle []
-        { columns = [ px 200, px 200, px 200, fill 1 ]
-        , rows =
-            [ px 200 => [ spanAll "header" ]
-            , px 200 => [ span 3 "content", span 1 "sidebar" ]
-            , px 200 => [ span 3 "content", span 1 "sidebar" ]
-            , px 200 => [ spanAll "footer" ]
-            ]
-        , cells =
-            [ named "header"
-                (el Box [] (text "box"))
-            , named "sidebar"
-                (el Box [] (text "box"))
-            ]
-        }
-
-**note:** this example uses rocket(`=>`) as a synonym for creating a tuple. For more, check out the [rocket update](https://github.com/NoRedInk/rocket-update) package!
-
+{-| A link to download a file.
 -}
-namedGrid : style -> List (Attribute variation msg) -> NamedGrid style variation msg -> Element style variation msg
-namedGrid style attrs config =
-    let
-        prepare el =
-            Normal <| List.map (\(NamedOnGrid x) -> x) el
+download : List (Attribute msg) -> Link msg -> Element msg
+download attrs { url, label } =
+    Internal.el
+        (Just "a")
+        (Internal.Attr (Html.Attributes.href url)
+            :: Internal.Attr (Html.Attributes.download True)
+            :: width shrink
+            :: height shrink
+            :: centerY
+            :: center
+            :: attrs
+        )
+        (Internal.Unkeyed [ label ])
 
-        ( spacing, notSpacingAttrs ) =
-            List.partition forSpacing attrs
 
-        forSpacing attr =
-            case attr of
-                Spacing _ _ ->
-                    True
-
-                _ ->
-                    False
-
-        gridAttributes =
-            case List.head <| List.reverse spacing of
-                Nothing ->
-                    []
-
-                Just (Spacing x y) ->
-                    [ Style.GridGap x y ]
-
-                _ ->
-                    []
-    in
-        Layout
-            { node = "div"
-            , style = Just style
-            , layout = Style.Grid (Style.NamedGridTemplate { rows = config.rows, columns = config.columns }) gridAttributes
-            , attrs = notSpacingAttrs
-            , children = (prepare config.cells)
-            , absolutelyPositioned = Nothing
-            }
+{-| A link to download a file, but you can specify the filename.
+-}
+downloadAs : List (Attribute msg) -> { label : Element msg, filename : String, url : String } -> Element msg
+downloadAs attrs { url, filename, label } =
+    Internal.el
+        (Just "a")
+        (Internal.Attr (Html.Attributes.href url)
+            :: Internal.Attr (Html.Attributes.downloadAs filename)
+            :: width shrink
+            :: height shrink
+            :: centerY
+            :: center
+            :: attrs
+        )
+        (Internal.Unkeyed [ label ])
 
 
 {-| -}
-type alias GridPosition style variation msg =
-    { start : ( Int, Int )
-    , width : Int
-    , height : Int
-    , content : Element style variation msg
-    }
+description : String -> Attribute msg
+description =
+    Internal.Describe << Internal.Label
 
 
 {-| -}
-type alias OnGrid thing =
-    Internal.OnGrid thing
-
-
-{-| -}
-type alias NamedOnGrid thing =
-    Internal.NamedOnGrid thing
-
-
-{-| A specific position on a `grid`.
--}
-cell : GridPosition style variation msg -> OnGrid (Element style variation msg)
-cell box =
-    let
-        coords =
-            { start = box.start
-            , width = box.width
-            , height = box.height
-            }
-    in
-        OnGrid <| Modify.addAttr (GridCoords <| Style.GridPosition coords) box.content
-
-
-{-| Specify a named postion on a `namedGrid`.
--}
-named : String -> Element style variation msg -> NamedOnGrid (Element style variation msg)
-named name el =
-    NamedOnGrid <| Modify.addAttr (GridArea name) el
-
-
-{-| -}
-type alias NamedGridPosition =
-    Style.NamedGridPosition
-
-
-{-| Used to define named areas in a `namedGrid`.
--}
-span : Int -> String -> NamedGridPosition
-span i name =
-    Style.Named (Style.SpanJust i) (Just name)
-
-
-{-| Used to define named areas in a `namedGrid`.
--}
-spanAll : String -> NamedGridPosition
-spanAll name =
-    Style.Named Style.SpanAll (Just name)
-
-
-{-| Turn an element into a link.
-
-    link "http://zombo.com"
-        <| el MyStyle (text "Welcome to Zombocom")
-
-Wraps an element in an `<a>` and sets the href. `rel` properties are set to `noopener` and `noreferrer`.
-
--}
-link : String -> Element style variation msg -> Element style variation msg
-link src el =
-    Element
-        { node = "a"
-        , style = Nothing
-        , attrs =
-            [ Attr (Html.Attributes.href src)
-            , Attr (Html.Attributes.rel "noopener noreferrer")
-            ]
-        , child = el
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| Make a link that opens in a new tab.
-
-Depending on the browsers configiration, it may open in a new window.
-
-    newTab "http://zombo.com"
-        <| el MyStyle (text "Welcome to Zombocom")
-
-Same as `target "_blank"`
-
--}
-newTab : String -> Element style variation msg -> Element style variation msg
-newTab src el =
-    Element
-        { node = "a"
-        , style = Nothing
-        , attrs =
-            [ Attr (Html.Attributes.href src)
-            , Attr (Html.Attributes.rel "noopener noreferrer")
-            , Attr (Html.Attributes.target "_blank")
-            ]
-        , child = el
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| Make a link that will download a file
-
-    download "http://zombo.com/schedule.pdf"
-        <| el MyStyle (text "Welcome to Zombocom")
-
--}
-download : String -> Element style variation msg -> Element style variation msg
-download src el =
-    Element
-        { node = "a"
-        , style = Nothing
-        , attrs =
-            [ Attr (Html.Attributes.href src)
-            , Attr (Html.Attributes.rel "noopener noreferrer")
-            , Attr (Html.Attributes.download True)
-            ]
-        , child = el
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| Make a link that will download a file and give it a specific filename.
-
-    downloadAs
-        { src = "http://zombo.com/schedule.pdf"
-        , filename = "zombocomSchedule.pdf"
-        }
-        <| el MyStyle (text "Welcome to Zombocom")
-
--}
-downloadAs : { src : String, filename : String } -> Element style variation msg -> Element style variation msg
-downloadAs { src, filename } el =
-    Element
-        { node = "a"
-        , style = Nothing
-        , attrs =
-            [ Attr (Html.Attributes.href src)
-            , Attr (Html.Attributes.rel "noopener noreferrer")
-            , Attr (Html.Attributes.download True)
-            , Attr (Html.Attributes.downloadAs filename)
-            ]
-        , child = el
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| A helper function. This:
-
-    when (x == 5) (text "yay, it's 5")
-
-is sugar for
-
-    if (x == 5) then
-        text "yay, it's 5"
+below : Bool -> Internal.Element msg -> Attribute msg
+below on element =
+    if on then
+        Internal.Nearby Internal.Below element
     else
-        empty
+        Internal.NoAttribute
 
+
+{-| `above` takes a `Bool` first so that you can easily toggle showing and hiding the element.
 -}
-when : Bool -> Element style variation msg -> Element style variation msg
-when bool elm =
-    if bool then
-        elm
+above : Bool -> Internal.Element msg -> Attribute msg
+above on element =
+    if on then
+        Internal.Nearby Internal.Above element
     else
-        empty
-
-
-{-| Another helper function that defaults to `empty`
-
-    whenJust (Just ("Hi!")) text
-
-is sugar for
-
-    case maybe of
-        Nothing ->
-            empty
-        Just x ->
-            text x
-
--}
-whenJust : Maybe a -> (a -> Element style variation msg) -> Element style variation msg
-whenJust maybe view =
-    case maybe of
-        Nothing ->
-            empty
-
-        Just thing ->
-            view thing
+        Internal.NoAttribute
 
 
 {-| -}
-within : List (Element style variation msg) -> Element style variation msg -> Element style variation msg
-within nearbys parent =
-    let
-        position el p =
-            el
-                |> Modify.wrapHtml
-                |> Modify.addAttr (PositionFrame (Nearby Within))
-                |> Modify.addChild p
-    in
-        List.foldr position parent nearbys
-
-
-{-| -}
-above : List (Element style variation msg) -> Element style variation msg -> Element style variation msg
-above nearbys parent =
-    let
-        position el p =
-            el
-                |> Modify.wrapHtml
-                |> Modify.addAttr (PositionFrame (Nearby Above))
-                |> Modify.removeAttrs [ VAlign Top, VAlign Bottom ]
-                |> Modify.addChild p
-    in
-        List.foldr position parent nearbys
-
-
-{-| -}
-below : List (Element style variation msg) -> Element style variation msg -> Element style variation msg
-below nearbys parent =
-    let
-        position el p =
-            el
-                |> Modify.wrapHtml
-                |> Modify.addAttr (PositionFrame (Nearby Below))
-                |> Modify.removeAttrs [ VAlign Top, VAlign Bottom ]
-                |> Modify.addChild p
-    in
-        List.foldr position parent nearbys
-
-
-{-| -}
-onRight : List (Element style variation msg) -> Element style variation msg -> Element style variation msg
-onRight nearbys parent =
-    let
-        position el p =
-            el
-                |> Modify.wrapHtml
-                |> Modify.addAttr (PositionFrame (Nearby OnRight))
-                |> Modify.removeAttrs [ HAlign Right, HAlign Left ]
-                |> Modify.addChild p
-    in
-        List.foldr position parent nearbys
-
-
-{-| -}
-onLeft : List (Element style variation msg) -> Element style variation msg -> Element style variation msg
-onLeft nearbys parent =
-    let
-        position el p =
-            el
-                |> Modify.wrapHtml
-                |> Modify.addAttr (PositionFrame (Nearby OnLeft))
-                |> Modify.removeAttrs [ HAlign Right, HAlign Left ]
-                |> Modify.addChild p
-    in
-        List.foldr position parent nearbys
-
-
-{-| Position an element relative to the window.
-
-Essentially the same as `display: fixed`.
-
-If you're trying to make a modal, check out `Element.Location.modal`
-
--}
-screen : Element style variation msg -> Element style variation msg
-screen el =
-    Element
-        { node = "div"
-        , style = Nothing
-        , attrs =
-            [ PositionFrame Screen
-            , Width (Style.Calc 100 0)
-            , Height (Style.Calc 100 0)
-            , PointerEvents False
-            ]
-        , child = empty
-        , absolutelyPositioned = Nothing
-        }
-        |> within
-            [ el
-            ]
-
-
-{-| Embeds the stylesheet and renders the `Element`'s into `Html`.
--}
-layout : StyleSheet style variation -> Element style variation msg -> Html msg
-layout =
-    Render.root
-
-
-{-| Same as `layout`, but the height and width of the site is set to the height and width of the screen.
--}
-viewport : StyleSheet style variation -> Element style variation msg -> Html msg
-viewport =
-    Render.viewport
-
-
-{-| Renders `Element`'s into `Html`, but does not embed a stylesheet.
--}
-toHtml : StyleSheet style variation -> Element style variation msg -> Html msg
-toHtml stylesheet el =
-    Html.div []
-        (Render.render stylesheet el)
-
-
-{-| Embed a stylesheet.
--}
-embedStylesheet : StyleSheet style variation -> Html msg
-embedStylesheet sheet =
-    -- We embed it not as a fullscreen
-    Html.div [] (Render.embed False sheet)
-
-
-{-| -}
-type alias Device =
-    { width : Int
-    , height : Int
-    , phone : Bool
-    , tablet : Bool
-    , desktop : Bool
-    , bigDesktop : Bool
-    , portrait : Bool
-    }
-
-
-{-| Takes in a Window.Size and returns a device profile which can be used for responsiveness.
--}
-classifyDevice : Window.Size -> Device
-classifyDevice { width, height } =
-    { width = width
-    , height = height
-    , phone = width <= 600
-    , tablet = width > 600 && width <= 1200
-    , desktop = width > 1200 && width <= 1800
-    , bigDesktop = width > 1800
-    , portrait = width < height
-    }
-
-
-{-| Define two ranges that should linearly match up with each other.
-
-Provide a value for the first and receive the calculated value for the second.
-
-    fontsize =
-        responsive device.width ( 600, 1200 ) ( 16, 20 )
-
-When the device width is between 600 and 1200, set the font-size between 16 and 20 using a linear scale.
-
--}
-responsive : Float -> ( Float, Float ) -> ( Float, Float ) -> Float
-responsive a ( aMin, aMax ) ( bMin, bMax ) =
-    if a <= aMin then
-        bMin
-    else if a >= aMax then
-        bMax
+onRight : Bool -> Internal.Element msg -> Attribute msg
+onRight on element =
+    if on then
+        Internal.Nearby Internal.OnRight element
     else
-        let
-            deltaA =
-                (a - aMin) / (aMax - aMin)
-        in
-            (deltaA * (bMax - bMin)) + bMin
-
-
-{-| Change the msg that an Element is sending.
-
-An analog of `Html.map`.
-
--}
-map : (a -> msg) -> Element style variation a -> Element style variation msg
-map =
-    Internal.mapMsg
-
-
-{-| An area that houses the controls for running a search.
-
-While `Element.Input.search` will create a literal search input,
-this element is meant to group all the controls that are involved with searching,
-such as filters and the search button.
-
--}
-search : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-search style attrs child =
-    Internal.Element
-        { node = "div"
-        , style = Just style
-        , attrs = Attr.width Attr.fill :: Attr.attribute "role" "search" :: attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
-
-
-{-| The main navigation of the site, rendered as a row.
-
-The required `name` is used by accessibility software to describe to non-sighted users what this navigation element pertains to.
-
-Don't leave `name` blank, even if you just put *"Main Navigation"* in it.
-
-     navigation NavMenuStyle
-        []
-        { name = "Main Navigation"
-        , options =
-            [ link "/profile" (el NavLink [] (text "profile"))
-            , link "/logout" (el NavLink [] (text "logout"))
-            ]
-        }
-
--}
-navigation : style -> List (Attribute variation msg) -> { options : List (Element style variation msg), name : String } -> Element style variation msg
-navigation style attrs { options, name } =
-    Internal.Element
-        { node = "nav"
-        , style = Nothing
-        , attrs = [ Attr.attribute "role" "navigation", Attr.attribute "aria-label" name ]
-        , child =
-            Internal.Layout
-                { node = "ul"
-                , style = Just style
-                , layout = Style.FlexLayout Style.GoRight []
-                , attrs = attrs
-                , children =
-                    options
-                        |> List.map (Modify.setNode "li")
-                        |> Internal.Normal
-                , absolutelyPositioned = Nothing
-                }
-        , absolutelyPositioned = Nothing
-        }
+        Internal.NoAttribute
 
 
 {-| -}
-navigationColumn : style -> List (Attribute variation msg) -> { options : List (Element style variation msg), name : String } -> Element style variation msg
-navigationColumn style attrs { options, name } =
-    Internal.Element
-        { node = "nav"
-        , style = Nothing
-        , attrs = [ Attr.attribute "role" "navigation", Attr.attribute "aria-label" name ]
-        , child =
-            Internal.Layout
-                { node = "ul"
-                , style = Just style
-                , layout = Style.FlexLayout Style.Down []
-                , attrs = attrs
-                , children =
-                    options
-                        |> List.map (Modify.setNode "li")
-                        |> Internal.Normal
-                , absolutelyPositioned = Nothing
-                }
-        , absolutelyPositioned = Nothing
-        }
+onLeft : Bool -> Internal.Element msg -> Attribute msg
+onLeft on element =
+    if on then
+        Internal.Nearby Internal.OnLeft element
+    else
+        Internal.NoAttribute
 
 
-{-| This is the main page header area.
+{-| -}
+inFront : Bool -> Internal.Element msg -> Attribute msg
+inFront on element =
+    if on then
+        Internal.Nearby Internal.InFront element
+    else
+        Internal.NoAttribute
+
+
+{-| -}
+behind : Bool -> Internal.Element msg -> Attribute msg
+behind on element =
+    if on then
+        Internal.Nearby Internal.Behind element
+    else
+        Internal.NoAttribute
+
+
+{-| -}
+width : Length -> Attribute msg
+width =
+    Internal.Width
+
+
+{-| -}
+height : Length -> Attribute msg
+height =
+    Internal.Height
+
+
+{-| -}
+scale : Float -> Attribute msg
+scale n =
+    Internal.Transform Nothing (Internal.Scale n n 1)
+
+
+{-| -}
+mouseOverScale : Float -> Attribute msg
+mouseOverScale n =
+    Internal.Transform (Just Internal.Hover) (Internal.Scale n n 1)
+
+
+{-| -}
+rotate : Float -> Attribute msg
+rotate angle =
+    Internal.Transform Nothing (Internal.Rotate 0 0 1 angle)
+
+
+
+-- {-| -}
+-- mouseOverRotate : Float -> Attribute msg
+-- mouseOverRotate angle =
+--     Internal.Transform (Just Internal.Hover) (Internal.Rotate 0 0 1 angle)
+
+
+{-| -}
+moveUp : Float -> Attribute msg
+moveUp y =
+    Internal.Transform Nothing (Internal.Move Nothing (Just (negate y)) Nothing)
+
+
+{-| -}
+moveDown : Float -> Attribute msg
+moveDown y =
+    Internal.Transform Nothing (Internal.Move Nothing (Just y) Nothing)
+
+
+{-| -}
+moveRight : Float -> Attribute msg
+moveRight x =
+    Internal.Transform Nothing (Internal.Move (Just x) Nothing Nothing)
+
+
+{-| -}
+moveLeft : Float -> Attribute msg
+moveLeft x =
+    Internal.Transform Nothing (Internal.Move (Just (negate x)) Nothing Nothing)
+
+
+{-| -}
+padding : Int -> Attribute msg
+padding x =
+    Internal.StyleClass (Internal.PaddingStyle x x x x)
+
+
+{-| Set horizontal and vertical padding.
 -}
-header : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-header style attrs child =
-    Internal.Element
-        { node = "header"
-        , style = Just style
-        , attrs = Attr.width Attr.fill :: Attr.attribute "role" "banner" :: attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
+paddingXY : Int -> Int -> Attribute msg
+paddingXY x y =
+    Internal.StyleClass (Internal.PaddingStyle y x y x)
 
 
-{-| This is the main page footer where your copyright and other infomation should live.
+{-| -}
+paddingEach : { bottom : Int, left : Int, right : Int, top : Int } -> Attribute msg
+paddingEach { top, right, bottom, left } =
+    Internal.StyleClass (Internal.PaddingStyle top right bottom left)
+
+
+{-| -}
+center : Attribute msg
+center =
+    Internal.AlignX Internal.CenterX
+
+
+{-| -}
+centerY : Attribute msg
+centerY =
+    Internal.AlignY Internal.CenterY
+
+
+{-| -}
+alignTop : Attribute msg
+alignTop =
+    Internal.AlignY Internal.Top
+
+
+{-| -}
+alignBottom : Attribute msg
+alignBottom =
+    Internal.AlignY Internal.Bottom
+
+
+{-| -}
+alignLeft : Attribute msg
+alignLeft =
+    Internal.AlignX Internal.Left
+
+
+{-| -}
+alignRight : Attribute msg
+alignRight =
+    Internal.AlignX Internal.Right
+
+
+{-| -}
+spaceEvenly : Attribute msg
+spaceEvenly =
+    Internal.Class "x-align" "space-evenly"
+
+
+{-| -}
+spacing : Int -> Attribute msg
+spacing x =
+    Internal.StyleClass (Internal.SpacingStyle x x)
+
+
+{-| In the majority of cases you'll just need to use `spacing`, which will work as intended.
+
+However for some layouts, like `textColumn`, you may want to set a different spacing for the x axis compared to the y axis.
+
 -}
-footer : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-footer style attrs child =
-    Internal.Element
-        { node = "footer"
-        , style = Just style
-        , attrs = Attr.width Attr.fill :: Attr.attribute "role" "contentinfo" :: attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
+spacingXY : Int -> Int -> Attribute msg
+spacingXY x y =
+    Internal.StyleClass (Internal.SpacingStyle x y)
 
 
-{-| This is a sidebar which contains complementary information to your main content.
+{-| -}
+hidden : Bool -> Attribute msg
+hidden on =
+    if on then
+        Internal.class "hidden"
+    else
+        Internal.NoAttribute
 
-It's rendered as a column.
 
+{-| -}
+scrollbars : Attribute msg
+scrollbars =
+    Internal.Class "overflow" "scrollbars"
+
+
+{-| -}
+scrollbarY : Attribute msg
+scrollbarY =
+    Internal.Class "overflow" "scrollbars-y"
+
+
+{-| -}
+scrollbarX : Attribute msg
+scrollbarX =
+    Internal.Class "overflow" "scrollbars-x"
+
+
+{-| -}
+clip : Attribute msg
+clip =
+    Internal.Class "overflow" "clip"
+
+
+{-| -}
+clipY : Attribute msg
+clipY =
+    Internal.Class "overflow" "clip-y"
+
+
+{-| -}
+clipX : Attribute msg
+clipX =
+    Internal.Class "overflow" "clip-x"
+
+
+{-| Set the cursor to the pointer hand.
 -}
-sidebar : style -> List (Attribute variation msg) -> List (Element style variation msg) -> Element style variation msg
-sidebar style attrs children =
-    Internal.Layout
-        { node = "aside"
-        , style = Just style
-        , layout = Style.FlexLayout Style.Down []
-        , attrs = Attr.attribute "role" "complementary" :: attrs
-        , children = Internal.Normal children
-        , absolutelyPositioned = Nothing
-        }
+pointer : Attribute msg
+pointer =
+    Internal.Class "cursor" "cursor-pointer"
 
 
-{-| The main content of your page.
--}
-mainContent : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-mainContent style attrs child =
-    Internal.Element
-        { node = "main"
-        , style = Just style
-        , attrs = Attr.width Attr.fill :: Attr.height Attr.fill :: Attr.attribute "role" "main" :: attrs
-        , child = child
-        , absolutelyPositioned = Nothing
-        }
 
-
-{-| This is a modal
--}
-modal : style -> List (Attribute variation msg) -> Element style variation msg -> Element style variation msg
-modal style attrs child =
-    screen <|
-        Internal.Element
-            { node = "div"
-            , style = Just style
-            , attrs = Attr.attribute "role" "alertdialog" :: Attr.attribute "aria-modal" "true" :: attrs
-            , child = child
-            , absolutelyPositioned = Nothing
-            }
+-- {-| If we have this construct, it makes it easier to change states for something like a button.
+--     el
+--         [ Color.background blue
+--         , onClick Send
+--         , mixIf model.disabled
+--             [ Color.background grey
+--             , onClick NoOp
+--             ]
+--         ]
+-- Does it allow elimination of event handlers? Would have to rely on html behavior for that if it's true.
+-- People could implement systems that involve multiple properties being set together.
+-- Example of a disabled button
+--     Input.button
+--         [ Color.background
+--             ( if disabled then
+--                 grey
+--              else
+--                 blue
+--             )
+--         , Color.border
+--             ( if disabled then
+--                 grey
+--              else
+--                 blue
+--             )
+--         ]
+--         { onPress = switch model.disabled Send
+--         , label = text "Press me"
+--         }
+-- Advantages: no new constructs(!)
+-- Disadvantages: could get verbose in the case of many properties set.
+--   - How many properties would likely vary in this way?
+--   - Would a `Color.palette {text, background, border}` go help?
+--     Input.button
+-- [ Color.palette
+--     ( if disabled then
+--         { background = grey
+--         , text = darkGrey
+--         , border = grey
+--         }
+--     else
+--         { background = blue
+--         , text = black
+--         , border = blue
+--         }
+--     )
+-- ]
+-- { onPress = switch model.disabled Send
+-- , label = text "Press me"
+-- }
+-- -- with mixIf
+--     Input.button
+--         [ Color.background blue
+--         , mixIf model.disabled
+--             [ Color.background grey
+--             ]
+--         ]
+--         { onPress = (if model.disabled then Nothing else Just Send )
+--         , label = text "Press me"
+--         }
+-- Advantages:
+--   - Any properties can be set together.
+--   - Would allow `above`/`below` type elements to be triggered manually.
+-- Disadvantages:
+--   - Does binding certain properties together lead to a good experience?
+-- -}
+-- mixIf : Bool -> List (Attribute msg) -> List (Attribute msg)
+-- mixIf on attrs =
+--     if on then
+--         attrs
+--     else
+--         []
+-- {-| For the hover pseudoclass, the considerations:
+-- 1.  What happens on mobile/touch devices?
+--       - Let the platform handle it
+-- 2.  We can make the hover event show a 'nearby', like 'below' or something.
+--       - what happens on mobile? Do first clicks now perform that action?
+-- -}
+-- {-| -}
+-- blur : Float -> Attribute msg
+-- blur x =
+--     Internal.Filter (Internal.Blur x)
+-- {-| -}
+-- grayscale : Float -> Attribute msg
+-- grayscale x =
+--     Internal.Filter (Internal.Grayscale x)
+-- -- hoverColors : { text : Maybe Color, background : Maybe Color, border : Maybe Color }
+-- type alias Style =
+--     Internal.Attribute Never
+-- type alias Shadow =
+--     { color : Color
+--     , offset : ( Int, Int )
+--     , blur : Int
+--     , size : Int
+--     }
+-- type alias Hoverable =
+--     { textColor : Maybe Color
+--     , backgroundColor : Maybe Color
+--     , borderColor : Maybe Color
+--     , scale : Maybe Int
+--     , shadow : Maybe Shadow
+--     }
+-- {-| -}
+-- mouseOver : List Style -> Attribute msg
+-- mouseOver attrs =
+--     Internal.Pseudo
+--         { class = Internal.Hover
+--         , attributes = List.map (Internal.mapAttr never) attrs
+--         }
