@@ -48,7 +48,7 @@ My current thinking is that you have 2 really powerful methods of capturing your
 
 1. Just put it in a view function. If you have a few button variations you want, just create a function for each variation.  You probably don't need a huge number of variations.  You don't need to think of it like recreating bootstrap in style-elements.
 
-2. Create a `Style` module that captures the _values_ you use for your styling. Keep your colors there, as well as values for spacing, font names, and font sizes.  You should consider using a scaling function for things like spacing and fontsizes.  Check out `Element.scale` if you're not suing it already.
+2. Create a `Style` module that captures the _values_ you use for your styling. Keep your colors there, as well as values for spacing, font names, and font sizes.  You should consider using a scaling function for things like spacing and fontsizes. 
 
 I'm going to write more on this, which will present more of an argument and include some examples when I do the next pass at documentation.
 
