@@ -97,12 +97,11 @@ Also of note, is that if something is `center`, then it will truly be in the cen
 
 **Percent** - `percent` is no longer there for width/height values. Just use `fill`, because you were probably just using `percent 100`, right?  If you really need something like percent, you can manage it pretty easy with `fillPortion`. The main reason this goes away is that `percent` allows you to accidently overflow your element when trying to sum up multiple elements.
 
-
 **Grids** - `grid`, and `namedGrid` are gone.  The reason for this is that for 95% of cases, just composing something with `row` and `column` results in _much_ nicer code.  I'm open to see arguments for `grid`, but I need to see specific realworld usecases that can't be done using `row` and `column`.
 
 **WrappedRows/Columns** - wrappedRow` and `wrappedColumn` are gone.  From what I can see these cases don't show up very often.  Removing them allows me to be cleaner with the internal style-elements code as well.
 
-**when/whenJust** - `when` and `whenJust` are removed, though you can easily make a convenience function for yourself!  I wanted the library to place an emphasis on common elm constructs instead of library-specific ones.  As far as shortcuts, they don't actually save you much anyway.
+**When/WhenJust** - `when` and `whenJust` are removed, though you can easily make a convenience function for yourself!  I wanted the library to place an emphasis on common elm constructs instead of library-specific ones.  As far as shortcuts, they don't actually save you much anyway.
 
-**full, spacer** - `full` and `spacer have been removed in order to follow the libraries priority of explicitness.  `full` would override the parents padding, while `spacer` would override the parent's `spacing`.  Both can be achieved with the more common primities of `row`, `column` and `spacing`, and potentially some nesting of layouts.
+**Full, Spacer** - `full` and `spacer` have been removed in order to follow the libraries priority of explicitness.  `full` would override the parents padding, while `spacer` would override the parent's `spacing`.  Both can be achieved with the more common primities of `row`, `column` and `spacing`, and potentially some nesting of layouts.
 
