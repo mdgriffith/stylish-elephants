@@ -2,9 +2,9 @@
 
 This was a MAJOR rewrite of the internal html generation, which is one of the reasons it's taken so long to get to the alpha stage :)
 
-* _Major Performance improvement_ - Style Elements v5 is much faster than v4 due to a better rendering strategy and generating very minimal html. The rewritten architecture also allows me to explore a few other optimizations, so things may get even faster than they are now.
+* **Major Performance improvement** - Style Elements v5 is much faster than v4 due to a better rendering strategy and generating very minimal html. The rewritten architecture also allows me to explore a few other optimizations, so things may get even faster than they are now.
 
-* _Lazy is here!_ - It works with no weird caveats.
+* **Lazy is here!** - It works with no weird caveats.
 
 ## No Stylesheet
 
@@ -33,30 +33,27 @@ It was!  So why is there only `Element` and no `StyleSheet` now?
 
 The key insight is that it's not so much the separation of layout and style that is important as it is that _properties affecting layout should all be in the view function_.  The main thing is _not_ having layout specified through several layers of indirection, but having everything explict and in one place.
 
-The new version moves to a more refined version of this idea: Everything should be explicit and in your view!
+The new version moves to a more refined version of this idea: **Everything should be explicit and in your view!**
 
 
 ## Style Organization
 
 Your next question might be "if we don't have a stylesheet, how to we capture our style logic in a nice way?"
 
-The main thing I've found is that stylesheets in general seem to be pretty hard to maintain.  Even well-typed stylesheets that only allow single classes!  You have to manage names for everything
+The main thing I've found is that stylesheets in general seem to be pretty hard to maintain.  Even well-typed stylesheets that only allow single classes!  You have to manage names for everything, and in the case of large style refactors it's not obvious that style classes would be organized the same way.
 
 So, I'm not sure that stylesheets or something like stylesheets are the way to go.
 
 My current thinking is that you have 2 really powerful methods of capturing your styling logic.
 
-1. Just put it in a view function. If you have a few button variations you want, just create a function for each variation.  You probably don't need a huge number of variations.  You don't need to think of it like recreating bootstrap in style-elements.
+1. **Just put it in a view function.** If you have a few button variations you want, just create a function for each variation.  You probably don't need a huge number of variations.  You don't need to think of it like recreating bootstrap in style-elements.
 
-2. Create a `Style` module that captures the _values_ you use for your styling. Keep your colors there, as well as values for spacing, font names, and font sizes.  You should consider using a scaling function for things like spacing and fontsizes. 
-
-I'm going to write more on this, which will present more of an argument and include some examples when I do the next pass at documentation.
-
+2. **Capture your colors, font sizes, etc.**  Create a `Style` module that captures the **values** you use for your styling. Keep your colors there, as well as values for spacing, font names, and font sizes all in one place.  You should consider using a scaling function for things like spacing and fontsizes. 
 
 
 ## Element.Area
 
-The `Element.Area` module is now how you can do accessibility markup like tag where your navigation is.
+The `Element.Area` module is now how you can do accessibility markup.
 
 You can do this by adding an area notation to an element's attributes.
 
@@ -65,10 +62,18 @@ import Element.Area as Area
 
 row [ Area.navigation ] 
     [ --..my navigation links
-
     ]
 
 ```
+Or you can make something an `<h1>`
+
+```
+el [ Area.heading 1 ] (text "Super important stuff")
+
+```
+
+This means your accessibility markup is separate from your layout markup, which turns out to be really nice.
+
 
 
 ## Alignment
@@ -99,7 +104,7 @@ Also of note, is that if something is `center`, then it will truly be in the cen
 
 **Grids** - `grid`, and `namedGrid` are gone.  The reason for this is that for 95% of cases, just composing something with `row` and `column` results in _much_ nicer code.  I'm open to see arguments for `grid`, but I need to see specific realworld usecases that can't be done using `row` and `column`.
 
-**WrappedRows/Columns** - wrappedRow` and `wrappedColumn` are gone.  From what I can see these cases don't show up very often.  Removing them allows me to be cleaner with the internal style-elements code as well.
+**WrappedRows/Columns** - `wrappedRow` and `wrappedColumn` are gone.  From what I can see these cases don't show up very often.  Removing them allows me to be cleaner with the internal style-elements code as well.
 
 **When/WhenJust** - `when` and `whenJust` are removed, though you can easily make a convenience function for yourself!  I wanted the library to place an emphasis on common elm constructs instead of library-specific ones.  As far as shortcuts, they don't actually save you much anyway.
 
