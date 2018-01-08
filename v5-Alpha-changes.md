@@ -79,12 +79,13 @@ Alignment got a _bunch_ of attention to make it more powerful and intuitive.
 
 * _It works everywhere!_  Previously, if you set a child as `alignLeft` in a row, nothing would happen.  The main weirdness that had to be resolved is what happens to the other elements when an el in the middle of a row is aligned.  The answer I came up with is that it will push other elements to the side.
 
->         alignLeft(pushes element on the left of it, to the left)
->         |              center(is the default now)
->         |              |                    alignRight
->         v              v                    v
->  |-el-|-el-|---------|-el-|---------------|-el-|
->
+```
+         alignLeft(pushes element on the left of it, to the left)
+         |              center(is the default now)
+         |              |                    alignRight
+         v              v                    v
+  |-el-|-el-|---------|-el-|---------------|-el-|
+```
 
 Also of note, is that if something is `center`, then it will truly be in the center.
 
@@ -94,8 +95,14 @@ Also of note, is that if something is `center`, then it will truly be in the cen
 ## Things that have been removed/deprecated
 
 
-* `percent` is no longer there for width/height values. Just use `fill`, because you were probably just using `percent 100`, right?  If you really need something like percent, you can manage it pretty easy with `fillPortion`. The main reason this goes away is that `percent` allows you to accidently overflow your element when trying to sum up multiple elements.
-* `grid`, and `namedGrid` are gone.  The reason for this is that for 95% of cases, just composing something with `row` and `column` results in _much_ nicer code.  I'm open to see arguments for `grid`, but I need to see specific realworld usecases that can't be done using `row` and `column`.
-* `wrappedRow` and `wrappedColumn` are gone.  From what I can see these cases don't show up very often.  Removing them allows me to be cleaner with the internal style-elements code as well.
-* `when` and `whenJust` are removed, though you can easily make a convenience function for yourself!  I wanted the library to place an emphasis on common elm constructs instead of library-specific ones.  As far as shortcuts, they don't actually save you much anyway.
+*Percent* - `percent` is no longer there for width/height values. Just use `fill`, because you were probably just using `percent 100`, right?  If you really need something like percent, you can manage it pretty easy with `fillPortion`. The main reason this goes away is that `percent` allows you to accidently overflow your element when trying to sum up multiple elements.
+
+
+*Grids* - `grid`, and `namedGrid` are gone.  The reason for this is that for 95% of cases, just composing something with `row` and `column` results in _much_ nicer code.  I'm open to see arguments for `grid`, but I need to see specific realworld usecases that can't be done using `row` and `column`.
+
+*WrappedRows/Columns* - wrappedRow` and `wrappedColumn` are gone.  From what I can see these cases don't show up very often.  Removing them allows me to be cleaner with the internal style-elements code as well.
+
+*when/whenJust* - `when` and `whenJust` are removed, though you can easily make a convenience function for yourself!  I wanted the library to place an emphasis on common elm constructs instead of library-specific ones.  As far as shortcuts, they don't actually save you much anyway.
+
+*full, spacer* - `full` and `spacer have been removed in order to follow the libraries priority of explicitness.  `full` would override the parents padding, while `spacer` would override the parent's `spacing`.  Both can be achieved with the more common primities of `row`, `column` and `spacing`, and potentially some nesting of layouts.
 
