@@ -740,6 +740,9 @@ rules =
             -- Must be below the alignment rules or else it interferes
             , Descriptor ".space-evenly"
                 [ Prop "justify-content" "space-between"
+                , Child ".spacer"
+                    [ Prop "display" "none"
+                    ]
                 ]
             ]
         , Class (class Column)
@@ -832,6 +835,9 @@ rules =
                 ]
             , Descriptor ".space-evenly"
                 [ Prop "justify-content" "space-between"
+                , Child ".spacer"
+                    [ Prop "display" "none"
+                    ]
                 ]
             ]
         , Class (class Grid)
