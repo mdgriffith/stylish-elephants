@@ -376,13 +376,6 @@ rules =
                         ]
                 )
             ]
-        , Class ("input" ++ class Any)
-            [ Prop "border" "none"
-            ]
-        , Class ("a" ++ class Any)
-            [ Prop "text-decoration" "none"
-            , Prop "color" "inherit"
-            ]
         , Class (class Root)
             [ Prop "width" "100%"
             , Prop "height" "auto"
@@ -390,6 +383,8 @@ rules =
             ]
         , Class (class Any)
             [ Prop "position" "relative"
+            , Prop "border" "none"
+            , Prop "text-decoration" "none"
             , Prop "flex-shrink" "0"
             , Prop "display" "flex"
             , Prop "flex-direction" "row"
@@ -407,8 +402,21 @@ rules =
             , Prop "font-family" "inherit"
             , Prop "line-height" "inherit"
             , Prop "font-weight" "normal"
+            , Descriptor ".no-text-selection"
+                [ Prop "user-select" "none"
+                , Prop "-ms-user-select" "none"
+                ]
             , Descriptor ".cursor-pointer"
                 [ Prop "cursor" "pointer"
+                ]
+            , Descriptor ".cursor-text"
+                [ Prop "cursor" "text"
+                ]
+            , Descriptor ".pass-pointer-events"
+                [ Prop "pointer-events" "none"
+                ]
+            , Descriptor ".capture-pointer-events"
+                [ Prop "pointer-events" "nauto"
                 ]
             , Descriptor ".hover-transition"
                 [ Prop "transition"
@@ -677,6 +685,7 @@ rules =
                 ]
             , Child ".spacer"
                 [ Prop "margin-left" "0 !important"
+                , Prop "height" "auto !important"
                 ]
             , Child ".spacer + .se"
                 [ Prop "margin-left" "0 !important"

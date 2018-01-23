@@ -29,7 +29,9 @@ type LayoutContext
     | AsColumn
     | AsEl
     | AsGrid
-    | AsGridEl
+      -- | AsGridEl
+    | AsParagraph
+    | AsTextColumn
 
 
 
@@ -56,9 +58,36 @@ asEl =
     AsEl
 
 
-asGridEl : LayoutContext
-asGridEl =
-    AsGridEl
+asParagraph : LayoutContext
+asParagraph =
+    AsParagraph
+
+
+asTextColumn : LayoutContext
+asTextColumn =
+    AsTextColumn
+
+
+contextClasses : LayoutContext -> Attribute msg
+contextClasses context =
+    case context of
+        AsRow ->
+            htmlClass "se row"
+
+        AsColumn ->
+            htmlClass "se column"
+
+        AsEl ->
+            htmlClass "se el"
+
+        AsGrid ->
+            htmlClass "se grid"
+
+        AsParagraph ->
+            htmlClass "se paragraph"
+
+        AsTextColumn ->
+            htmlClass "se page"
 
 
 type Aligned
@@ -142,7 +171,7 @@ type Attribute msg
     | AlignX HAlign
     | Width Length
     | Height Length
-    | Nearby Location (Element msg)
+    | Nearby Location Bool (Element msg)
     | Transform (Maybe PseudoClass) Transformation
     | TextShadow
         { offset : ( Float, Float )
@@ -196,6 +225,14 @@ type Length
     = Px Int
     | Content
     | Fill Int
+
+
+
+-- | Between
+--     { value : Length
+--     , min : Maybe Int
+--     , max : Maybe Int
+--     }
 
 
 type Axis
@@ -260,8 +297,8 @@ mapAttr fn attr =
         StyleClass style ->
             StyleClass style
 
-        Nearby location element ->
-            Nearby location (map fn element)
+        Nearby location on element ->
+            Nearby location on (map fn element)
 
         Transform pseudo trans ->
             Transform pseudo trans
@@ -321,8 +358,8 @@ unstyled =
 
 
 {-| -}
-renderNode : Aligned -> NodeName -> List (VirtualDom.Property msg) -> Children (VirtualDom.Node msg) -> Maybe String -> LayoutContext -> VirtualDom.Node msg
-renderNode alignment node attrs children styles context =
+renderNode : Gathered msg -> Children (VirtualDom.Node msg) -> Maybe String -> LayoutContext -> VirtualDom.Node msg
+renderNode { alignment, attributes, node, width, height } children styles context =
     let
         createNode node attrs styles =
             case children of
@@ -354,166 +391,73 @@ renderNode alignment node attrs children styles context =
         html =
             case node of
                 Generic ->
-                    createNode "div" attrs styles
+                    createNode "div" attributes styles
 
                 NodeName nodeName ->
-                    createNode nodeName attrs styles
+                    createNode nodeName attributes styles
 
                 Embedded nodeName internal ->
                     VirtualDom.node nodeName
-                        attrs
+                        attributes
                         [ createNode internal [ Html.Attributes.class "se el" ] styles
                         ]
     in
     case context of
-        AsEl ->
-            html
-
-        AsGrid ->
-            html
-
-        AsGridEl ->
-            html
-
         AsRow ->
-            case alignment of
-                Unaligned ->
+            case width of
+                Just (Fill _) ->
                     html
-
-                Aligned (Just Left) _ ->
-                    VirtualDom.node "alignLeft"
-                        [ Html.Attributes.class "se el container align-container-left content-center-y" ]
-                        [ html ]
-
-                Aligned (Just Right) _ ->
-                    VirtualDom.node "alignRight"
-                        [ Html.Attributes.class "se el container align-container-right content-center-y" ]
-                        [ html ]
 
                 _ ->
-                    html
+                    case alignment of
+                        Unaligned ->
+                            html
+
+                        Aligned (Just Left) _ ->
+                            VirtualDom.node "alignLeft"
+                                [ Html.Attributes.class "se el container align-container-left content-center-y" ]
+                                [ html ]
+
+                        Aligned (Just Right) _ ->
+                            VirtualDom.node "alignRight"
+                                [ Html.Attributes.class "se el container align-container-right content-center-y" ]
+                                [ html ]
+
+                        _ ->
+                            html
 
         AsColumn ->
-            case alignment of
-                Unaligned ->
-                    VirtualDom.node "alignTop"
-                        [ Html.Attributes.class "se el container align-container-top" ]
-                        [ html ]
-
-                Aligned _ Nothing ->
-                    VirtualDom.node "alignTop"
-                        [ Html.Attributes.class "se el container align-container-top" ]
-                        [ html ]
-
-                Aligned _ (Just Top) ->
-                    VirtualDom.node "alignTop"
-                        [ Html.Attributes.class "se el container align-container-top" ]
-                        [ html ]
-
-                Aligned _ (Just Bottom) ->
-                    VirtualDom.node "alignBottom"
-                        [ Html.Attributes.class "se el container align-container-bottom" ]
-                        [ html ]
+            case height of
+                Just (Fill _) ->
+                    html
 
                 _ ->
-                    html
+                    case alignment of
+                        Unaligned ->
+                            VirtualDom.node "alignTop"
+                                [ Html.Attributes.class "se el container align-container-top" ]
+                                [ html ]
 
+                        Aligned _ Nothing ->
+                            VirtualDom.node "alignTop"
+                                [ Html.Attributes.class "se el container align-container-top" ]
+                                [ html ]
 
-renderKeyedNode : Aligned -> NodeName -> List (VirtualDom.Property msg) -> List ( String, VirtualDom.Node msg ) -> Maybe String -> LayoutContext -> VirtualDom.Node msg
-renderKeyedNode alignment node attrs children styles context =
-    let
-        html =
-            case node of
-                Generic ->
-                    VirtualDom.keyedNode "div"
-                        attrs
-                        (case styles of
-                            Nothing ->
-                                children
+                        Aligned _ (Just Top) ->
+                            VirtualDom.node "alignTop"
+                                [ Html.Attributes.class "se el container align-container-top" ]
+                                [ html ]
 
-                            Just stylesheet ->
-                                ( "stylesheet-pls-pls-pls-be-unique"
-                                , VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ Html.text stylesheet ]
-                                )
-                                    :: children
-                        )
+                        Aligned _ (Just Bottom) ->
+                            VirtualDom.node "alignBottom"
+                                [ Html.Attributes.class "se el container align-container-bottom" ]
+                                [ html ]
 
-                NodeName nodeName ->
-                    VirtualDom.keyedNode nodeName
-                        attrs
-                        (case styles of
-                            Nothing ->
-                                children
+                        _ ->
+                            html
 
-                            Just stylesheet ->
-                                ( "stylesheet-pls-pls-pls-be-unique"
-                                , VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ Html.text stylesheet ]
-                                )
-                                    :: children
-                        )
-
-                Embedded nodeName internal ->
-                    VirtualDom.node nodeName
-                        attrs
-                        [ VirtualDom.keyedNode internal
-                            [ Html.Attributes.class "se el" ]
-                            (case styles of
-                                Nothing ->
-                                    children
-
-                                Just stylesheet ->
-                                    ( "stylesheet-pls-pls-pls-be-unique"
-                                    , VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ Html.text stylesheet ]
-                                    )
-                                        :: children
-                            )
-                        ]
-    in
-    case context of
-        AsEl ->
+        _ ->
             html
-
-        AsGridEl ->
-            html
-
-        AsGrid ->
-            html
-
-        AsRow ->
-            case alignment of
-                Unaligned ->
-                    html
-
-                Aligned (Just Left) _ ->
-                    VirtualDom.node "alignLeft"
-                        [ Html.Attributes.class "se el container align-container-left" ]
-                        [ html ]
-
-                Aligned (Just Right) _ ->
-                    VirtualDom.node "alignRight"
-                        [ Html.Attributes.class "se el container align-container-right" ]
-                        [ html ]
-
-                _ ->
-                    html
-
-        AsColumn ->
-            case alignment of
-                Unaligned ->
-                    html
-
-                Aligned _ (Just Top) ->
-                    VirtualDom.node "alignTop"
-                        [ Html.Attributes.class "se el container align-container-top" ]
-                        [ html ]
-
-                Aligned _ (Just Bottom) ->
-                    VirtualDom.node "alignBottom"
-                        [ Html.Attributes.class "se el container align-container-bottom" ]
-                        [ html ]
-
-                _ ->
-                    html
 
 
 addNodeName : String -> NodeName -> NodeName
@@ -747,7 +691,7 @@ gatherAttributes attr gathered =
                 LiveAssertive ->
                     { gathered | attributes = Html.Attributes.attribute "aria-live" "assertive" :: gathered.attributes }
 
-        Nearby location elem ->
+        Nearby location on elem ->
             let
                 nearbyGroup =
                     case gathered.nearbys of
@@ -785,13 +729,13 @@ gatherAttributes attr gathered =
                                     Nothing
 
                                 Text str ->
-                                    Just (textElement str)
+                                    Just ( on, textElement str )
 
                                 Unstyled html ->
-                                    Just (html asEl)
+                                    Just ( on, html asEl )
 
                                 Styled styled ->
-                                    Just (styled.html Nothing asEl)
+                                    Just ( on, styled.html Nothing asEl )
 
                         _ ->
                             existing
@@ -1022,6 +966,62 @@ gatherAttributes attr gathered =
                             gathered
 
 
+floorAtZero : Int -> Int
+floorAtZero x =
+    if x > 0 then
+        x
+    else
+        0
+
+
+{-| Paragraph's use a slightly different mode of spacing, which is that it's gives every child a margin of 1/2 of the spacing value for that axis.
+
+This means paragraph's with spacing must have padding that is at least the same size
+
+-}
+adjustParagraphSpacing : List (Attribute msg) -> List (Attribute msg)
+adjustParagraphSpacing attrs =
+    let
+        adjust ( x, y ) attribute =
+            case attribute of
+                StyleClass (PaddingStyle top right bottom left) ->
+                    StyleClass
+                        (PaddingStyle
+                            (floorAtZero (top - (y // 2)))
+                            (floorAtZero (right - (x // 2)))
+                            (floorAtZero (bottom - (y // 2)))
+                            (floorAtZero (left - (x // 2)))
+                        )
+
+                _ ->
+                    attribute
+
+        spacing =
+            attrs
+                |> List.foldr
+                    (\x acc ->
+                        case acc of
+                            Just x ->
+                                Just x
+
+                            Nothing ->
+                                case x of
+                                    StyleClass (SpacingStyle x y) ->
+                                        Just ( x, y )
+
+                                    _ ->
+                                        Nothing
+                    )
+                    Nothing
+    in
+    case spacing of
+        Nothing ->
+            attrs
+
+        Just ( x, y ) ->
+            List.map (adjust ( x, y )) attrs
+
+
 type alias TransformationAlias a =
     { a
         | rotate : Maybe ( Float, Float, Float, Float )
@@ -1030,6 +1030,7 @@ type alias TransformationAlias a =
     }
 
 
+addScale : a -> b -> c -> { d | scale : Maybe ( a, b, c ) } -> { d | scale : Maybe ( a, b, c ) }
 addScale x y z transformation =
     case transformation.scale of
         Nothing ->
@@ -1042,6 +1043,7 @@ addScale x y z transformation =
             transformation
 
 
+addRotate : a -> b -> c -> d -> { e | rotate : Maybe ( a, b, c, d ) } -> { e | rotate : Maybe ( a, b, c, d ) }
 addRotate x y z angle transformation =
     case transformation.rotate of
         Nothing ->
@@ -1090,12 +1092,12 @@ type NodeName
 
 
 type alias NearbyGroup msg =
-    { above : Maybe (Html msg)
-    , below : Maybe (Html msg)
-    , right : Maybe (Html msg)
-    , left : Maybe (Html msg)
-    , infront : Maybe (Html msg)
-    , behind : Maybe (Html msg)
+    { above : Maybe ( Bool, Html msg )
+    , below : Maybe ( Bool, Html msg )
+    , right : Maybe ( Bool, Html msg )
+    , left : Maybe ( Bool, Html msg )
+    , infront : Maybe ( Bool, Html msg )
+    , behind : Maybe ( Bool, Html msg )
     }
 
 
@@ -1128,10 +1130,10 @@ type alias Gathered msg =
     }
 
 
-initGathered : Maybe String -> List Style -> Gathered msg
-initGathered maybeNodeName styles =
+initGathered : Maybe String -> Gathered msg
+initGathered maybeNodeName =
     { attributes = []
-    , styles = styles
+    , styles = []
     , width = Nothing
     , height = Nothing
     , borders = NoBorders
@@ -1170,9 +1172,18 @@ renderNearbyGroupAbsolute nearby =
                 Nothing ->
                     Nothing
 
-                Just el ->
+                Just ( on, el ) ->
                     Just <|
-                        Html.div [ Html.Attributes.class (locationClass location) ] [ el ]
+                        Html.div
+                            [ Html.Attributes.class <|
+                                locationClass location
+                                    ++ (if not on then
+                                            " hidden"
+                                        else
+                                            ""
+                                       )
+                            ]
+                            [ el ]
     in
     Html.div [ Html.Attributes.class "se el nearby" ]
         (List.filterMap create
@@ -1374,8 +1385,7 @@ formatTransformations gathered =
                     , Single ("." ++ name) "text-shadow" shades
                         :: styles
                     )
-    in
-    let
+
         ( classes, styles ) =
             ( [], gathered.styles )
                 |> addFilters
@@ -1391,15 +1401,219 @@ formatTransformations gathered =
     }
 
 
-renderAttributes : Maybe String -> List Style -> List (Attribute msg) -> Gathered msg
-renderAttributes node styles attributes =
-    case attributes of
-        [] ->
-            initGathered node styles
+type EmbedStyle
+    = NoStyleSheet
+    | StaticRootAndDynamic OptionRecord
+    | OnlyDynamic OptionRecord
 
-        attrs ->
-            List.foldr gatherAttributes (initGathered node styles) attrs
-                |> formatTransformations
+
+noStyleSheet : EmbedStyle
+noStyleSheet =
+    NoStyleSheet
+
+
+element : EmbedStyle -> LayoutContext -> Maybe String -> List (Attribute msg) -> Children (Element msg) -> Element msg
+element embedMode context node attributes children =
+    (contextClasses context :: attributes)
+        |> List.foldr gatherAttributes (initGathered node)
+        |> formatTransformations
+        |> asElement embedMode children context
+
+
+asElement : EmbedStyle -> Children (Element msg) -> LayoutContext -> Gathered msg -> Element msg
+asElement embedMode children context rendered =
+    let
+        ( htmlChildren, styleChildren ) =
+            case children of
+                Keyed keyedChildren ->
+                    List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren
+                        |> Tuple.mapFirst Keyed
+
+                Unkeyed unkeyedChildren ->
+                    List.foldr gather ( [], rendered.styles ) unkeyedChildren
+                        |> Tuple.mapFirst Unkeyed
+
+        gather child ( htmls, existingStyles ) =
+            case child of
+                Unstyled html ->
+                    ( html context :: htmls
+                    , existingStyles
+                    )
+
+                Styled styled ->
+                    ( styled.html Nothing context :: htmls
+                    , styled.styles ++ existingStyles
+                    )
+
+                Text str ->
+                    -- TEXT OPTIMIZATION
+                    -- You can have raw text if the element is an el, and has `width-content` and `height-content`
+                    -- Same if it's a column or row with one child and width-content, height-content
+                    if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
+                        ( Html.text str
+                            :: htmls
+                        , existingStyles
+                        )
+                    else if context == asEl then
+                        ( textElementFill str
+                            :: htmls
+                        , existingStyles
+                        )
+                    else
+                        ( textElement str
+                            :: htmls
+                        , existingStyles
+                        )
+
+                Empty ->
+                    ( htmls, existingStyles )
+
+        gatherKeyed ( key, child ) ( htmls, existingStyles ) =
+            case child of
+                Unstyled html ->
+                    ( ( key, html context ) :: htmls
+                    , existingStyles
+                    )
+
+                Styled styled ->
+                    ( ( key, styled.html Nothing context ) :: htmls
+                    , styled.styles ++ existingStyles
+                    )
+
+                Text str ->
+                    -- TEXT OPTIMIZATION
+                    -- You can have raw text if the element is an el, and has `width-content` and `height-content`
+                    -- Same if it's a column or row with one child and width-content, height-content
+                    if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
+                        ( ( key, Html.text str )
+                            :: htmls
+                        , existingStyles
+                        )
+                    else
+                        ( ( key, textElement str )
+                            :: htmls
+                        , existingStyles
+                        )
+
+                Empty ->
+                    ( htmls, existingStyles )
+    in
+    case embedMode of
+        NoStyleSheet ->
+            let
+                renderedChildren =
+                    case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
+                        Nothing ->
+                            htmlChildren
+
+                        Just nearby ->
+                            case htmlChildren of
+                                Keyed keyed ->
+                                    Keyed <| ( "nearby-elements-pls-pls-pls-pls-be-unique", nearby ) :: keyed
+
+                                Unkeyed unkeyed ->
+                                    Unkeyed (nearby :: unkeyed)
+            in
+            case styleChildren of
+                [] ->
+                    Unstyled (renderNode rendered renderedChildren Nothing)
+
+                _ ->
+                    Styled
+                        { styles = styleChildren
+                        , html = renderNode rendered renderedChildren
+                        }
+
+        StaticRootAndDynamic options ->
+            let
+                styles =
+                    styleChildren
+                        |> List.foldr reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
+                        |> Tuple.second
+
+                renderedChildren =
+                    case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
+                        Nothing ->
+                            case htmlChildren of
+                                Keyed keyed ->
+                                    Keyed <|
+                                        ( "static-stylesheet", Internal.Style.rulesElement )
+                                            :: ( "dynamic-stylesheet", toStyleSheet options styles )
+                                            :: keyed
+
+                                Unkeyed unkeyed ->
+                                    Unkeyed
+                                        (Internal.Style.rulesElement
+                                            :: toStyleSheet options styles
+                                            :: unkeyed
+                                        )
+
+                        Just nearby ->
+                            case htmlChildren of
+                                Keyed keyed ->
+                                    Keyed <|
+                                        ( "static-stylesheet", Internal.Style.rulesElement )
+                                            :: ( "dynamic-stylesheet", toStyleSheet options styles )
+                                            :: ( "nearby-elements-pls-pls-pls-pls-be-unique", nearby )
+                                            :: keyed
+
+                                Unkeyed unkeyed ->
+                                    Unkeyed
+                                        (Internal.Style.rulesElement
+                                            :: toStyleSheet options styles
+                                            :: nearby
+                                            :: unkeyed
+                                        )
+            in
+            Unstyled
+                (renderNode rendered
+                    renderedChildren
+                    Nothing
+                )
+
+        OnlyDynamic options ->
+            let
+                styles =
+                    styleChildren
+                        |> List.foldr reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
+                        |> Tuple.second
+
+                renderedChildren =
+                    case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
+                        Nothing ->
+                            case htmlChildren of
+                                Keyed keyed ->
+                                    Keyed <|
+                                        ( "dynamic-stylesheet", toStyleSheet options styles )
+                                            :: keyed
+
+                                Unkeyed unkeyed ->
+                                    Unkeyed
+                                        (Internal.Style.rulesElement
+                                            :: toStyleSheet options styles
+                                            :: unkeyed
+                                        )
+
+                        Just nearby ->
+                            case htmlChildren of
+                                Keyed keyed ->
+                                    Keyed <|
+                                        ( "dynamic-stylesheet", toStyleSheet options styles )
+                                            :: ( "nearby-elements-pls-pls-pls-pls-be-unique", nearby )
+                                            :: keyed
+
+                                Unkeyed unkeyed ->
+                                    Unkeyed
+                                        (toStyleSheet options styles
+                                            :: nearby
+                                            :: unkeyed
+                                        )
+            in
+            Unstyled
+                (renderNode rendered
+                    renderedChildren
+                    Nothing
+                )
 
 
 rowEdgeFillers : List (Element msg) -> List (Element msg)
@@ -1525,7 +1739,7 @@ filter attrs =
                         else
                             ( x :: found, Set.insert "described" has )
 
-                    Nearby location elem ->
+                    Nearby location on elem ->
                         ( x :: found, has )
 
                     AlignX _ ->
@@ -1613,36 +1827,6 @@ getSpacingAttribute attrs default =
         |> (\( x, y ) -> StyleClass (SpacingStyle x y))
 
 
-row : List (Attribute msg) -> Children (Element msg) -> Element msg
-row attrs children =
-    element asRow Nothing (htmlClass "se row" :: attrs) children
-
-
-column : List (Attribute msg) -> Children (Element msg) -> Element msg
-column attrs children =
-    element asColumn Nothing (htmlClass "se column" :: attrs) children
-
-
-el : Maybe String -> List (Attribute msg) -> Children (Element msg) -> Element msg
-el node attrs child =
-    element asEl node (htmlClass "se el" :: attrs) child
-
-
-gridEl : Maybe String -> List (Attribute msg) -> List (Element msg) -> Element msg
-gridEl node attrs children =
-    element asGridEl node (htmlClass "se el" :: attrs) (Unkeyed children)
-
-
-paragraph : List (Attribute msg) -> Children (Element msg) -> Element msg
-paragraph attrs children =
-    element asEl (Just "p") (htmlClass "se paragraph" :: attrs) children
-
-
-textPage : List (Attribute msg) -> Children (Element msg) -> Element msg
-textPage attrs children =
-    element asEl Nothing (htmlClass "se page" :: attrs) children
-
-
 textElement : String -> VirtualDom.Node msg
 textElement str =
     VirtualDom.node "div"
@@ -1666,109 +1850,27 @@ type Children x
     | Keyed (List ( String, x ))
 
 
-element : LayoutContext -> Maybe String -> List (Attribute msg) -> Children (Element msg) -> Element msg
-element context nodeName attributes children =
-    let
-        rendered =
-            renderAttributes nodeName [] attributes
+toHtml : OptionRecord -> Element msg -> Html msg
+toHtml options el =
+    case el of
+        Unstyled html ->
+            html asEl
 
-        ( htmlChildren, styleChildren ) =
-            case children of
-                Keyed keyedChildren ->
-                    List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren
-                        |> Tuple.mapFirst Keyed
+        Styled { styles, html } ->
+            let
+                styleSheet =
+                    styles
+                        |> List.foldr reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
+                        |> Tuple.second
+                        |> toStyleSheetString options
+            in
+            html (Just styleSheet) asEl
 
-                Unkeyed unkeyedChildren ->
-                    List.foldr gather ( [], rendered.styles ) unkeyedChildren
-                        |> Tuple.mapFirst Unkeyed
+        Text text ->
+            textElement text
 
-        gather child ( htmls, existingStyles ) =
-            case child of
-                Unstyled html ->
-                    ( html context :: htmls
-                    , existingStyles
-                    )
-
-                Styled styled ->
-                    ( styled.html Nothing context :: htmls
-                    , styled.styles ++ existingStyles
-                    )
-
-                Text str ->
-                    -- TEXT OPTIMIZATION
-                    -- You can have raw text if the element is an el, and has `width-content` and `height-content`
-                    -- Same if it's a column or row with one child and width-content, height-content
-                    if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
-                        ( Html.text str
-                            :: htmls
-                        , existingStyles
-                        )
-                    else if context == asEl then
-                        ( textElementFill str
-                            :: htmls
-                        , existingStyles
-                        )
-                    else
-                        ( textElement str
-                            :: htmls
-                        , existingStyles
-                        )
-
-                Empty ->
-                    ( htmls, existingStyles )
-
-        gatherKeyed ( key, child ) ( htmls, existingStyles ) =
-            case child of
-                Unstyled html ->
-                    ( ( key, html context ) :: htmls
-                    , existingStyles
-                    )
-
-                Styled styled ->
-                    ( ( key, styled.html Nothing context ) :: htmls
-                    , styled.styles ++ existingStyles
-                    )
-
-                Text str ->
-                    -- TEXT OPTIMIZATION
-                    -- You can have raw text if the element is an el, and has `width-content` and `height-content`
-                    -- Same if it's a column or row with one child and width-content, height-content
-                    if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
-                        ( ( key, Html.text str )
-                            :: htmls
-                        , existingStyles
-                        )
-                    else
-                        ( ( key, textElement str )
-                            :: htmls
-                        , existingStyles
-                        )
-
-                Empty ->
-                    ( htmls, existingStyles )
-
-        renderedChildren =
-            case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
-                Nothing ->
-                    htmlChildren
-
-                Just nearby ->
-                    case htmlChildren of
-                        Keyed keyed ->
-                            Keyed <| ( "nearby-elements-pls-pls-pls-pls-be-unique", nearby ) :: keyed
-
-                        Unkeyed unkeyed ->
-                            Unkeyed (nearby :: unkeyed)
-    in
-    case styleChildren of
-        [] ->
-            Unstyled <| renderNode rendered.alignment rendered.node rendered.attributes renderedChildren Nothing
-
-        _ ->
-            Styled
-                { styles = styleChildren
-                , html = renderNode rendered.alignment rendered.node rendered.attributes renderedChildren
-                }
+        Empty ->
+            textElement ""
 
 
 {-| -}
@@ -1777,69 +1879,9 @@ renderRoot optionList attributes child =
     let
         options =
             optionsToRecord optionList
-
-        rendered =
-            renderAttributes Nothing [] attributes
-
-        ( htmlChildren, styleChildren ) =
-            case child of
-                Unstyled html ->
-                    ( html asEl, rendered.styles )
-
-                Styled styled ->
-                    ( styled.html Nothing asEl
-                    , styled.styles ++ rendered.styles
-                    )
-
-                Text str ->
-                    ( textElement str
-                    , rendered.styles
-                    )
-
-                Empty ->
-                    ( Html.text "", rendered.styles )
-
-        styles =
-            styleChildren
-                |> List.foldr reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
-                |> Tuple.second
-
-        styleSheets children =
-            -- children
-            case options.mode of
-                NoStaticStyleSheet ->
-                    toStyleSheet options styles :: children
-
-                Layout ->
-                    Internal.Style.rulesElement
-                        :: toStyleSheet options styles
-                        :: children
-
-                Viewport ->
-                    Internal.Style.viewportRulesElement
-                        :: toStyleSheet options styles
-                        :: children
-
-                WithVirtualCss ->
-                    -- not implemented...yet
-                    children
-
-        -- let
-        --     _ =
-        --         toStyleSheetVirtualCss styles
-        -- in
-        -- Internal.Style.rulesElement
-        --     :: children
-        children =
-            case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
-                Nothing ->
-                    styleSheets [ htmlChildren ]
-
-                Just nearby ->
-                    styleSheets [ nearby, htmlChildren ]
     in
-    -- The top node cannot be keyed
-    renderNode rendered.alignment rendered.node rendered.attributes (Unkeyed children) Nothing asEl
+    element (StaticRootAndDynamic options) asEl Nothing attributes (Unkeyed [ child ])
+        |> toHtml options
 
 
 type RenderMode
@@ -1901,7 +1943,7 @@ renderFocusStyle :
     FocusStyle
     -> Style
 renderFocusStyle focus =
-    Style ".se:focus .focusable > *:not(.unfocusable)"
+    Style ".se:focus .focusable > *:not(.unfocusable), .se.focus-exactly:focus"
         (List.filterMap identity
             [ Maybe.map (\color -> Property "border-color" (formatColor color)) focus.borderColor
             , Maybe.map (\color -> Property "background-color" (formatColor color)) focus.backgroundColor
@@ -2117,6 +2159,18 @@ toStyleSheetString options stylesheet =
                         , renderStyle force maybePseudo (class ++ ".page > .se") [ Property "margin-top" (toString y ++ "px") ]
                         , renderStyle force maybePseudo (class ++ ".page > .self-left") [ Property "margin-right" (toString x ++ "px") ]
                         , renderStyle force maybePseudo (class ++ ".page > .self-right") [ Property "margin-left" (toString x ++ "px") ]
+                        , renderStyle force
+                            maybePseudo
+                            (class ++ ".paragraph > .se")
+                            [ Property "margin-right" (toString (toFloat x / 2) ++ "px")
+                            , Property "margin-left" (toString (toFloat x / 2) ++ "px")
+                            ]
+                        , renderStyle force
+                            maybePseudo
+                            (class ++ ".paragraph > .se")
+                            [ Property "margin-bottom" (toString (toFloat y / 2) ++ "px")
+                            , Property "margin-top" (toString (toFloat y / 2) ++ "px")
+                            ]
                         ]
 
                 PaddingStyle top right bottom left ->
@@ -2332,6 +2386,19 @@ lengthClassName x =
 
         Fill i ->
             intToString i ++ "fr"
+
+
+
+-- Between { value, min, max } ->
+--     case (min, max) ->
+--         (Nothing, Nothing) ->
+--             lengthClassName value
+--         (Just minimum, Nothing) ->
+--             lengthClassName value ++ "-min-" ++ intToString minimum
+--         (Nothing, Just maximum) ->
+--             lengthClassName value ++ "-max-" ++ intToString maximum
+--         (Just minimum, Just maximum) ->
+--             lengthClassName value ++ "-min-" ++ intToString minimum ++ "-max-" ++ intToString maximum
 
 
 formatDropShadow : { d | blur : a, color : Color, offset : ( b, c ) } -> String

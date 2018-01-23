@@ -4,6 +4,8 @@ module Element
         , Column
         , Element
         , FocusStyle
+        , IndexedColumn
+        , IndexedTable
         , Length
         , Link
         , Option
@@ -37,6 +39,7 @@ module Element
         , html
         , image
         , inFront
+        , indexedTable
         , layout
         , layoutWith
         , link
@@ -98,6 +101,8 @@ Text needs it's own layout primitives.
 ## Data Table
 
 @docs Table, Column, table
+
+@docs IndexedTable, IndexedColumn, indexedTable
 
 
 ## Rendering
@@ -295,6 +300,11 @@ fill =
     Internal.Fill 1
 
 
+
+-- between =
+--     Internal.Between
+
+
 {-| Sometimes you may not want to split available space evenly. In this case you can use `fillPortion` to define which elements should have what portion of the available space.
 
 So, two elements, one with `width (fillPortion 2)` and one with `width (fillPortion 3)`. The first would get 2 portions of the available space, while the second would get 3.
@@ -318,8 +328,8 @@ layout =
 layoutWith : { options : List Option } -> List (Attribute msg) -> Element msg -> Html msg
 layoutWith { options } attrs child =
     Internal.renderRoot options
-        (Background.color Color.blue
-            :: Font.color Color.white
+        (Background.color Color.white
+            :: Font.color Color.darkCharcoal
             :: Font.size 20
             :: Font.family
                 [ Font.typeface "Open Sans"
@@ -463,7 +473,8 @@ text content =
 -}
 el : List (Attribute msg) -> Element msg -> Element msg
 el attrs child =
-    Internal.el
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         Nothing
         (width shrink
             :: height shrink
@@ -480,7 +491,10 @@ el attrs child =
 -}
 row : List (Attribute msg) -> List (Element msg) -> Element msg
 row attrs children =
-    Internal.row
+    Internal.element
+        Internal.noStyleSheet
+        Internal.asRow
+        Nothing
         (Internal.Class "x-content-align" "content-center-x"
             :: Internal.Class "y-content-align" "content-center-y"
             :: width fill
@@ -492,7 +506,9 @@ row attrs children =
 {-| -}
 column : List (Attribute msg) -> List (Element msg) -> Element msg
 column attrs children =
-    Internal.column
+    Internal.element Internal.noStyleSheet
+        Internal.asColumn
+        Nothing
         (Internal.Class "y-content-align" "content-top"
             :: Internal.Class "x-content-align" "content-center-x"
             :: height fill
@@ -557,15 +573,72 @@ We could render it using
             ]
         }
 
+**Note:** Sometimes you might not have a list of records directly in your model. In this case it can be really nice to write a function that transforms some part of your model into a list of records before feeding it into `Element.table`.
+
 -}
 table : List (Attribute msg) -> Table data msg -> Element msg
 table attrs config =
+    tableHelper attrs
+        { data = config.data
+        , columns =
+            List.map InternalColumn config.columns
+        }
+
+
+{-| -}
+type alias IndexedTable records msg =
+    { data : List records
+    , columns : List (IndexedColumn records msg)
+    }
+
+
+{-| -}
+type alias IndexedColumn record msg =
+    { header : Element msg
+    , view : Int -> record -> Element msg
+    }
+
+
+{-| Same as `Element.table` except the `view` for each column will also receive the row index as well as the record.
+-}
+indexedTable : List (Attribute msg) -> IndexedTable data msg -> Element msg
+indexedTable attrs config =
+    tableHelper attrs
+        { data = config.data
+        , columns =
+            List.map InternalIndexedColumn config.columns
+        }
+
+
+{-| -}
+type alias InternalTable records msg =
+    { data : List records
+    , columns : List (InternalTableColumn records msg)
+    }
+
+
+{-| -}
+type InternalTableColumn record msg
+    = InternalIndexedColumn (IndexedColumn record msg)
+    | InternalColumn (Column record msg)
+
+
+tableHelper : List (Attribute msg) -> InternalTable data msg -> Element msg
+tableHelper attrs config =
     let
         ( sX, sY ) =
             Internal.getSpacing attrs ( 0, 0 )
 
+        columnHeader col =
+            case col of
+                InternalIndexedColumn colConfig ->
+                    colConfig.header
+
+                InternalColumn colConfig ->
+                    colConfig.header
+
         maybeHeaders =
-            List.map .header config.columns
+            List.map columnHeader config.columns
                 |> (\headers ->
                         if List.all ((==) Internal.Empty) headers then
                             Nothing
@@ -582,7 +655,10 @@ table attrs config =
                     }
 
         onGrid row column el =
-            Internal.gridEl Nothing
+            Internal.element
+                Internal.noStyleSheet
+                Internal.asEl
+                Nothing
                 [ Internal.StyleClass
                     (Internal.GridPosition
                         { row = row
@@ -592,15 +668,25 @@ table attrs config =
                         }
                     )
                 ]
-                [ el ]
+                (Internal.Unkeyed [ el ])
 
-        add cell column cursor =
-            { cursor
-                | elements =
-                    onGrid cursor.row cursor.column (column.view cell)
-                        :: cursor.elements
-                , column = cursor.column + 1
-            }
+        add cell columnConfig cursor =
+            case columnConfig of
+                InternalIndexedColumn column ->
+                    { cursor
+                        | elements =
+                            onGrid cursor.row cursor.column (column.view cursor.row cell)
+                                :: cursor.elements
+                        , column = cursor.column + 1
+                    }
+
+                InternalColumn column ->
+                    { cursor
+                        | elements =
+                            onGrid cursor.row cursor.column (column.view cell)
+                                :: cursor.elements
+                        , column = cursor.column + 1
+                    }
 
         build columns rowData cursor =
             let
@@ -626,10 +712,10 @@ table attrs config =
                 }
                 config.data
     in
-    Internal.element Internal.asGrid
+    Internal.element Internal.noStyleSheet
+        Internal.asGrid
         Nothing
-        (Internal.htmlClass "se grid"
-            :: width fill
+        (width fill
             :: center
             :: template
             :: attrs
@@ -682,7 +768,7 @@ Which will look something like
 -}
 paragraph : List (Attribute msg) -> List (Element msg) -> Element msg
 paragraph attrs children =
-    Internal.paragraph (Internal.htmlClass "se paragraph" :: width fill :: attrs) (Internal.Unkeyed children)
+    Internal.element Internal.noStyleSheet Internal.asParagraph (Just "p") (Internal.adjustParagraphSpacing attrs) (Internal.Unkeyed children)
 
 
 {-| Now that we have a paragraph, we need someway to attach a bunch of paragraph's together.
@@ -706,7 +792,12 @@ Which will result in something like:
 -}
 textColumn : List (Attribute msg) -> List (Element msg) -> Element msg
 textColumn attrs children =
-    Internal.textPage (width (px 650) :: attrs) (Internal.Unkeyed children)
+    Internal.element
+        Internal.noStyleSheet
+        Internal.asTextColumn
+        Nothing
+        (width (px 650) :: attrs)
+        (Internal.Unkeyed children)
 
 
 {-| Both a source and a description are required for images. The description is used to describe the image to screen readers.
@@ -714,9 +805,6 @@ textColumn attrs children =
 image : List (Attribute msg) -> { src : String, description : String } -> Element msg
 image attrs { src, description } =
     let
-        filtered =
-            Internal.filter attrs
-
         imageAttributes =
             attrs
                 |> List.filter
@@ -732,18 +820,22 @@ image attrs { src, description } =
                                 False
                     )
     in
-    Internal.el
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         Nothing
-        (clip :: attrs)
+        (clip
+            :: attrs
+        )
         (Internal.Unkeyed
-            [ Internal.el
+            [ Internal.element Internal.noStyleSheet
+                Internal.asEl
                 (Just "img")
                 (imageAttributes
                     ++ [ Internal.Attr <| Html.Attributes.src src
                        , Internal.Attr <| Html.Attributes.alt description
                        ]
                 )
-                (Internal.Unkeyed [ Internal.Empty ])
+                (Internal.Unkeyed [])
             ]
         )
 
@@ -753,9 +845,6 @@ image attrs { src, description } =
 decorativeImage : List (Attribute msg) -> { src : String } -> Element msg
 decorativeImage attrs { src } =
     let
-        filtered =
-            Internal.filter attrs
-
         imageAttributes =
             attrs
                 |> List.filter
@@ -771,18 +860,22 @@ decorativeImage attrs { src } =
                                 False
                     )
     in
-    Internal.el
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         Nothing
-        (clip :: attrs)
+        (clip
+            :: attrs
+        )
         (Internal.Unkeyed
-            [ Internal.el
+            [ Internal.element Internal.noStyleSheet
+                Internal.asEl
                 (Just "img")
                 (imageAttributes
                     ++ [ Internal.Attr <| Html.Attributes.src src
                        , Internal.Attr <| Html.Attributes.alt ""
                        ]
                 )
-                (Internal.Unkeyed [ Internal.Empty ])
+                (Internal.Unkeyed [])
             ]
         )
 
@@ -804,7 +897,8 @@ type alias Link msg =
 -}
 link : List (Attribute msg) -> Link msg -> Element msg
 link attrs { url, label } =
-    Internal.el
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         (Just "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
@@ -820,7 +914,8 @@ link attrs { url, label } =
 {-| -}
 newTabLink : List (Attribute msg) -> Link msg -> Element msg
 newTabLink attrs { url, label } =
-    Internal.el
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         (Just "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
@@ -838,7 +933,8 @@ newTabLink attrs { url, label } =
 -}
 download : List (Attribute msg) -> Link msg -> Element msg
 download attrs { url, label } =
-    Internal.el
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         (Just "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.download True)
@@ -855,7 +951,8 @@ download attrs { url, label } =
 -}
 downloadAs : List (Attribute msg) -> { label : Element msg, filename : String, url : String } -> Element msg
 downloadAs attrs { url, filename, label } =
-    Internal.el
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         (Just "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.downloadAs filename)
@@ -875,58 +972,43 @@ description =
 
 
 {-| -}
-below : Bool -> Internal.Element msg -> Attribute msg
+below : Bool -> Element msg -> Attribute msg
 below on element =
     if on then
-        Internal.Nearby Internal.Below element
+        Internal.Nearby Internal.Below on element
     else
         Internal.NoAttribute
 
 
 {-| `above` takes a `Bool` first so that you can easily toggle showing and hiding the element.
 -}
-above : Bool -> Internal.Element msg -> Attribute msg
+above : Bool -> Element msg -> Attribute msg
 above on element =
-    if on then
-        Internal.Nearby Internal.Above element
-    else
-        Internal.NoAttribute
+    Internal.Nearby Internal.Above on element
 
 
 {-| -}
-onRight : Bool -> Internal.Element msg -> Attribute msg
+onRight : Bool -> Element msg -> Attribute msg
 onRight on element =
-    if on then
-        Internal.Nearby Internal.OnRight element
-    else
-        Internal.NoAttribute
+    Internal.Nearby Internal.OnRight on element
 
 
 {-| -}
-onLeft : Bool -> Internal.Element msg -> Attribute msg
+onLeft : Bool -> Element msg -> Attribute msg
 onLeft on element =
-    if on then
-        Internal.Nearby Internal.OnLeft element
-    else
-        Internal.NoAttribute
+    Internal.Nearby Internal.OnLeft on element
 
 
 {-| -}
-inFront : Bool -> Internal.Element msg -> Attribute msg
+inFront : Bool -> Element msg -> Attribute msg
 inFront on element =
-    if on then
-        Internal.Nearby Internal.InFront element
-    else
-        Internal.NoAttribute
+    Internal.Nearby Internal.InFront on element
 
 
 {-| -}
-behind : Bool -> Internal.Element msg -> Attribute msg
+behind : Bool -> Element msg -> Attribute msg
 behind on element =
-    if on then
-        Internal.Nearby Internal.Behind element
-    else
-        Internal.NoAttribute
+    Internal.Nearby Internal.Behind on element
 
 
 {-| -}
@@ -1119,113 +1201,12 @@ pointer =
     Internal.Class "cursor" "cursor-pointer"
 
 
+type Device
+    = Device
 
--- {-| If we have this construct, it makes it easier to change states for something like a button.
---     el
---         [ Color.background blue
---         , onClick Send
---         , mixIf model.disabled
---             [ Color.background grey
---             , onClick NoOp
---             ]
---         ]
--- Does it allow elimination of event handlers? Would have to rely on html behavior for that if it's true.
--- People could implement systems that involve multiple properties being set together.
--- Example of a disabled button
---     Input.button
---         [ Color.background
---             ( if disabled then
---                 grey
---              else
---                 blue
---             )
---         , Color.border
---             ( if disabled then
---                 grey
---              else
---                 blue
---             )
---         ]
---         { onPress = switch model.disabled Send
---         , label = text "Press me"
---         }
--- Advantages: no new constructs(!)
--- Disadvantages: could get verbose in the case of many properties set.
---   - How many properties would likely vary in this way?
---   - Would a `Color.palette {text, background, border}` go help?
---     Input.button
--- [ Color.palette
---     ( if disabled then
---         { background = grey
---         , text = darkGrey
---         , border = grey
---         }
---     else
---         { background = blue
---         , text = black
---         , border = blue
---         }
---     )
--- ]
--- { onPress = switch model.disabled Send
--- , label = text "Press me"
--- }
--- -- with mixIf
---     Input.button
---         [ Color.background blue
---         , mixIf model.disabled
---             [ Color.background grey
---             ]
---         ]
---         { onPress = (if model.disabled then Nothing else Just Send )
---         , label = text "Press me"
---         }
--- Advantages:
---   - Any properties can be set together.
---   - Would allow `above`/`below` type elements to be triggered manually.
--- Disadvantages:
---   - Does binding certain properties together lead to a good experience?
--- -}
--- mixIf : Bool -> List (Attribute msg) -> List (Attribute msg)
--- mixIf on attrs =
---     if on then
---         attrs
---     else
---         []
--- {-| For the hover pseudoclass, the considerations:
--- 1.  What happens on mobile/touch devices?
---       - Let the platform handle it
--- 2.  We can make the hover event show a 'nearby', like 'below' or something.
---       - what happens on mobile? Do first clicks now perform that action?
--- -}
--- {-| -}
--- blur : Float -> Attribute msg
--- blur x =
---     Internal.Filter (Internal.Blur x)
--- {-| -}
--- grayscale : Float -> Attribute msg
--- grayscale x =
---     Internal.Filter (Internal.Grayscale x)
--- -- hoverColors : { text : Maybe Color, background : Maybe Color, border : Maybe Color }
--- type alias Style =
---     Internal.Attribute Never
--- type alias Shadow =
---     { color : Color
---     , offset : ( Int, Int )
---     , blur : Int
---     , size : Int
---     }
--- type alias Hoverable =
---     { textColor : Maybe Color
---     , backgroundColor : Maybe Color
---     , borderColor : Maybe Color
---     , scale : Maybe Int
---     , shadow : Maybe Shadow
---     }
--- {-| -}
--- mouseOver : List Style -> Attribute msg
--- mouseOver attrs =
---     Internal.Pseudo
---         { class = Internal.Hover
---         , attributes = List.map (Internal.mapAttr never) attrs
---         }
+
+{-| <meta name="viewport" content="width=device-width, initial-scale=1">
+-}
+classifyDevice : { window | width : Int } -> Device
+classifyDevice window =
+    Device

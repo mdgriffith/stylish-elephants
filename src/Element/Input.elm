@@ -67,8 +67,6 @@ module Element.Input
 
 @docs errorAbove, errorBelow, errorLeft, errorRight
 
-@docs Placeholder, placeholder
-
 -}
 
 import Color exposing (..)
@@ -88,13 +86,13 @@ import Json.Decode as Json
 
 {-| -}
 type Placeholder msg
-    = Placeholder (Element msg)
+    = Placeholder (List (Attribute msg)) (Element msg)
 
 
 {-| -}
 placeholder : List (Attribute msg) -> Element msg -> Placeholder msg
-placeholder attrs child =
-    Placeholder <| Internal.el Nothing (Element.height Element.fill :: attrs) (Internal.Unkeyed [ child ])
+placeholder =
+    Placeholder
 
 
 {-| Every input has a required `label`.
@@ -207,14 +205,14 @@ The `onPress` handler will be fired either `onClick` or when the element is focu
 -}
 button : List (Attribute msg) -> Button msg -> Element msg
 button attrs { onPress, label } =
-    Internal.element Internal.asEl
+    Internal.element Internal.noStyleSheet
+        Internal.asEl
         -- We don't explicitly label this node as a button,
         -- because buttons fire a bunch of times when you hold down the enter key.
         -- We'd like to fire just once on the enter key, which means using keyup instead of keydown.
         -- Because we have no way to disable keydown, though our messages get doubled.
         Nothing
-        (Internal.htmlClass "se el"
-            :: Element.width Element.shrink
+        (Element.width Element.shrink
             :: Element.height Element.shrink
             :: Element.centerY
             :: Element.center
@@ -244,49 +242,13 @@ type alias Checkbox msg =
     }
 
 
-defaultCheckbox : Bool -> Element msg
-defaultCheckbox checked =
-    Element.el
-        [ Element.width (Element.px 12)
-        , Element.height (Element.px 12)
-        , Font.color white
-        , Font.size 9
-        , Font.center
-        , Border.rounded 3
-        , Border.color (Color.rgb 211 211 211)
-        , Font.family
-            [ Font.typeface "georgia"
-            , Font.serif
-            ]
-        , Border.shadow
-            { offset = ( 0, 0 )
-            , blur = 1
-            , color = Color.rgb 238 238 238
-            }
-        , Background.color <|
-            if checked then
-                Color.rgb 59 153 252
-            else
-                white
-        , Border.width <|
-            if checked then
-                0
-            else
-                1
-        ]
-        (if checked then
-            Element.text "✓"
-         else
-            Element.empty
-        )
-
-
 {-| -}
 checkbox : List (Attribute msg) -> Checkbox msg -> Element msg
 checkbox attrs { label, icon, checked, onChange, notice } =
     let
         input =
-            Internal.el
+            Internal.element Internal.noStyleSheet
+                Internal.asEl
                 (Just "div")
                 [ Internal.Attr <|
                     Html.Attributes.attribute "role" "checkbox"
@@ -525,11 +487,6 @@ type alias Text msg =
     }
 
 
-defaultTextPadding : Attribute msg
-defaultTextPadding =
-    Element.paddingXY 15 5
-
-
 textHelper : TextType -> List (Attribute msg) -> Text msg -> Element msg
 textHelper textType attrs textOptions =
     let
@@ -620,43 +577,57 @@ textHelper textType attrs textOptions =
                             False
 
         inputElement =
-            Internal.el
-                (Just "input")
-                (List.concat
-                    [ [ value textOptions.text
-                      , defaultTextPadding
-                      ]
-                    , textTypeAttr
-                    , behavior
-                    , attributes
-                    ]
-                )
-                (Internal.Unkeyed [])
+            Internal.element Internal.noStyleSheet
+                Internal.asEl
+                Nothing
+                (case textOptions.placeholder of
+                    Nothing ->
+                        []
 
-        input =
-            case textOptions.placeholder of
-                Nothing ->
-                    inputElement
-
-                Just (Placeholder placeholder) ->
-                    Internal.el Nothing
+                    Just (Placeholder placeholderAttrs placeholder) ->
                         [ Element.inFront (textOptions.text == "") <|
-                            Internal.el Nothing
+                            Internal.element Internal.noStyleSheet
+                                Internal.asEl
+                                Nothing
                                 (Font.color charcoal
+                                    :: Internal.Class "text-selection" "no-text-selection"
                                     :: defaultTextPadding
                                     :: Element.height Element.fill
                                     :: Element.width Element.fill
-                                    :: inputPadding
+                                    :: (inputPadding
+                                            ++ placeholderAttrs
+                                       )
                                 )
-                                (Internal.Unkeyed [ placeholder ])
+                                (Internal.Unkeyed
+                                    [ placeholder
+                                    ]
+                                )
                         ]
-                        (Internal.Unkeyed [ inputElement ])
+                )
+                (Internal.Unkeyed <|
+                    [ Internal.element Internal.noStyleSheet
+                        Internal.asEl
+                        (Just "input")
+                        (List.concat
+                            [ [ value textOptions.text
+                              , defaultTextPadding
+                              , Internal.Class "focus" "focus-exactly"
+                              ]
+                            , defaultTextBoxStyle
+                            , textTypeAttr
+                            , behavior
+                            , attributes
+                            ]
+                        )
+                        (Internal.Unkeyed [])
+                    ]
+                )
     in
     positionLabels
-        parentAttributes
+        (Internal.Class "cursor" "cursor-text" :: parentAttributes)
         textOptions.label
         textOptions.notice
-        input
+        inputElement
 
 
 {-| -}
@@ -704,7 +675,7 @@ multilineHelper : SpellChecked -> List (Attribute msg) -> Text msg -> Element ms
 multilineHelper spellchecked attrs textOptions =
     let
         attributes =
-            Element.height Element.shrink :: Element.width Element.fill :: attrs
+            Element.height Element.shrink :: Element.width Element.fill :: defaultTextBoxStyle ++ attrs
 
         behavior =
             case textOptions.onChange of
@@ -745,7 +716,12 @@ multilineHelper spellchecked attrs textOptions =
                                         ( pad, height, lh, newAttrs )
 
                             Internal.StyleClass (Internal.PaddingStyle t r b l) ->
-                                ( Just ( t, r, b, l ), height, lh, attr :: newAttrs )
+                                case pad of
+                                    Nothing ->
+                                        ( Just ( t, r, b, l ), height, lh, attr :: newAttrs )
+
+                                    _ ->
+                                        ( pad, height, lh, newAttrs )
 
                             _ ->
                                 ( pad, height, lh, attr :: newAttrs )
@@ -762,11 +738,16 @@ multilineHelper spellchecked attrs textOptions =
                         newlineCount =
                             String.lines textOptions.text
                                 |> List.length
-                                -- |> ((+) 1)
                                 |> toFloat
+                                |> (\x ->
+                                        if x < 1 then
+                                            1
+                                        else
+                                            x
+                                   )
 
                         heightValue count =
-                            case padding of
+                            case Debug.log "padding" padding of
                                 Nothing ->
                                     toString (count * lineHeight) ++ "em"
 
@@ -833,25 +814,42 @@ multilineHelper spellchecked attrs textOptions =
                         _ ->
                             False
 
-        placeholder =
-            case textOptions.placeholder of
-                Nothing ->
-                    []
-
-                Just (Placeholder placeholder) ->
-                    [ Element.inFront (textOptions.text == "") <|
-                        Internal.el Nothing (Font.color charcoal :: inputPadding) (Internal.Unkeyed [ placeholder ])
-                    ]
-
         input =
-            Internal.el Nothing
-                placeholder
-            <|
-                Internal.Unkeyed
-                    [ Internal.el
+            Internal.element Internal.noStyleSheet
+                Internal.asEl
+                Nothing
+                (case textOptions.placeholder of
+                    Nothing ->
+                        []
+
+                    Just (Placeholder placeholderAttrs placeholder) ->
+                        [ Element.inFront (textOptions.text == "") <|
+                            Internal.element Internal.noStyleSheet
+                                Internal.asEl
+                                Nothing
+                                (Font.color charcoal
+                                    :: Internal.Class "text-selection" "no-text-selection"
+                                    :: defaultTextPadding
+                                    :: Internal.Class "cursor" "cursor-text"
+                                    :: Element.height Element.fill
+                                    :: Element.width Element.fill
+                                    :: (inputPadding
+                                            ++ placeholderAttrs
+                                       )
+                                )
+                                (Internal.Unkeyed
+                                    [ placeholder
+                                    ]
+                                )
+                        ]
+                )
+                (Internal.Unkeyed <|
+                    [ Internal.element Internal.noStyleSheet
+                        Internal.asEl
                         (Just "textarea")
                         (List.concat
                             [ [ value textOptions.text
+                              , Internal.Class "focus" "focus-exactly"
                               , case spellchecked of
                                     SpellChecked ->
                                         spellcheck True
@@ -871,6 +869,7 @@ multilineHelper spellchecked attrs textOptions =
                         )
                         (Internal.Unkeyed [ Internal.unstyled (Html.text textOptions.text) ])
                     ]
+                )
     in
     positionLabels attributesFromChild textOptions.label textOptions.notice input
 
@@ -964,58 +963,6 @@ option value text =
     Option value
         defaultRadioIcon
         text
-
-
-defaultRadioIcon : OptionState -> Element msg
-defaultRadioIcon status =
-    Element.el
-        [ Element.width (Element.px 14)
-        , Element.height (Element.px 14)
-        , Background.color white
-        , Border.rounded 7
-
-        -- , Border.shadow <|
-        --     -- case status of
-        --     --     Idle ->
-        --     --         { offset = ( 0, 0 )
-        --     --         , blur =
-        --     --             1
-        --     --         , color = Color.rgb 235 235 235
-        --     --         }
-        --     --     Focused ->
-        --     --         { offset = ( 0, 0 )
-        --     --         , blur =
-        --     --             0
-        --     --         , color = Color.rgba 235 235 235 0
-        --     --         }
-        --     --     Selected ->
-        --     { offset = ( 0, 0 )
-        --     , blur =
-        --         1
-        --     , color = Color.rgba 235 235 235 0
-        --     }
-        , Border.width <|
-            case status of
-                Idle ->
-                    1
-
-                Focused ->
-                    1
-
-                Selected ->
-                    5
-        , Border.color <|
-            case status of
-                Idle ->
-                    Color.rgb 208 208 208
-
-                Focused ->
-                    Color.rgb 208 208 208
-
-                Selected ->
-                    Color.rgb 59 153 252
-        ]
-        Element.empty
 
 
 
@@ -1225,8 +1172,9 @@ radioHelper orientation attrs input =
 {-| -}
 type alias Select option msg =
     { onChange : Maybe (option -> msg)
-    , menu : Menu option msg
     , selected : Maybe option
+    , menu : Menu option msg
+    , placeholder : Maybe (Element msg)
     , label : Label msg
     , notice : Maybe (Notice msg)
     }
@@ -1244,14 +1192,14 @@ type MenuPosition
 
 {-| -}
 menuAbove : List (Attribute msg) -> List (Option option msg) -> Menu option msg
-menuAbove =
-    Menu MenuAbove
+menuAbove attrs =
+    Menu MenuAbove (defaultTextBoxStyle ++ attrs)
 
 
 {-| -}
 menuBelow : List (Attribute msg) -> List (Option option msg) -> Menu option msg
-menuBelow =
-    Menu MenuBelow
+menuBelow attrs =
+    Menu MenuBelow (defaultTextBoxStyle ++ attrs)
 
 
 {-| -}
@@ -1269,8 +1217,8 @@ select attrs input =
                     else
                         Idle
             in
-            Element.row
-                [ spacing
+            Element.el
+                [ Element.width Element.fill
                 , Element.pointer
                 , case input.onChange of
                     Nothing ->
@@ -1297,9 +1245,7 @@ select attrs input =
                 , Internal.Attr <|
                     Html.Attributes.attribute "role" "radio"
                 ]
-                [ icon status
-                , Element.el [ Element.width Element.fill, Internal.class "unfocusable" ] text
-                ]
+                text
 
         renderSelectedOption (Option value icon text) =
             let
@@ -1309,19 +1255,17 @@ select attrs input =
                     else
                         Idle
             in
-            Element.row
-                [ spacing
+            Element.el
+                [ Element.width Element.fill
                 , Element.pointer
-                , case status of
-                    Selected ->
-                        Internal.class "focusable"
 
-                    _ ->
-                        Internal.NoAttribute
+                -- , case status of
+                --     Selected ->
+                --         Internal.class "focusable"
+                --     _ ->
+                --         Internal.NoAttribute
                 ]
-                [ icon status
-                , Element.el [ Element.width Element.fill, Internal.class "unfocusable" ] text
-                ]
+                text
 
         toggleSelected =
             case input.selected of
@@ -1351,6 +1295,9 @@ select attrs input =
                     :: Border.width 1
                     :: Border.color lightGrey
                     :: Border.rounded 5
+                    :: defaultTextPadding
+                    :: Element.width Element.fill
+                    :: Element.pointer
                     :: attrs
                 )
                 (case prevNext of
@@ -1360,7 +1307,12 @@ select attrs input =
                     Just ( prev, selected, next ) ->
                         case selected of
                             Nothing ->
-                                Element.empty
+                                case input.placeholder of
+                                    Nothing ->
+                                        Element.text "-"
+
+                                    Just placeholder ->
+                                        placeholder
 
                             Just sel ->
                                 renderSelectedOption sel
@@ -1406,7 +1358,9 @@ select attrs input =
     positionLabels
         (case input.onChange of
             Nothing ->
-                [ Element.alignLeft ]
+                [ Element.width Element.fill
+                , Element.alignLeft
+                ]
 
             Just onChange ->
                 List.filterMap identity
@@ -1462,10 +1416,10 @@ type Orientation
 
 column : List (Attribute msg) -> List (Internal.Element msg) -> Internal.Element msg
 column attrs children =
-    Internal.column
-        (--Internal.Class "y-content-align" "content-top"
-         -- :: Internal.Class "x-content-align" "content-center-x"
-         Element.height Element.shrink
+    Internal.element Internal.noStyleSheet
+        Internal.asColumn
+        Nothing
+        (Element.height Element.shrink
             :: Element.width Element.fill
             :: attrs
         )
@@ -1474,17 +1428,17 @@ column attrs children =
 
 row : List (Attribute msg) -> List (Internal.Element msg) -> Internal.Element msg
 row attrs children =
-    Internal.row
-        (--Internal.Class "x-content-align" "content-center-x"
-         -- :: Internal.Class "y-content-align" "content-center-y"
-         Element.width Element.fill
+    Internal.element
+        Internal.noStyleSheet
+        Internal.asRow
+        Nothing
+        (Element.width Element.fill
             :: attrs
         )
         (Internal.Unkeyed <| Internal.rowEdgeFillers children)
 
 
 
--- <| Internal.columnEdgeFillers children)
 {- Event Handlers -}
 
 
@@ -1699,3 +1653,113 @@ autofill =
 autofocus : Bool -> Attribute msg
 autofocus =
     Internal.Attr << Html.Attributes.autofocus
+
+
+
+{- Style Defaults -}
+
+
+defaultTextBoxStyle : List (Attribute msg)
+defaultTextBoxStyle =
+    [ defaultTextPadding
+    , Border.rounded 3
+    , Border.color lightGrey
+    , Background.color white
+    , Border.width 1
+    , Element.spacing 3
+    ]
+
+
+defaultTextPadding : Attribute msg
+defaultTextPadding =
+    Element.paddingXY 12 7
+
+
+defaultRadioIcon : OptionState -> Element msg
+defaultRadioIcon status =
+    Element.el
+        [ Element.width (Element.px 14)
+        , Element.height (Element.px 14)
+        , Background.color white
+        , Border.rounded 7
+
+        -- , Border.shadow <|
+        --     -- case status of
+        --     --     Idle ->
+        --     --         { offset = ( 0, 0 )
+        --     --         , blur =
+        --     --             1
+        --     --         , color = Color.rgb 235 235 235
+        --     --         }
+        --     --     Focused ->
+        --     --         { offset = ( 0, 0 )
+        --     --         , blur =
+        --     --             0
+        --     --         , color = Color.rgba 235 235 235 0
+        --     --         }
+        --     --     Selected ->
+        --     { offset = ( 0, 0 )
+        --     , blur =
+        --         1
+        --     , color = Color.rgba 235 235 235 0
+        --     }
+        , Border.width <|
+            case status of
+                Idle ->
+                    1
+
+                Focused ->
+                    1
+
+                Selected ->
+                    5
+        , Border.color <|
+            case status of
+                Idle ->
+                    Color.rgb 208 208 208
+
+                Focused ->
+                    Color.rgb 208 208 208
+
+                Selected ->
+                    Color.rgb 59 153 252
+        ]
+        Element.empty
+
+
+defaultCheckbox : Bool -> Element msg
+defaultCheckbox checked =
+    Element.el
+        [ Element.width (Element.px 12)
+        , Element.height (Element.px 12)
+        , Font.color white
+        , Font.size 9
+        , Font.center
+        , Border.rounded 3
+        , Border.color (Color.rgb 211 211 211)
+        , Font.family
+            [ Font.typeface "georgia"
+            , Font.serif
+            ]
+        , Border.shadow
+            { offset = ( 0, 0 )
+            , blur = 1
+            , size = 2
+            , color = Color.rgb 238 238 238
+            }
+        , Background.color <|
+            if checked then
+                Color.rgb 59 153 252
+            else
+                white
+        , Border.width <|
+            if checked then
+                0
+            else
+                1
+        ]
+        (if checked then
+            Element.text "✓"
+         else
+            Element.empty
+        )

@@ -13,7 +13,8 @@ import Internal.Model as Internal
 {-| -}
 el : List (Attribute msg) -> ( String, Element msg ) -> Element msg
 el attrs child =
-    Internal.el
+    Internal.element Internal.NoStyleSheet
+        Internal.asEl
         Nothing
         (width Element.shrink
             :: height Element.shrink
@@ -29,8 +30,12 @@ el attrs child =
 {-| -}
 row : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
 row attrs children =
-    Internal.row
+    Internal.element
+        Internal.NoStyleSheet
+        Internal.asRow
+        Nothing
         (Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
             :: width fill
             :: attrs
         )
@@ -40,8 +45,11 @@ row attrs children =
 {-| -}
 column : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
 column attrs children =
-    Internal.column
+    Internal.element Internal.NoStyleSheet
+        Internal.asColumn
+        Nothing
         (Internal.Class "y-content-align" "content-top"
+            :: Internal.Class "x-content-align" "content-center-x"
             :: height fill
             :: width fill
             :: attrs
