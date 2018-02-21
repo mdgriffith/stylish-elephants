@@ -31,8 +31,8 @@ module Element.Events
 
 -}
 
-import Html.Events
 import Element exposing (Attribute)
+import Html.Events
 import Internal.Model as Internal
 import Json.Decode as Json
 import VirtualDom
@@ -174,6 +174,10 @@ onLoseFocus =
     Internal.Attr << Html.Events.onBlur
 
 
+
+-- Internal.Attr <| Html.Events.on "focusout" (Json.succeed msg)
+
+
 {-| -}
 onFocus : msg -> Attribute msg
 onFocus =
@@ -181,6 +185,7 @@ onFocus =
 
 
 
+-- Internal.Attr <| Html.Events.on "focusin" (Json.succeed msg)
 -- CUSTOM EVENTS
 
 

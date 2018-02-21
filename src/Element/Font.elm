@@ -7,23 +7,29 @@ module Element.Font
         , center
         , color
         , external
+        , extraBold
+        , extraLight
         , family
         , glow
+        , hairline
+        , heavy
         , italic
         , justify
         , letterSpacing
         , light
         , lineHeight
+        , medium
         , monospace
-        , mouseOverColor
+        , regular
         , sansSerif
+        , semiBold
         , serif
         , shadow
         , size
         , strike
         , typeface
         , underline
-        , weight
+        , unitalicized
         , wordSpacing
         )
 
@@ -50,7 +56,7 @@ module Element.Font
 
 **Note**: `Font.color`, `Font.size`, `Font.family`, and `Font.lineHeight` are all inherited, meaning you can set them at the top of your view and all subsequent nodes will have that value.
 
-@docs color, mouseOverColor, size, lineHeight
+@docs color, size, lineHeight
 
 
 ## Typefaces
@@ -84,7 +90,12 @@ module Element.Font
 
 ## Font Styles
 
-@docs underline, strike, italic, bold, light, weight
+@docs underline, strike, italic, unitalicized
+
+
+## Font Weight
+
+@docs heavy, extraBold, bold, semiBold, medium, regular, light, extraLight, hairline
 
 
 ## Shadows
@@ -94,7 +105,8 @@ module Element.Font
 -}
 
 import Color exposing (Color)
-import Internal.Model as Internal exposing (Attribute(..), Style(..))
+import Element exposing (Attr, Attribute)
+import Internal.Model as Internal
 
 
 {-| -}
@@ -103,15 +115,9 @@ type alias Font =
 
 
 {-| -}
-color : Color -> Attribute msg
+color : Color -> Attr decorative msg
 color fontColor =
-    StyleClass (Colored ("font-color-" ++ Internal.formatColorClass fontColor) "color" fontColor)
-
-
-{-| -}
-mouseOverColor : Color -> Attribute msg
-mouseOverColor fontColor =
-    Internal.hover (Colored ("hover-font-color-" ++ Internal.formatColorClass fontColor) "color" fontColor)
+    Internal.StyleClass (Internal.Colored ("font-color-" ++ Internal.formatColorClass fontColor) "color" fontColor)
 
 
 {-|
@@ -131,33 +137,7 @@ mouseOverColor fontColor =
 -}
 family : List Font -> Attribute msg
 family families =
-    let
-        renderFontClassName font current =
-            current
-                ++ (case font of
-                        Internal.Serif ->
-                            "serif"
-
-                        Internal.SansSerif ->
-                            "sans-serif"
-
-                        Internal.Monospace ->
-                            "monospace"
-
-                        Internal.Typeface name ->
-                            name
-                                |> String.toLower
-                                |> String.words
-                                |> String.join "-"
-
-                        Internal.ImportFont name url ->
-                            name
-                                |> String.toLower
-                                |> String.words
-                                |> String.join "-"
-                   )
-    in
-    StyleClass <| Internal.FontFamily (List.foldl renderFontClassName "font-" families) families
+    Internal.StyleClass <| Internal.FontFamily (List.foldl Internal.renderFontClassName "font-" families) families
 
 
 {-| -}
@@ -192,9 +172,9 @@ external { url, name } =
 
 {-| Font sizes are always given as `px`.
 -}
-size : Int -> Attribute msg
+size : Int -> Attr decorative msg
 size size =
-    StyleClass (Single ("font-size-" ++ toString size) "font-size" (toString size ++ "px"))
+    Internal.StyleClass (Internal.Single ("font-size-" ++ toString size) "font-size" (toString size ++ "px"))
 
 
 {-| This is the only unitless value in the library that isn't `px`.
@@ -206,17 +186,17 @@ This means the final lineHeight in px is:
       Font.size * Font.lineHeight == lineHeightInPx
 
 -}
-lineHeight : Float -> Attribute msg
+lineHeight : Float -> Attr decorative msg
 lineHeight =
-    StyleClass << LineHeight
+    Internal.StyleClass << Internal.LineHeight
 
 
 {-| In `px`.
 -}
 letterSpacing : Float -> Attribute msg
 letterSpacing offset =
-    StyleClass <|
-        Single
+    Internal.StyleClass <|
+        Internal.Single
             ("letter-spacing-" ++ Internal.floatClass offset)
             "letter-spacing"
             (toString offset ++ "px")
@@ -226,15 +206,8 @@ letterSpacing offset =
 -}
 wordSpacing : Float -> Attribute msg
 wordSpacing offset =
-    StyleClass <|
-        Single ("word-spacing-" ++ Internal.floatClass offset) "word-spacing" (toString offset ++ "px")
-
-
-{-| -}
-weight : Int -> Attribute msg
-weight fontWeight =
-    StyleClass <|
-        Single ("font-weight-" ++ toString fontWeight) "font-weight" (toString fontWeight)
+    Internal.StyleClass <|
+        Internal.Single ("word-spacing-" ++ Internal.floatClass offset) "word-spacing" (toString offset ++ "px")
 
 
 {-| Align the font to the left.
@@ -302,12 +275,61 @@ light =
 
 
 {-| -}
+hairline : Attribute msg
+hairline =
+    Internal.class "text-thin"
+
+
+{-| -}
+extraLight : Attribute msg
+extraLight =
+    Internal.class "text-extra-light"
+
+
+{-| -}
+regular : Attribute msg
+regular =
+    Internal.class "text-normal-weight"
+
+
+{-| -}
+semiBold : Attribute msg
+semiBold =
+    Internal.class "text-semi-bold"
+
+
+{-| -}
+medium : Attribute msg
+medium =
+    Internal.class "text-medium"
+
+
+{-| -}
+extraBold : Attribute msg
+extraBold =
+    Internal.class "text-extra-bold"
+
+
+{-| -}
+heavy : Attribute msg
+heavy =
+    Internal.class "text-heavy"
+
+
+{-| This will reset bold and italic.
+-}
+unitalicized : Attribute msg
+unitalicized =
+    Internal.class "text-unitalicized"
+
+
+{-| -}
 shadow :
     { offset : ( Float, Float )
     , blur : Float
     , color : Color
     }
-    -> Internal.Attribute msg
+    -> Attr decorative msg
 shadow { offset, blur, color } =
     Internal.TextShadow
         { offset = offset
@@ -318,7 +340,7 @@ shadow { offset, blur, color } =
 
 {-| A glow is just a simplified shadow
 -}
-glow : Color -> Float -> Internal.Attribute msg
+glow : Color -> Float -> Attr decorative msg
 glow color size =
     Internal.TextShadow
         { offset = ( 0, 0 )

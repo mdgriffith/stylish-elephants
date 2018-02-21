@@ -1,6 +1,5 @@
 module Internal.Style exposing (..)
 
-import Dict
 import Html
 
 
@@ -203,28 +202,28 @@ class cls =
             ".se"
 
         Single ->
-            ".el"
+            ".se.el"
 
         Row ->
-            ".row"
+            ".se.row"
 
         Column ->
-            ".column"
+            ".se.column"
 
         Page ->
-            ".page"
+            ".se.page"
 
         Paragraph ->
-            ".paragraph"
+            ".se.paragraph"
 
         Text ->
-            ".text"
+            ".se.text"
 
         Grid ->
-            ".grid"
+            ".se.grid"
 
         Spacer ->
-            ".spacer"
+            ".se.spacer"
 
 
 type Intermediate
@@ -351,6 +350,29 @@ viewportRulesElement =
     Html.node "style" [] [ Html.text viewportRules ]
 
 
+describeText : String -> List Rule -> Rule
+describeText cls props =
+    Descriptor cls
+        (List.map makeImportant props
+            ++ [ Child ".text"
+                    props
+               , Child ".el"
+                    props
+               , Child ".el > .text"
+                    props
+               ]
+        )
+
+
+makeImportant rule =
+    case rule of
+        Prop name prop ->
+            Prop name (prop ++ " !important")
+
+        _ ->
+            rule
+
+
 rules : String
 rules =
     render
@@ -362,46 +384,67 @@ rules =
         , Class ".se:focus"
             [ Prop "outline" "none"
             ]
-        , Class ".se:focus .se.show-on-focus"
-            [ Prop "opacity" "1"
-            , Prop "pointer-events" "auto"
-            ]
-        , Class ".se.show-on-focus"
-            [ Prop "opacity" "0"
-            , Prop "pointer-events" "none"
-            , Prop "transition"
-                (String.join ", " <|
-                    List.map (\x -> x ++ " 160ms")
-                        [ "opacity"
-                        ]
-                )
-            ]
+
+        -- , Class ".se:focus .se.show-on-focus"
+        --     [ Prop "opacity" "1"
+        --     , Prop "pointer-events" "auto"
+        --     ]
+        -- , Class ".se.show-on-focus"
+        --     [ Prop "opacity" "0"
+        --     , Prop "pointer-events" "none"
+        --     , Prop "transition"
+        --         (String.join ", " <|
+        --             List.map (\x -> x ++ " 160ms")
+        --                 [ "opacity"
+        --                 ]
+        --         )
+        --     ]
         , Class (class Root)
             [ Prop "width" "100%"
             , Prop "height" "auto"
             , Prop "min-height" "100%"
+            , Descriptor ".se.el.height-content"
+                [ Prop "height" "100%"
+                , Child ".height-fill"
+                    [ Prop "height" "100%"
+                    ]
+                ]
+            , Descriptor ".wireframe .el"
+                [ Prop "outline" "2px dashed black"
+                ]
+            , Descriptor ".wireframe .row"
+                [ Prop "outline" "2px dashed black"
+                ]
+            , Descriptor ".wireframe .column"
+                [ Prop "outline" "2px dashed black"
+                ]
             ]
         , Class (class Any)
             [ Prop "position" "relative"
             , Prop "border" "none"
-            , Prop "text-decoration" "none"
             , Prop "flex-shrink" "0"
             , Prop "display" "flex"
             , Prop "flex-direction" "row"
             , Prop "flex-basis" "auto"
             , Prop "resize" "none"
 
-            -- , Prop "flex-basis" "0"
+            -- , Prop "flex-basis" "0%"
             , Prop "box-sizing" "border-box"
             , Prop "margin" "0"
             , Prop "padding" "0"
             , Prop "border-width" "0"
             , Prop "border-style" "solid"
+
+            -- inheritable font properties
             , Prop "font-size" "inherit"
             , Prop "color" "inherit"
             , Prop "font-family" "inherit"
             , Prop "line-height" "inherit"
-            , Prop "font-weight" "normal"
+            , Prop "font-weight" "inherit"
+
+            -- Text decoration is *mandatorily inherited* in the css spec.  There's no way to change this.
+            , Prop "text-decoration" "none"
+            , Prop "font-style" "inherit"
             , Descriptor ".no-text-selection"
                 [ Prop "user-select" "none"
                 , Prop "-ms-user-select" "none"
@@ -418,7 +461,37 @@ rules =
             , Descriptor ".capture-pointer-events"
                 [ Prop "pointer-events" "nauto"
                 ]
-            , Descriptor ".hover-transition"
+            , Descriptor ".transparent"
+                [ Prop "opacity" "0"
+                ]
+            , Descriptor ".opaque"
+                [ Prop "opacity" "1"
+                ]
+            , Descriptor ".hover-transparent:hover"
+                [ Prop "opacity" "0"
+                ]
+            , Descriptor ".hover-opaque:hover"
+                [ Prop "opacity" "1"
+                ]
+            , Descriptor ".hover-transparent:hover"
+                [ Prop "opacity" "0"
+                ]
+            , Descriptor ".hover-opaque:hover"
+                [ Prop "opacity" "1"
+                ]
+            , Descriptor ".focus-transparent:focus"
+                [ Prop "opacity" "0"
+                ]
+            , Descriptor ".focus-opaque:focus"
+                [ Prop "opacity" "1"
+                ]
+            , Descriptor ".active-transparent:active"
+                [ Prop "opacity" "0"
+                ]
+            , Descriptor ".active-opaque:active"
+                [ Prop "opacity" "1"
+                ]
+            , Descriptor ".transition"
                 [ Prop "transition"
                     (String.join ", " <|
                         List.map (\x -> x ++ " 160ms")
@@ -427,6 +500,7 @@ rules =
                             , "filter"
                             , "background-color"
                             , "color"
+                            , "font-size"
                             ]
                     )
                 ]
@@ -436,12 +510,19 @@ rules =
                 ]
             , Descriptor ".scrollbars"
                 [ Prop "overflow" "auto"
+                , Prop "flex-shrink" "1"
                 ]
             , Descriptor ".scrollbars-x"
                 [ Prop "overflow-x" "auto"
+                , Descriptor ".row"
+                    [ Prop "flex-shrink" "1"
+                    ]
                 ]
             , Descriptor ".scrollbars-y"
                 [ Prop "overflow-y" "auto"
+                , Descriptor ".column"
+                    [ Prop "flex-shrink" "1"
+                    ]
                 ]
             , Descriptor ".clip"
                 [ Prop "overflow" "hidden"
@@ -482,6 +563,9 @@ rules =
                                     , Prop "pointer-events" "auto"
                                     , Child ".height-fill"
                                         [ Prop "height" "auto"
+                                        ]
+                                    , Child ".width-fill"
+                                        [ Prop "width" "100%"
                                         ]
                                     , Child ".se"
                                         [ Prop "position" "absolute"
@@ -528,7 +612,10 @@ rules =
                                     , Prop "left" "0"
                                     , Prop "top" "0"
                                     , Prop "z-index" "10"
-                                    , Prop "pointer-events" "auto"
+                                    , Prop "pointer-events" "none"
+                                    , Child ".se"
+                                        [ Prop "pointer-events" "auto"
+                                        ]
                                     ]
 
                             Behind ->
@@ -539,37 +626,51 @@ rules =
                                     , Prop "left" "0"
                                     , Prop "top" "0"
                                     , Prop "z-index" "0"
-                                    , Prop "pointer-events" "auto"
+                                    , Prop "pointer-events" "none"
+                                    , Child ".se"
+                                        [ Prop "pointer-events" "auto"
+                                        ]
                                     ]
-            , Descriptor ".bold"
-                [ Prop "font-weight" "700"
-                , Child ".text"
-                    [ Prop "font-weight" "700"
-                    ]
+            , Descriptor ".text-thin"
+                [ Prop "font-weight" "100"
+                ]
+            , Descriptor ".text-extra-light"
+                [ Prop "font-weight" "200"
                 ]
             , Descriptor ".text-light"
                 [ Prop "font-weight" "300"
-                , Child ".text"
-                    [ Prop "font-weight" "300"
-                    ]
+                ]
+            , Descriptor ".text-normal-weight"
+                [ Prop "font-weight" "400"
+                ]
+            , Descriptor ".text-medium"
+                [ Prop "font-weight" "500"
+                ]
+            , Descriptor ".text-semi-bold"
+                [ Prop "font-weight" "600"
+                ]
+            , Descriptor ".bold"
+                [ Prop "font-weight" "700"
+                ]
+            , Descriptor ".text-extra-bold"
+                [ Prop "font-weight" "800"
+                ]
+            , Descriptor ".text-heavy"
+                [ Prop "font-weight" "900"
                 ]
             , Descriptor ".italic"
                 [ Prop "font-style" "italic"
-                , Child ".text"
-                    [ Prop "font-style" "italic"
-                    ]
                 ]
             , Descriptor ".strike"
                 [ Prop "text-decoration" "line-through"
-                , Child ".text"
-                    [ Prop "text-decoration" "line-through"
-                    ]
                 ]
             , Descriptor ".underline"
                 [ Prop "text-decoration" "underline"
-                , Child ".text"
-                    [ Prop "text-decoration" "underline"
-                    ]
+                , Prop "text-decoration-skip-ink" "auto"
+                , Prop "text-decoration-skip" "ink"
+                ]
+            , Descriptor ".text-unitalicized"
+                [ Prop "font-style" "normal"
                 ]
             , Descriptor ".text-justify"
                 [ Prop "text-align" "justify"
@@ -601,6 +702,18 @@ rules =
             [ Prop "display" "flex"
             , Prop "flex-direction" "column"
             , Prop "white-space" "pre"
+            , Descriptor ".se-button"
+                -- Special default for text in a button.
+                -- This is overridden is they put the text inside an `el`
+                [ Child ".text"
+                    [ Descriptor ".height-fill"
+                        [ Prop "flex-grow" "0"
+                        ]
+                    , Descriptor ".width-fill"
+                        [ Prop "align-self" "auto !important"
+                        ]
+                    ]
+                ]
             , Child ".height-content"
                 [ Prop "height" "auto"
                 ]
@@ -657,6 +770,11 @@ rules =
             , Prop "width" "100%"
             , Prop "height" "100%"
             , Prop "pointer-events" "none"
+            , Prop "margin" "0 !important"
+            , Adjacent ".se"
+                [ Prop "margin-top" "0"
+                , Prop "margin-left" "0"
+                ]
             ]
         , Class ".modal"
             [ Prop "position" "fixed"
@@ -670,12 +788,23 @@ rules =
             [ Prop "display" "flex"
             , Prop "flex-direction" "row"
             , Child (class Any)
-                [ Prop "flex-basis" "0"
+                [ Prop "flex-basis" "0%"
                 , Descriptor ".width-exact"
                     [ Prop "flex-basis" "auto"
                     ]
                 ]
+            , Child ".se:first-child"
+                [ Prop "margin-left" "0 !important"
+                ]
+            , Child ".se.teleporting-spacer"
+                [ Prop "margin-left" "0 !important"
+                ]
             , Child ".height-fill"
+                [ --Prop "height" "100%"
+                  -- alignTop, centerY, and alignBottom need to be disabled
+                  Prop "align-self" "stretch !important"
+                ]
+            , Child ".height-fill-portion"
                 [ --Prop "height" "100%"
                   -- alignTop, centerY, and alignBottom need to be disabled
                   Prop "align-self" "stretch !important"
@@ -698,8 +827,10 @@ rules =
                 ]
             , Child ".container"
                 [ Prop "flex-grow" "0"
-                , Prop "flex-basis" "0"
-                , Prop "height" "100%"
+                , Prop "flex-basis" "0%"
+
+                -- , Prop "height" "100%"
+                , Prop "align-self" "stretch"
                 ]
             , Child "alignLeft:last-of-type.align-container-left"
                 [ Prop "flex-grow" "1"
@@ -707,6 +838,47 @@ rules =
             , Child "alignRight:first-of-type.align-container-right"
                 [ Prop "flex-grow" "1"
                 ]
+
+            -- Working Area
+            -- first center y
+            , Child "centerX:first-of-type.align-container-center-x"
+                [ Prop "flex-grow" "1"
+
+                -- , Prop "justify-content" "flex-end"
+                , Child ".self-center-y"
+                    [ Prop "margin-bottom" "0 !important"
+                    ]
+                ]
+            , Child "centerX:last-of-type.align-container-center-x"
+                [ Prop "flex-grow" "1"
+
+                -- , Prop "justify-content" "flex-start"
+                , Child ".self-center-y"
+                    [ Prop "margin-top" "0 !important"
+                    ]
+                ]
+
+            -- lonley centerX
+            , Child "centerX:only-of-type.align-container-center-x"
+                [ Prop "flex-grow" "1"
+                , Child ".self-center-y"
+                    [ Prop "margin-top" "auto !important"
+                    , Prop "margin-bottom" "auto !important"
+                    ]
+                ]
+
+            -- alignBottom's after a centerX should not grow
+            , Child "centerX:last-of-type.align-container-center-x ~ alignRight"
+                [ Prop "flex-grow" "0"
+                ]
+
+            -- centerX's after an alignBottom should be ignored
+            , Child "alignRight:first-of-type.align-container-right ~ centerX.align-container-center-x"
+                -- Bottom alignment always overrides center alignment
+                [ Prop "flex-grow" "0"
+                ]
+
+            -- End Working Area
             , describeAlignment <|
                 \alignment ->
                     case alignment of
@@ -765,6 +937,11 @@ rules =
                   -- alignLeft, alignRight, centerX need to be disabled
                   Prop "align-self" "stretch !important"
                 ]
+            , Child ".width-fill-portion"
+                [ --Prop "width" "100%"
+                  -- alignLeft, alignRight, centerX need to be disabled
+                  Prop "align-self" "stretch !important"
+                ]
             , Child ".se:first-child"
                 [ Prop "margin-top" "0 !important"
                 ]
@@ -792,6 +969,50 @@ rules =
             , Child ".teleporting-spacer"
                 [ Prop "flex-grow" "0"
                 ]
+
+            -- WORKIGN AREA
+            -- first center y
+            , Child "centerY:first-of-type.align-container-center-y"
+                [ Prop "flex-grow" "1"
+
+                -- , Prop "justify-content" "flex-end"
+                , Child ".self-center-y"
+                    [ Prop "margin-bottom" "0 !important"
+                    ]
+                ]
+            , Child "centerY:last-of-type.align-container-center-y"
+                [ Prop "flex-grow" "1"
+
+                -- , Prop "justify-content" "flex-start"
+                , Child ".self-center-y"
+                    [ Prop "margin-top" "0 !important"
+                    ]
+                ]
+
+            -- lonley centerY
+            , Child "centerY:only-of-type.align-container-center-y"
+                [ Prop "flex-grow" "1"
+                , Child ".self-center-y"
+                    [ Prop "margin-top" "auto !important"
+                    , Prop "margin-bottom" "auto !important"
+                    ]
+                ]
+
+            -- alignBottom's after a centerY should not grow
+            , Child "centerY:last-of-type.align-container-center-y ~ alignBottom"
+                [ Prop "flex-grow" "0"
+                ]
+
+            -- centerY's after an alignBottom should be ignored
+            , Child "alignBottom:first-of-type.align-container-bottom ~ centerY.align-container-center-y"
+                -- Bottom alignment always overrides center alignment
+                [ Prop "flex-grow" "0"
+                ]
+
+            -- , Child "alignRight:first-of-type.align-container-right"
+            --     [ Prop "flex-grow" "1"
+            --     ]
+            -- END WORKING AREA
             , Child ".se.self-center-y:first-child ~ .teleporting-spacer"
                 [ Prop "flex-grow" "1"
                 , Prop "order" "-1"
@@ -841,6 +1062,7 @@ rules =
                 [ Prop "flex-grow" "0"
                 , Prop "flex-basis" "auto"
                 , Prop "width" "100%"
+                , Prop "align-self" "stretch !important"
                 ]
             , Descriptor ".space-evenly"
                 [ Prop "justify-content" "space-between"
@@ -877,6 +1099,9 @@ rules =
             ]
         , Class (class Page)
             [ Prop "display" "block"
+            , Child (class Any ++ ":first-child")
+                [ Prop "margin" "0 !important"
+                ]
 
             -- clear spacing of any subsequent element if an element is float-left
             , Child (class Any ++ selfName (Self Left) ++ ":first-child + .se")
@@ -987,10 +1212,10 @@ rules =
                             , []
                             )
             ]
-        , Class ".ignore"
+        , Class ".se.ignore"
             [ Prop "margin" "0 !important"
             ]
-        , Class ".hidden"
+        , Class ".se.hidden"
             [ Prop "display" "none"
             ]
         ]

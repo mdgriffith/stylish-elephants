@@ -2,8 +2,6 @@ module Internal.Model exposing (..)
 
 {-| -}
 
--- import VirtualCss
-
 import Color exposing (Color)
 import Html exposing (Html)
 import Html.Attributes
@@ -34,62 +32,6 @@ type LayoutContext
     | AsTextColumn
 
 
-
-{- Constants -}
-
-
-asGrid : LayoutContext
-asGrid =
-    AsGrid
-
-
-asRow : LayoutContext
-asRow =
-    AsRow
-
-
-asColumn : LayoutContext
-asColumn =
-    AsColumn
-
-
-asEl : LayoutContext
-asEl =
-    AsEl
-
-
-asParagraph : LayoutContext
-asParagraph =
-    AsParagraph
-
-
-asTextColumn : LayoutContext
-asTextColumn =
-    AsTextColumn
-
-
-contextClasses : LayoutContext -> Attribute msg
-contextClasses context =
-    case context of
-        AsRow ->
-            htmlClass "se row"
-
-        AsColumn ->
-            htmlClass "se column"
-
-        AsEl ->
-            htmlClass "se el"
-
-        AsGrid ->
-            htmlClass "se grid"
-
-        AsParagraph ->
-            htmlClass "se paragraph"
-
-        AsTextColumn ->
-            htmlClass "se page"
-
-
 type Aligned
     = Unaligned
     | Aligned (Maybe HAlign) (Maybe VAlign)
@@ -107,17 +49,13 @@ type VAlign
     | Bottom
 
 
-hover : Style -> Attribute msg
-hover style =
-    StyleClass (PseudoSelector Hover style)
-
-
 type Style
     = Style String (List Property)
       --       class  prop   val
     | LineHeight Float
     | FontFamily String (List Font)
     | FontSize Int
+      -- classname, prop, value
     | Single String String String
     | Colored String String Color
     | SpacingStyle Int Int
@@ -133,12 +71,16 @@ type Style
         , width : Int
         , height : Int
         }
-    | PseudoSelector PseudoClass Style
+    | Transform Transformation
+    | PseudoSelector PseudoClass (List Style)
+    | Transparency String Float
+    | Shadows String String
 
 
 type PseudoClass
     = Focus
     | Hover
+    | Active
 
 
 type Font
@@ -159,20 +101,19 @@ type Transformation
     | Scale Float Float Float
 
 
-type Attribute msg
-    = Attr (Html.Attribute msg)
+type Attribute aligned msg
+    = NoAttribute
+    | Attr (Html.Attribute msg)
     | Describe Description
       -- invalidation key and literal class
     | Class String String
       -- invalidation key "border-color" as opposed to "border-color-10-10-10" that will be the key for the class
     | StyleClass Style
-      -- Descriptions will add aria attributes and if the element is not a link, may set the node type.
     | AlignY VAlign
     | AlignX HAlign
     | Width Length
     | Height Length
     | Nearby Location Bool (Element msg)
-    | Transform (Maybe PseudoClass) Transformation
     | TextShadow
         { offset : ( Float, Float )
         , blur : Float
@@ -186,7 +127,6 @@ type Attribute msg
         , color : Color
         }
     | Filter FilterType
-    | NoAttribute
 
 
 type Description
@@ -225,14 +165,11 @@ type Length
     = Px Int
     | Content
     | Fill Int
-
-
-
--- | Between
---     { value : Length
---     , min : Maybe Int
---     , max : Maybe Int
---     }
+    | FillBetween
+        { portion : Int
+        , min : Maybe Int
+        , max : Maybe Int
+        }
 
 
 type Axis
@@ -250,73 +187,62 @@ type Location
     | Behind
 
 
-map : (msg -> msg1) -> Element msg -> Element msg1
-map fn el =
-    case el of
-        Styled styled ->
-            Styled
-                { styles = styled.styles
-                , html = \add context -> Html.map fn <| styled.html add context
-                }
-
-        Unstyled html ->
-            Unstyled (Html.map fn << html)
-
-        Text str ->
-            Text str
-
-        Empty ->
-            Empty
+type alias TransformationAlias a =
+    { a
+        | rotate : Maybe ( Float, Float, Float, Float )
+        , translate : Maybe ( Maybe Float, Maybe Float, Maybe Float )
+        , scale : Maybe ( Float, Float, Float )
+    }
 
 
-mapAttr : (msg -> msg1) -> Attribute msg -> Attribute msg1
-mapAttr fn attr =
-    case attr of
-        NoAttribute ->
-            NoAttribute
-
-        Describe description ->
-            Describe description
-
-        AlignX x ->
-            AlignX x
-
-        AlignY y ->
-            AlignY y
-
-        Width x ->
-            Width x
-
-        Height x ->
-            Height x
-
-        -- invalidation key "border-color" as opposed to "border-color-10-10-10" that will be the key for the class
-        Class x y ->
-            Class x y
-
-        StyleClass style ->
-            StyleClass style
-
-        Nearby location on element ->
-            Nearby location on (map fn element)
-
-        Transform pseudo trans ->
-            Transform pseudo trans
-
-        Attr htmlAttr ->
-            Attr (Html.Attributes.map fn htmlAttr)
-
-        TextShadow shadow ->
-            TextShadow shadow
-
-        BoxShadow shadow ->
-            BoxShadow shadow
-
-        Filter filter ->
-            Filter filter
+type NodeName
+    = Generic
+    | NodeName String
+    | Embedded String String
 
 
-class : String -> Attribute msg
+type alias NearbyGroup msg =
+    { above : Maybe ( Bool, Html msg )
+    , below : Maybe ( Bool, Html msg )
+    , right : Maybe ( Bool, Html msg )
+    , left : Maybe ( Bool, Html msg )
+    , infront : Maybe ( Bool, Html msg )
+    , behind : Maybe ( Bool, Html msg )
+    }
+
+
+type alias Gathered msg =
+    { node : NodeName
+    , attributes : List (Html.Attribute msg)
+    , styles : List Style
+    , alignment : Aligned
+    , width : Maybe Length
+    , height : Maybe Length
+    , nearbys : Maybe (List ( Location, Bool, Element msg ))
+    , filters : Maybe String
+    , boxShadows : Maybe String
+    , textShadows : Maybe String
+    , transform : Maybe (Decorated TransformationGroup)
+    , has : Set String
+    }
+
+
+type alias Decorated x =
+    { focus : Maybe x
+    , hover : Maybe x
+    , normal : Maybe x
+    , active : Maybe x
+    }
+
+
+type alias TransformationGroup =
+    { rotate : Maybe ( Float, Float, Float, Float )
+    , translate : Maybe ( Maybe Float, Maybe Float, Maybe Float )
+    , scale : Maybe ( Float, Float, Float )
+    }
+
+
+class : String -> Attribute aligned msg
 class x =
     Class x x
 
@@ -371,7 +297,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                                 keyed
 
                             Just stylesheet ->
-                                ( "stylesheet-pls-pls-pls-be-unique"
+                                ( "stylesheet"
                                 , VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ Html.text stylesheet ]
                                 )
                                     :: keyed
@@ -410,17 +336,20 @@ renderNode { alignment, attributes, node, width, height } children styles contex
 
                 _ ->
                     case alignment of
-                        Unaligned ->
-                            html
-
-                        Aligned (Just Left) _ ->
-                            VirtualDom.node "alignLeft"
-                                [ Html.Attributes.class "se el container align-container-left content-center-y" ]
-                                [ html ]
-
+                        -- Unaligned ->
+                        --     html
+                        -- Aligned (Just Left) _ ->
+                        --     VirtualDom.node "alignLeft"
+                        --         [ Html.Attributes.class "se el container align-container-left content-center-y" ]
+                        --         [ html ]
                         Aligned (Just Right) _ ->
                             VirtualDom.node "alignRight"
                                 [ Html.Attributes.class "se el container align-container-right content-center-y" ]
+                                [ html ]
+
+                        Aligned (Just CenterX) _ ->
+                            VirtualDom.node "centerX"
+                                [ Html.Attributes.class "se el container align-container-center-x content-center-y" ]
                                 [ html ]
 
                         _ ->
@@ -433,19 +362,21 @@ renderNode { alignment, attributes, node, width, height } children styles contex
 
                 _ ->
                     case alignment of
-                        Unaligned ->
-                            VirtualDom.node "alignTop"
-                                [ Html.Attributes.class "se el container align-container-top" ]
-                                [ html ]
-
-                        Aligned _ Nothing ->
-                            VirtualDom.node "alignTop"
-                                [ Html.Attributes.class "se el container align-container-top" ]
-                                [ html ]
-
-                        Aligned _ (Just Top) ->
-                            VirtualDom.node "alignTop"
-                                [ Html.Attributes.class "se el container align-container-top" ]
+                        -- Unaligned ->
+                        --     VirtualDom.node "alignTop"
+                        --         [ Html.Attributes.class "se el container align-container-top" ]
+                        --         [ html ]
+                        -- Aligned _ Nothing ->
+                        --     VirtualDom.node "alignTop"
+                        --         [ Html.Attributes.class "se el container align-container-top" ]
+                        --         [ html ]
+                        -- Aligned _ (Just Top) ->
+                        --     VirtualDom.node "alignTop"
+                        --         [ Html.Attributes.class "se el container align-container-top" ]
+                        --         [ html ]
+                        Aligned _ (Just CenterY) ->
+                            VirtualDom.node "centerY"
+                                [ Html.Attributes.class "se el container align-container-center-y" ]
                                 [ html ]
 
                         Aligned _ (Just Bottom) ->
@@ -499,7 +430,7 @@ alignYName align =
             "self-center-y"
 
 
-noAreas : List (Attribute msg) -> List (Attribute msg)
+noAreas : List (Attribute aligned msg) -> List (Attribute aligned msg)
 noAreas attrs =
     let
         notAnArea a =
@@ -513,7 +444,142 @@ noAreas attrs =
     List.filter notAnArea attrs
 
 
-gatherAttributes : Attribute msg -> Gathered msg -> Gathered msg
+{-| replace a
+-}
+addIfNothing val existing =
+    case existing of
+        Nothing ->
+            val
+
+        x ->
+            x
+
+
+emptyTransformationStates =
+    { focus = Nothing
+    , hover = Nothing
+    , normal = Nothing
+    , active = Nothing
+    }
+
+
+emptyTransformGroup =
+    { translate = Nothing
+    , rotate = Nothing
+    , scale = Nothing
+    }
+
+
+stackOn : Maybe PseudoClass -> Transformation -> Gathered msg -> Gathered msg
+stackOn maybePseudo transform gathered =
+    let
+        states =
+            Maybe.withDefault emptyTransformationStates gathered.transform
+    in
+    case maybePseudo of
+        Nothing ->
+            let
+                normal =
+                    states.normal
+            in
+            { gathered
+                | transform =
+                    Just
+                        { states
+                            | normal =
+                                normal
+                                    |> Maybe.withDefault emptyTransformGroup
+                                    |> stackTransforms transform
+                                    |> Just
+                        }
+            }
+
+        Just Hover ->
+            let
+                hover =
+                    states.hover
+            in
+            { gathered
+                | transform =
+                    Just
+                        { states
+                            | hover =
+                                hover
+                                    |> Maybe.withDefault emptyTransformGroup
+                                    |> stackTransforms transform
+                                    |> Just
+                        }
+            }
+
+        Just Active ->
+            let
+                active =
+                    states.active
+            in
+            { gathered
+                | transform =
+                    Just
+                        { states
+                            | active =
+                                active
+                                    |> Maybe.withDefault emptyTransformGroup
+                                    |> stackTransforms transform
+                                    |> Just
+                        }
+            }
+
+        Just focus ->
+            let
+                focus =
+                    states.focus
+            in
+            { gathered
+                | transform =
+                    Just
+                        { states
+                            | focus =
+                                focus
+                                    |> Maybe.withDefault emptyTransformGroup
+                                    |> stackTransforms transform
+                                    |> Just
+                        }
+            }
+
+
+{-| -}
+stackTransforms : Transformation -> TransformationGroup -> TransformationGroup
+stackTransforms transform group =
+    case transform of
+        Move mx my mz ->
+            case group.translate of
+                Nothing ->
+                    { group
+                        | translate =
+                            Just ( mx, my, mz )
+                    }
+
+                Just ( existingX, existingY, existingZ ) ->
+                    { group
+                        | translate =
+                            Just
+                                ( addIfNothing mx existingX
+                                , addIfNothing my existingY
+                                , addIfNothing mz existingZ
+                                )
+                    }
+
+        Rotate x y z angle ->
+            { group
+                | rotate = addIfNothing (Just ( x, y, z, angle )) group.rotate
+            }
+
+        Scale x y z ->
+            { group
+                | scale = addIfNothing (Just ( x, y, z )) group.scale
+            }
+
+
+gatherAttributes : Attribute aligned msg -> Gathered msg -> Gathered msg
 gatherAttributes attr gathered =
     let
         className name =
@@ -524,8 +590,14 @@ gatherAttributes attr gathered =
 
         formatStyleClass style =
             case style of
+                Transform x ->
+                    Transform x
+
+                Shadows x y ->
+                    Shadows x y
+
                 PseudoSelector selector style ->
-                    PseudoSelector selector (formatStyleClass style)
+                    PseudoSelector selector (List.map formatStyleClass style)
 
                 Style class props ->
                     Style (styleName class) props
@@ -556,6 +628,9 @@ gatherAttributes attr gathered =
 
                 FontSize i ->
                     FontSize i
+
+                Transparency name o ->
+                    Transparency name o
     in
     case attr of
         NoAttribute ->
@@ -575,23 +650,52 @@ gatherAttributes attr gathered =
 
         StyleClass style ->
             let
-                key =
-                    styleKey style
-            in
-            if Set.member key gathered.has then
-                gathered
-            else
-                { gathered
-                    | attributes =
-                        case style of
-                            PseudoSelector Hover _ ->
-                                VirtualDom.property "className" (Json.string "hover-transition") :: className (getStyleName style) :: gathered.attributes
+                addNormalStyle styleProp gatheredProps =
+                    let
+                        key =
+                            styleKey styleProp
+                    in
+                    if Set.member key gatheredProps.has then
+                        gatheredProps
+                    else
+                        { gatheredProps
+                            | attributes =
+                                case styleProp of
+                                    PseudoSelector _ _ ->
+                                        VirtualDom.property "className" (Json.string "transition") :: className (getStyleName styleProp) :: gatheredProps.attributes
 
-                            _ ->
-                                className (getStyleName style) :: gathered.attributes
-                    , styles = formatStyleClass style :: gathered.styles
-                    , has = Set.insert key gathered.has
-                }
+                                    _ ->
+                                        className (getStyleName styleProp) :: gatheredProps.attributes
+                            , styles = formatStyleClass styleProp :: gatheredProps.styles
+                            , has = Set.insert key gatheredProps.has
+                        }
+            in
+            case style of
+                Transform transformation ->
+                    stackOn Nothing transformation gathered
+
+                PseudoSelector pseudo props ->
+                    let
+                        ( transformationProps, otherProps ) =
+                            List.partition (\x -> forTransforms x /= Nothing) props
+
+                        forTransforms attr =
+                            case attr of
+                                Transform x ->
+                                    Just x
+
+                                _ ->
+                                    Nothing
+
+                        withTransforms =
+                            transformationProps
+                                |> List.filterMap forTransforms
+                                |> List.foldr (stackOn (Just pseudo)) gathered
+                    in
+                    addNormalStyle (PseudoSelector pseudo otherProps) withTransforms
+
+                _ ->
+                    addNormalStyle style gathered
 
         Width width ->
             if gathered.width == Nothing then
@@ -622,6 +726,48 @@ gatherAttributes attr gathered =
                                 , styles =
                                     Single (".se.row > " ++ (styleName <| "width-fill-" ++ toString portion)) "flex-grow" (toString (portion * 100000)) :: gathered.styles
                             }
+
+                    FillBetween fill ->
+                        let
+                            minimum =
+                                Maybe.map renderMin fill.min
+
+                            maximum =
+                                Maybe.map renderMax fill.max
+
+                            renderMin px =
+                                ( "min-width-" ++ intToString px, Single (".min-width-" ++ intToString px) "min-width" (intToString px ++ "px") )
+
+                            renderMax px =
+                                ( ".max-width-" ++ intToString px, Single (".max-width-" ++ intToString px) "max-width" (intToString px ++ "px") )
+
+                            base =
+                                Just
+                                    ( "width-fill-portion width-fill-" ++ toString fill.portion
+                                    , Single (".se.row > " ++ (styleName <| "width-fill-" ++ toString fill.portion)) "flex-grow" (toString (fill.portion * 100000))
+                                    )
+
+                            classes =
+                                String.join " " <|
+                                    List.filterMap (Maybe.map Tuple.first)
+                                        [ minimum
+                                        , maximum
+                                        , base
+                                        ]
+
+                            styles =
+                                List.filterMap (Maybe.map Tuple.second)
+                                    [ minimum
+                                    , maximum
+                                    , base
+                                    ]
+                        in
+                        { gathered
+                            | width = Just width
+                            , attributes = className classes :: gathered.attributes
+                            , styles =
+                                styles ++ gathered.styles
+                        }
             else
                 gathered
 
@@ -654,6 +800,48 @@ gatherAttributes attr gathered =
                                 , styles =
                                     Single (".se.column > " ++ (styleName <| "height-fill-" ++ toString portion)) "flex-grow" (toString (portion * 100000)) :: gathered.styles
                             }
+
+                    FillBetween fill ->
+                        let
+                            minimum =
+                                Maybe.map renderMin fill.min
+
+                            maximum =
+                                Maybe.map renderMax fill.max
+
+                            renderMin px =
+                                ( "min-height-" ++ intToString px, Single (".min-height-" ++ intToString px) "min-height" (intToString px ++ "px") )
+
+                            renderMax px =
+                                ( ".max-height-" ++ intToString px, Single (".max-height-" ++ intToString px) "max-height" (intToString px ++ "px") )
+
+                            base =
+                                Just
+                                    ( "height-fill-portion height-fill-" ++ toString fill.portion
+                                    , Single (".se.column > " ++ (styleName <| "height-fill-" ++ toString fill.portion)) "flex-grow" (toString (fill.portion * 100000))
+                                    )
+
+                            classes =
+                                String.join " " <|
+                                    List.filterMap (Maybe.map Tuple.first)
+                                        [ minimum
+                                        , maximum
+                                        , base
+                                        ]
+
+                            styles =
+                                List.filterMap (Maybe.map Tuple.second)
+                                    [ minimum
+                                    , maximum
+                                    , base
+                                    ]
+                        in
+                        { gathered
+                            | height = Just height
+                            , attributes = className classes :: gathered.attributes
+                            , styles =
+                                styles ++ gathered.styles
+                        }
             else
                 gathered
 
@@ -680,7 +868,7 @@ gatherAttributes attr gathered =
                         { gathered | node = addNodeName "h6" gathered.node }
 
                 Button ->
-                    { gathered | attributes = Html.Attributes.attribute "aria-role" "button" :: gathered.attributes }
+                    { gathered | attributes = Html.Attributes.attribute "role" "button" :: gathered.attributes }
 
                 Label label ->
                     { gathered | attributes = Html.Attributes.attribute "aria-label" label :: gathered.attributes }
@@ -693,20 +881,6 @@ gatherAttributes attr gathered =
 
         Nearby location on elem ->
             let
-                nearbyGroup =
-                    case gathered.nearbys of
-                        Nothing ->
-                            { above = Nothing
-                            , below = Nothing
-                            , right = Nothing
-                            , left = Nothing
-                            , infront = Nothing
-                            , behind = Nothing
-                            }
-
-                        Just x ->
-                            x
-
                 styles =
                     case elem of
                         Empty ->
@@ -720,25 +894,6 @@ gatherAttributes attr gathered =
 
                         Styled styled ->
                             Just <| gathered.styles ++ styled.styles
-
-                addIfEmpty existing =
-                    case existing of
-                        Nothing ->
-                            case elem of
-                                Empty ->
-                                    Nothing
-
-                                Text str ->
-                                    Just ( on, textElement str )
-
-                                Unstyled html ->
-                                    Just ( on, html asEl )
-
-                                Styled styled ->
-                                    Just ( on, styled.html Nothing asEl )
-
-                        _ ->
-                            existing
             in
             { gathered
                 | styles =
@@ -749,37 +904,12 @@ gatherAttributes attr gathered =
                         Just newStyles ->
                             newStyles
                 , nearbys =
-                    Just <|
-                        case location of
-                            Above ->
-                                { nearbyGroup
-                                    | above = addIfEmpty nearbyGroup.above
-                                }
+                    case gathered.nearbys of
+                        Nothing ->
+                            Just [ ( location, on, elem ) ]
 
-                            Below ->
-                                { nearbyGroup
-                                    | below = addIfEmpty nearbyGroup.below
-                                }
-
-                            OnRight ->
-                                { nearbyGroup
-                                    | right = addIfEmpty nearbyGroup.right
-                                }
-
-                            OnLeft ->
-                                { nearbyGroup
-                                    | left = addIfEmpty nearbyGroup.left
-                                }
-
-                            InFront ->
-                                { nearbyGroup
-                                    | infront = addIfEmpty nearbyGroup.infront
-                                }
-
-                            Behind ->
-                                { nearbyGroup
-                                    | behind = addIfEmpty nearbyGroup.behind
-                                }
+                        Just nearby ->
+                            Just (( location, on, elem ) :: nearby)
             }
 
         AlignX x ->
@@ -840,131 +970,6 @@ gatherAttributes attr gathered =
                 Just existing ->
                     { gathered | textShadows = Just (formatTextShadow shadow ++ ", " ++ existing) }
 
-        Transform pseudoClass transform ->
-            case transform of
-                Move mx my mz ->
-                    case pseudoClass of
-                        Nothing ->
-                            case gathered.transform of
-                                Nothing ->
-                                    { gathered
-                                        | transform =
-                                            Just
-                                                { translate =
-                                                    Just ( mx, my, mz )
-                                                , scale = Nothing
-                                                , rotate = Nothing
-                                                }
-                                    }
-
-                                Just transformation ->
-                                    { gathered
-                                        | transform = Just (addTranslate mx my mz transformation)
-                                    }
-
-                        Just Hover ->
-                            case gathered.transformHover of
-                                Nothing ->
-                                    { gathered
-                                        | transformHover =
-                                            Just
-                                                { translate =
-                                                    Just ( mx, my, mz )
-                                                , scale = Nothing
-                                                , rotate = Nothing
-                                                }
-                                    }
-
-                                Just transformation ->
-                                    { gathered
-                                        | transformHover = Just (addTranslate mx my mz transformation)
-                                    }
-
-                        Just Focus ->
-                            gathered
-
-                Rotate x y z angle ->
-                    case pseudoClass of
-                        Nothing ->
-                            case gathered.transform of
-                                Nothing ->
-                                    { gathered
-                                        | transform =
-                                            Just
-                                                { rotate =
-                                                    Just ( x, y, z, angle )
-                                                , scale = Nothing
-                                                , translate = Nothing
-                                                }
-                                    }
-
-                                Just transformation ->
-                                    { gathered
-                                        | transform = Just (addRotate x y z angle transformation)
-                                    }
-
-                        Just Hover ->
-                            case gathered.transformHover of
-                                Nothing ->
-                                    { gathered
-                                        | transformHover =
-                                            Just
-                                                { rotate =
-                                                    Just ( x, y, z, angle )
-                                                , scale = Nothing
-                                                , translate = Nothing
-                                                }
-                                    }
-
-                                Just transformation ->
-                                    { gathered
-                                        | transformHover = Just (addRotate x y z angle transformation)
-                                    }
-
-                        Just Focus ->
-                            gathered
-
-                Scale x y z ->
-                    case pseudoClass of
-                        Nothing ->
-                            case gathered.transform of
-                                Nothing ->
-                                    { gathered
-                                        | transform =
-                                            Just
-                                                { scale =
-                                                    Just ( x, y, z )
-                                                , rotate = Nothing
-                                                , translate = Nothing
-                                                }
-                                    }
-
-                                Just transformation ->
-                                    { gathered
-                                        | transform = Just (addScale x y z transformation)
-                                    }
-
-                        Just Hover ->
-                            case gathered.transformHover of
-                                Nothing ->
-                                    { gathered
-                                        | transformHover =
-                                            Just
-                                                { scale =
-                                                    Just ( x, y, z )
-                                                , rotate = Nothing
-                                                , translate = Nothing
-                                                }
-                                    }
-
-                                Just transformation ->
-                                    { gathered
-                                        | transformHover = Just (addScale x y z transformation)
-                                    }
-
-                        Just Focus ->
-                            gathered
-
 
 floorAtZero : Int -> Int
 floorAtZero x =
@@ -979,7 +984,7 @@ floorAtZero x =
 This means paragraph's with spacing must have padding that is at least the same size
 
 -}
-adjustParagraphSpacing : List (Attribute msg) -> List (Attribute msg)
+adjustParagraphSpacing : List (Attribute aligned msg) -> List (Attribute aligned msg)
 adjustParagraphSpacing attrs =
     let
         adjust ( x, y ) attribute =
@@ -1022,121 +1027,12 @@ adjustParagraphSpacing attrs =
             List.map (adjust ( x, y )) attrs
 
 
-type alias TransformationAlias a =
-    { a
-        | rotate : Maybe ( Float, Float, Float, Float )
-        , translate : Maybe ( Maybe Float, Maybe Float, Maybe Float )
-        , scale : Maybe ( Float, Float, Float )
-    }
-
-
-addScale : a -> b -> c -> { d | scale : Maybe ( a, b, c ) } -> { d | scale : Maybe ( a, b, c ) }
-addScale x y z transformation =
-    case transformation.scale of
-        Nothing ->
-            { transformation
-                | scale =
-                    Just ( x, y, z )
-            }
-
-        _ ->
-            transformation
-
-
-addRotate : a -> b -> c -> d -> { e | rotate : Maybe ( a, b, c, d ) } -> { e | rotate : Maybe ( a, b, c, d ) }
-addRotate x y z angle transformation =
-    case transformation.rotate of
-        Nothing ->
-            { transformation
-                | rotate =
-                    Just ( x, y, z, angle )
-            }
-
-        _ ->
-            transformation
-
-
-addTranslate : Maybe a -> Maybe a1 -> Maybe a2 -> { b | translate : Maybe ( Maybe a, Maybe a1, Maybe a2 ) } -> { b | translate : Maybe ( Maybe a, Maybe a1, Maybe a2 ) }
-addTranslate mx my mz transformation =
-    case transformation.translate of
-        Nothing ->
-            { transformation
-                | translate =
-                    Just ( mx, my, mz )
-            }
-
-        Just ( existingX, existingY, existingZ ) ->
-            let
-                addIfNothing val existing =
-                    case existing of
-                        Nothing ->
-                            val
-
-                        x ->
-                            x
-            in
-            { transformation
-                | translate =
-                    Just
-                        ( addIfNothing mx existingX
-                        , addIfNothing my existingY
-                        , addIfNothing mz existingZ
-                        )
-            }
-
-
-type NodeName
-    = Generic
-    | NodeName String
-    | Embedded String String
-
-
-type alias NearbyGroup msg =
-    { above : Maybe ( Bool, Html msg )
-    , below : Maybe ( Bool, Html msg )
-    , right : Maybe ( Bool, Html msg )
-    , left : Maybe ( Bool, Html msg )
-    , infront : Maybe ( Bool, Html msg )
-    , behind : Maybe ( Bool, Html msg )
-    }
-
-
-type Borders
-    = NoBorders
-    | AllBorders Int
-    | EachBorders
-        { left : Int
-        , top : Int
-        , bottom : Int
-        , right : Int
-        }
-
-
-type alias Gathered msg =
-    { attributes : List (Html.Attribute msg)
-    , styles : List Style
-    , alignment : Aligned
-    , borders : Borders
-    , width : Maybe Length
-    , height : Maybe Length
-    , nearbys : Maybe (NearbyGroup msg)
-    , node : NodeName
-    , filters : Maybe String
-    , boxShadows : Maybe String
-    , textShadows : Maybe String
-    , transform : Maybe TransformationGroup
-    , transformHover : Maybe TransformationGroup
-    , has : Set String
-    }
-
-
 initGathered : Maybe String -> Gathered msg
 initGathered maybeNodeName =
     { attributes = []
     , styles = []
     , width = Nothing
     , height = Nothing
-    , borders = NoBorders
     , alignment = Unaligned
     , node =
         case maybeNodeName of
@@ -1147,7 +1043,6 @@ initGathered maybeNodeName =
                 NodeName name
     , nearbys = Nothing
     , transform = Nothing
-    , transformHover = Nothing
     , filters = Nothing
     , boxShadows = Nothing
     , textShadows = Nothing
@@ -1155,46 +1050,37 @@ initGathered maybeNodeName =
     }
 
 
-type alias TransformationGroup =
-    { rotate : Maybe ( Float, Float, Float, Float )
-    , translate : Maybe ( Maybe Float, Maybe Float, Maybe Float )
-    , scale : Maybe ( Float, Float, Float )
-    }
-
-
 {-| Because of how it's constructed, we know that NearbyGroup is nonempty
 -}
-renderNearbyGroupAbsolute : NearbyGroup msg -> Html msg
-renderNearbyGroupAbsolute nearby =
+renderNearbyGroupAbsolute : List ( Location, Bool, Element msg ) -> Html msg
+renderNearbyGroupAbsolute nearbys =
     let
-        create ( location, node ) =
-            case node of
-                Nothing ->
-                    Nothing
+        create ( location, on, elem ) =
+            Html.div
+                [ Html.Attributes.class <|
+                    locationClass location
+                        ++ (if not on then
+                                " hidden"
+                            else
+                                ""
+                           )
+                ]
+                [ case elem of
+                    Empty ->
+                        Html.text ""
 
-                Just ( on, el ) ->
-                    Just <|
-                        Html.div
-                            [ Html.Attributes.class <|
-                                locationClass location
-                                    ++ (if not on then
-                                            " hidden"
-                                        else
-                                            ""
-                                       )
-                            ]
-                            [ el ]
+                    Text str ->
+                        textElement str
+
+                    Unstyled html ->
+                        html asEl
+
+                    Styled styled ->
+                        styled.html Nothing asEl
+                ]
     in
     Html.div [ Html.Attributes.class "se el nearby" ]
-        (List.filterMap create
-            [ ( Above, nearby.above )
-            , ( Below, nearby.below )
-            , ( OnLeft, nearby.left )
-            , ( OnRight, nearby.right )
-            , ( InFront, nearby.infront )
-            , ( Behind, nearby.behind )
-            ]
-        )
+        (List.map create nearbys)
 
 
 {-| -}
@@ -1222,8 +1108,8 @@ className x =
 
 
 {-| -}
-renderTransformationGroup : Maybe ( String, String ) -> { a | rotate : Maybe ( Float, Float, Float, Float ), scale : Maybe ( Float, Float, Float ), translate : Maybe ( Maybe Float, Maybe Float, Maybe Float ) } -> Maybe ( String, Style )
-renderTransformationGroup maybePostfix group =
+renderTransformationGroup : Maybe PseudoClass -> TransformationGroup -> Maybe ( String, Style )
+renderTransformationGroup maybePseudo group =
     let
         translate =
             flip Maybe.map
@@ -1294,52 +1180,56 @@ renderTransformationGroup maybePostfix group =
                     String.join " " trans
 
                 ( classOnElement, classInStylesheet ) =
-                    case maybePostfix of
+                    case maybePseudo of
                         Nothing ->
                             ( "transform-" ++ name
                             , ".transform-" ++ name
                             )
 
-                        Just ( postfix, pseudostate ) ->
-                            ( "transform-" ++ name ++ "-" ++ postfix
-                            , "." ++ "transform-" ++ name ++ "-" ++ postfix ++ ":" ++ pseudostate
-                            )
+                        Just pseudo ->
+                            case pseudo of
+                                Hover ->
+                                    ( "transform-" ++ name ++ "-hover"
+                                    , ".transform-" ++ name ++ "-hover:hover"
+                                    )
+
+                                Focus ->
+                                    ( "transform-" ++ name ++ "-focus"
+                                    , ".transform-" ++ name ++ "-focus:focus, .se:focus ~ .transform-" ++ name ++ "-focus"
+                                    )
+
+                                Active ->
+                                    ( "transform-" ++ name ++ "-active"
+                                    , ".transform-" ++ name ++ "-active:active"
+                                    )
             in
             Just ( classOnElement, Single classInStylesheet "transform" transforms )
 
 
-formatTransformations : Gathered msg -> Gathered msg
-formatTransformations gathered =
+finalize : Gathered msg -> Gathered msg
+finalize gathered =
     let
+        add new ( classes, styles ) =
+            case new of
+                Nothing ->
+                    ( classes, styles )
+
+                Just ( newClass, newStyle ) ->
+                    ( newClass :: classes
+                    , newStyle :: styles
+                    )
+
         addTransform ( classes, styles ) =
             case gathered.transform of
                 Nothing ->
                     ( classes, styles )
 
                 Just transform ->
-                    case renderTransformationGroup Nothing transform of
-                        Nothing ->
-                            ( classes, styles )
-
-                        Just ( name, transformStyle ) ->
-                            ( name :: classes
-                            , transformStyle :: styles
-                            )
-
-        addHoverTransform ( classes, styles ) =
-            case gathered.transformHover of
-                Nothing ->
                     ( classes, styles )
-
-                Just transform ->
-                    case renderTransformationGroup (Just ( "hover", "hover" )) transform of
-                        Nothing ->
-                            ( classes, styles )
-
-                        Just ( name, transformStyle ) ->
-                            ( name :: classes
-                            , transformStyle :: styles
-                            )
+                        |> add (Maybe.andThen (renderTransformationGroup Nothing) transform.normal)
+                        |> add (Maybe.andThen (renderTransformationGroup (Just Focus)) transform.focus)
+                        |> add (Maybe.andThen (renderTransformationGroup (Just Hover)) transform.hover)
+                        |> add (Maybe.andThen (renderTransformationGroup (Just Active)) transform.active)
 
         addFilters ( classes, styles ) =
             case gathered.filters of
@@ -1392,7 +1282,6 @@ formatTransformations gathered =
                 |> addBoxShadows
                 |> addTextShadows
                 |> addTransform
-                |> addHoverTransform
     in
     { gathered
         | styles = styles
@@ -1412,11 +1301,11 @@ noStyleSheet =
     NoStyleSheet
 
 
-element : EmbedStyle -> LayoutContext -> Maybe String -> List (Attribute msg) -> Children (Element msg) -> Element msg
+element : EmbedStyle -> LayoutContext -> Maybe String -> List (Attribute aligned msg) -> Children (Element msg) -> Element msg
 element embedMode context node attributes children =
     (contextClasses context :: attributes)
         |> List.foldr gatherAttributes (initGathered node)
-        |> formatTransformations
+        |> finalize
         |> asElement embedMode children context
 
 
@@ -1449,12 +1338,13 @@ asElement embedMode children context rendered =
                     -- TEXT OPTIMIZATION
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
-                    if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
-                        ( Html.text str
-                            :: htmls
-                        , existingStyles
-                        )
-                    else if context == asEl then
+                    -- interferes with css grid
+                    -- if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
+                    --     ( Html.text str
+                    --         :: htmls
+                    --     , existingStyles
+                    --     ) else
+                    if context == asEl then
                         ( textElementFill str
                             :: htmls
                         , existingStyles
@@ -1509,7 +1399,7 @@ asElement embedMode children context rendered =
                         Just nearby ->
                             case htmlChildren of
                                 Keyed keyed ->
-                                    Keyed <| ( "nearby-elements-pls-pls-pls-pls-be-unique", nearby ) :: keyed
+                                    Keyed <| ( "nearby-elements-pls", nearby ) :: keyed
 
                                 Unkeyed unkeyed ->
                                     Unkeyed (nearby :: unkeyed)
@@ -1554,7 +1444,7 @@ asElement embedMode children context rendered =
                                     Keyed <|
                                         ( "static-stylesheet", Internal.Style.rulesElement )
                                             :: ( "dynamic-stylesheet", toStyleSheet options styles )
-                                            :: ( "nearby-elements-pls-pls-pls-pls-be-unique", nearby )
+                                            :: ( "nearby-elements-pls", nearby )
                                             :: keyed
 
                                 Unkeyed unkeyed ->
@@ -1599,7 +1489,7 @@ asElement embedMode children context rendered =
                                 Keyed keyed ->
                                     Keyed <|
                                         ( "dynamic-stylesheet", toStyleSheet options styles )
-                                            :: ( "nearby-elements-pls-pls-pls-pls-be-unique", nearby )
+                                            :: ( "nearby-elements-pls", nearby )
                                             :: keyed
 
                                 Unkeyed unkeyed ->
@@ -1616,17 +1506,52 @@ asElement embedMode children context rendered =
                 )
 
 
+
+-- rowEdgeFillers : List (Element msg) -> List (Element msg)
+-- rowEdgeFillers children =
+--     unstyled
+--         (VirtualDom.node "alignLeft"
+--             [ Html.Attributes.class "se container align-container-left content-center-y spacer unfocusable" ]
+--             []
+--         )
+--         :: children
+--         ++ [ unstyled
+--                 (VirtualDom.node "alignRight"
+--                     [ Html.Attributes.class "se container align-container-right content-center-y spacer unfocusable" ]
+--                     []
+--                 )
+--            ]
+-- keyedRowEdgeFillers : List ( String, Element msg ) -> List ( String, Element msg )
+-- keyedRowEdgeFillers children =
+--     ( "left-filler-node"
+--     , unstyled
+--         (VirtualDom.node "alignLeft"
+--             [ Html.Attributes.class "se container align-container-left content-center-y spacer unfocusable" ]
+--             []
+--         )
+--     )
+--         :: children
+--         ++ [ ( "right-filler-node"
+--              , unstyled
+--                 (VirtualDom.node "alignRight"
+--                     [ Html.Attributes.class "se container align-container-right content-center-y spacer unfocusable" ]
+--                     []
+--                 )
+--              )
+--            ]
+
+
 rowEdgeFillers : List (Element msg) -> List (Element msg)
 rowEdgeFillers children =
-    unstyled
-        (VirtualDom.node "alignLeft"
-            [ Html.Attributes.class "se container align-container-left content-center-y spacer unfocusable" ]
-            []
-        )
-        :: children
+    children
         ++ [ unstyled
+                (VirtualDom.node "div"
+                    [ Html.Attributes.class "se container align-container-left teleporting-spacer unfocusable" ]
+                    []
+                )
+           , unstyled
                 (VirtualDom.node "alignRight"
-                    [ Html.Attributes.class "se container align-container-right content-center-y spacer unfocusable" ]
+                    [ Html.Attributes.class "se container align-container-right spacer unfocusable" ]
                     []
                 )
            ]
@@ -1634,18 +1559,18 @@ rowEdgeFillers children =
 
 keyedRowEdgeFillers : List ( String, Element msg ) -> List ( String, Element msg )
 keyedRowEdgeFillers children =
-    ( "left-filler-node-pls-pls-pls-be-unique"
-    , unstyled
-        (VirtualDom.node "alignLeft"
-            [ Html.Attributes.class "se container align-container-left content-center-y spacer unfocusable" ]
-            []
-        )
-    )
-        :: children
-        ++ [ ( "right-filler-node-pls-pls-pls-be-unique"
+    children
+        ++ [ ( "teleporting-left-filler-node"
+             , unstyled
+                (VirtualDom.node "div"
+                    [ Html.Attributes.class "se container align-container-left teleporting-spacer" ]
+                    []
+                )
+             )
+           , ( "right-filler-node"
              , unstyled
                 (VirtualDom.node "alignRight"
-                    [ Html.Attributes.class "se container align-container-right content-center-y spacer unfocusable" ]
+                    [ Html.Attributes.class "se container align-container-right spacer" ]
                     []
                 )
              )
@@ -1654,11 +1579,6 @@ keyedRowEdgeFillers children =
 
 columnEdgeFillers : List (Element msg) -> List (Element msg)
 columnEdgeFillers children =
-    -- unstyled <|
-    -- (VirtualDom.node "alignTop"
-    --     [ Html.Attributes.class "se container align-container-top spacer" ]
-    --     []
-    -- ) ::
     children
         ++ [ unstyled
                 (VirtualDom.node "div"
@@ -1675,20 +1595,15 @@ columnEdgeFillers children =
 
 keyedColumnEdgeFillers : List ( String, Element msg ) -> List ( String, Element msg )
 keyedColumnEdgeFillers children =
-    -- unstyled <|
-    -- (VirtualDom.node "alignTop"
-    --     [ Html.Attributes.class "se container align-container-top spacer" ]
-    --     []
-    -- ) ::
     children
-        ++ [ ( "teleporting-top-filler-node-pls-pls-pls-be-unique"
+        ++ [ ( "teleporting-top-filler-node"
              , unstyled
                 (VirtualDom.node "div"
                     [ Html.Attributes.class "se container align-container-top teleporting-spacer" ]
                     []
                 )
              )
-           , ( "bottom-filler-node-pls-pls-pls-be-unique"
+           , ( "bottom-filler-node"
              , unstyled
                 (VirtualDom.node "alignBottom"
                     [ Html.Attributes.class "se container align-container-bottom spacer" ]
@@ -1703,7 +1618,7 @@ keyedColumnEdgeFillers children =
 This doesn't reduce equivalent attributes completely.
 
 -}
-filter : List (Attribute msg) -> List (Attribute msg)
+filter : List (Attribute aligned msg) -> List (Attribute aligned msg)
 filter attrs =
     Tuple.first <|
         List.foldr
@@ -1762,15 +1677,12 @@ filter attrs =
 
                     TextShadow shadow ->
                         ( x :: found, has )
-
-                    Transform _ _ ->
-                        ( x :: found, has )
             )
             ( [], Set.empty )
             attrs
 
 
-get : List (Attribute msg) -> (Attribute msg -> Bool) -> List (Attribute msg)
+get : List (Attribute aligned msg) -> (Attribute aligned msg -> Bool) -> List (Attribute aligned msg)
 get attrs isAttr =
     attrs
         |> filter
@@ -1784,7 +1696,7 @@ get attrs isAttr =
             []
 
 
-getSpacing : List (Attribute msg) -> ( Int, Int ) -> ( Int, Int )
+getSpacing : List (Attribute aligned msg) -> ( Int, Int ) -> ( Int, Int )
 getSpacing attrs default =
     attrs
         |> List.foldr
@@ -1805,7 +1717,7 @@ getSpacing attrs default =
         |> Maybe.withDefault default
 
 
-getSpacingAttribute : List (Attribute msg) -> ( Int, Int ) -> Attribute msg1
+getSpacingAttribute : List (Attribute aligned msg) -> ( Int, Int ) -> Attribute aligned msg1
 getSpacingAttribute attrs default =
     attrs
         |> List.foldr
@@ -1874,7 +1786,7 @@ toHtml options el =
 
 
 {-| -}
-renderRoot : List Option -> List (Attribute msg) -> Element msg -> Html msg
+renderRoot : List Option -> List (Attribute aligned msg) -> Element msg -> Html msg
 renderRoot optionList attributes child =
     let
         options =
@@ -1925,6 +1837,52 @@ type alias Shadow =
     }
 
 
+rootStyle : List (Attribute aligned msg)
+rootStyle =
+    let
+        families =
+            [ Typeface "Open Sans"
+            , Typeface "Helvetica"
+            , Typeface "Verdana"
+            , SansSerif
+            ]
+    in
+    [ StyleClass (Colored ("bg-color-" ++ formatColorClass (Color.rgba 255 255 255 0)) "background-color" (Color.rgba 255 255 255 0))
+    , StyleClass (Colored ("font-color-" ++ formatColorClass Color.darkCharcoal) "color" Color.darkCharcoal)
+    , StyleClass (Single "font-size-20" "font-size" "20px")
+    , StyleClass <|
+        FontFamily (List.foldl renderFontClassName "font-" families)
+            families
+    ]
+
+
+renderFontClassName : Font -> String -> String
+renderFontClassName font current =
+    current
+        ++ (case font of
+                Serif ->
+                    "serif"
+
+                SansSerif ->
+                    "sans-serif"
+
+                Monospace ->
+                    "monospace"
+
+                Typeface name ->
+                    name
+                        |> String.toLower
+                        |> String.words
+                        |> String.join "-"
+
+                ImportFont name url ->
+                    name
+                        |> String.toLower
+                        |> String.words
+                        |> String.join "-"
+           )
+
+
 
 -- renderStyles : Element msg -> ( Set String, List Style ) -> ( Set String, List Style )
 -- renderStyles el ( cache, existing ) =
@@ -1943,7 +1901,7 @@ renderFocusStyle :
     FocusStyle
     -> Style
 renderFocusStyle focus =
-    Style ".se:focus .focusable > *:not(.unfocusable), .se.focus-exactly:focus"
+    Style ".se:focus .focusable, .se.focusable:focus"
         (List.filterMap identity
             [ Maybe.map (\color -> Property "border-color" (formatColor color)) focus.borderColor
             , Maybe.map (\color -> Property "background-color" (formatColor color)) focus.backgroundColor
@@ -2041,7 +1999,7 @@ optionsToRecord options =
             options
 
 
-htmlClass : String -> Attribute msg
+htmlClass : String -> Attribute aligned msg
 htmlClass cls =
     Attr <| VirtualDom.property "className" (Json.string cls)
 
@@ -2105,12 +2063,68 @@ toStyleSheetString options stylesheet =
                     selector ++ "{" ++ List.foldl (renderProps force) "" props ++ "\n}"
 
                 Just pseudo ->
-                    selector ++ ":" ++ pseudo ++ " {" ++ List.foldl (renderProps force) "" props ++ "\n}"
+                    case pseudo of
+                        Hover ->
+                            selector ++ ":hover {" ++ List.foldl (renderProps force) "" props ++ "\n}"
+
+                        Focus ->
+                            let
+                                renderedProps =
+                                    List.foldl (renderProps force) "" props
+                            in
+                            String.join "\n"
+                                [ selector
+                                    ++ ":focus {"
+                                    ++ renderedProps
+                                    ++ "\n}"
+                                , ".se:focus ~ "
+                                    ++ selector
+                                    ++ ":not(.focus)  {"
+                                    ++ renderedProps
+                                    ++ "\n}"
+                                , ".se:focus "
+                                    ++ selector
+                                    ++ "  {"
+                                    ++ renderedProps
+                                    ++ "\n}"
+                                ]
+
+                        Active ->
+                            selector ++ ":active {" ++ List.foldl (renderProps force) "" props ++ "\n}"
 
         renderStyleRule rule maybePseudo force =
             case rule of
                 Style selector props ->
                     renderStyle force maybePseudo selector props
+
+                Shadows name prop ->
+                    renderStyle force
+                        maybePseudo
+                        ("." ++ name)
+                        [ Property "box-shadow" prop
+                        ]
+
+                Transparency name transparency ->
+                    let
+                        opacity =
+                            (1 - transparency)
+                                |> min 1
+                                |> max 0
+                    in
+                    if opacity <= 0 then
+                        renderStyle force
+                            maybePseudo
+                            ("." ++ name)
+                            [ Property "opacity" "0"
+                            , Property "pointer-events" "none"
+                            ]
+                    else
+                        renderStyle force
+                            maybePseudo
+                            ("." ++ name)
+                            [ Property "opacity" (toString opacity)
+                            , Property "pointer-events" "auto"
+                            ]
 
                 FontSize i ->
                     renderStyle force
@@ -2224,10 +2238,26 @@ toStyleSheetString options stylesheet =
                                     toString px ++ "px"
 
                                 Content ->
-                                    "auto"
+                                    -- "1fr"
+                                    -- "auto"
+                                    "max-content"
 
                                 Fill i ->
-                                    toString i ++ "fr"
+                                    intToString i ++ "fr"
+
+                                FillBetween fill ->
+                                    case ( fill.min, fill.max ) of
+                                        ( Nothing, Nothing ) ->
+                                            intToString fill.portion ++ "fr"
+
+                                        ( Just minimum, Nothing ) ->
+                                            "minmax(" ++ intToString minimum ++ "px, " ++ intToString fill.portion ++ "fr)"
+
+                                        ( Nothing, Just maximum ) ->
+                                            "minmax(" ++ intToString fill.portion ++ "fr, " ++ intToString maximum ++ "px)"
+
+                                        ( Just minimum, Just maximum ) ->
+                                            "minmax(" ++ intToString minimum ++ "px, " ++ intToString maximum ++ "px)"
 
                         msColumns =
                             template.columns
@@ -2323,21 +2353,32 @@ toStyleSheetString options stylesheet =
                     in
                     base ++ supports
 
-                PseudoSelector class style ->
-                    case class of
-                        Focus ->
-                            renderStyleRule style (Just "focus") False
+                PseudoSelector class styles ->
+                    let
+                        renderPseudoRule style =
+                            case class of
+                                Focus ->
+                                    renderStyleRule style (Just Focus) False
 
-                        Hover ->
-                            case options.hover of
-                                NoHover ->
-                                    ""
+                                Active ->
+                                    renderStyleRule style (Just Active) False
 
-                                AllowHover ->
-                                    renderStyleRule style (Just "hover") False
+                                Hover ->
+                                    case options.hover of
+                                        NoHover ->
+                                            ""
 
-                                ForceHover ->
-                                    renderStyleRule style Nothing True
+                                        AllowHover ->
+                                            renderStyleRule style (Just Hover) False
+
+                                        ForceHover ->
+                                            renderStyleRule style Nothing True
+                    in
+                    List.map renderPseudoRule styles
+                        |> String.join " "
+
+                Transform _ ->
+                    ""
 
         renderTopLevels rule =
             case rule of
@@ -2387,18 +2428,25 @@ lengthClassName x =
         Fill i ->
             intToString i ++ "fr"
 
+        FillBetween bounds ->
+            let
+                renderedMin =
+                    case bounds.min of
+                        Nothing ->
+                            ""
 
+                        Just m ->
+                            "-" ++ intToString m
 
--- Between { value, min, max } ->
---     case (min, max) ->
---         (Nothing, Nothing) ->
---             lengthClassName value
---         (Just minimum, Nothing) ->
---             lengthClassName value ++ "-min-" ++ intToString minimum
---         (Nothing, Just maximum) ->
---             lengthClassName value ++ "-max-" ++ intToString maximum
---         (Just minimum, Just maximum) ->
---             lengthClassName value ++ "-min-" ++ intToString minimum ++ "-max-" ++ intToString maximum
+                renderedMax =
+                    case bounds.max of
+                        Nothing ->
+                            ""
+
+                        Just m ->
+                            "-" ++ intToString m
+            in
+            intToString bounds.portion ++ "fr" ++ renderedMin ++ renderedMax
 
 
 formatDropShadow : { d | blur : a, color : Color, offset : ( b, c ) } -> String
@@ -2636,6 +2684,7 @@ formatColorClass color =
 --                 |> always ()
 
 
+psuedoClassName : PseudoClass -> String
 psuedoClassName class =
     case class of
         Focus ->
@@ -2644,12 +2693,21 @@ psuedoClassName class =
         Hover ->
             "hover"
 
+        Active ->
+            "active"
+
 
 {-| This is a key to know which styles should override which other styles.
 -}
 styleKey : Style -> String
 styleKey style =
     case style of
+        Shadows _ _ ->
+            "shadows"
+
+        Transparency name x ->
+            "transparency"
+
         Style class _ ->
             class
 
@@ -2681,7 +2739,10 @@ styleKey style =
             "grid-position"
 
         PseudoSelector class style ->
-            psuedoClassName class ++ styleKey style
+            psuedoClassName class ++ (String.join "" <| List.map styleKey style)
+
+        Transform _ ->
+            "transform"
 
 
 isInt : Int -> Int
@@ -2692,6 +2753,12 @@ isInt x =
 getStyleName : Style -> String
 getStyleName style =
     case style of
+        Shadows name _ ->
+            name
+
+        Transparency name o ->
+            name
+
         Style class _ ->
             class
 
@@ -2744,7 +2811,12 @@ getStyleName style =
                 ++ toString pos.height
 
         PseudoSelector selector subStyle ->
-            getStyleName subStyle
+            psuedoClassName selector
+                :: List.map getStyleName subStyle
+                |> String.join " "
+
+        Transform _ ->
+            "transformation"
 
 
 locationClass : Location -> String
@@ -2767,3 +2839,248 @@ locationClass location =
 
         Behind ->
             "se el behind"
+
+
+
+{- Constants -}
+
+
+asGrid : LayoutContext
+asGrid =
+    AsGrid
+
+
+asRow : LayoutContext
+asRow =
+    AsRow
+
+
+asColumn : LayoutContext
+asColumn =
+    AsColumn
+
+
+asEl : LayoutContext
+asEl =
+    AsEl
+
+
+asParagraph : LayoutContext
+asParagraph =
+    AsParagraph
+
+
+asTextColumn : LayoutContext
+asTextColumn =
+    AsTextColumn
+
+
+contextClasses : LayoutContext -> Attribute aligned msg
+contextClasses context =
+    case context of
+        AsRow ->
+            htmlClass "se row"
+
+        AsColumn ->
+            htmlClass "se column"
+
+        AsEl ->
+            htmlClass "se el"
+
+        AsGrid ->
+            htmlClass "se grid"
+
+        AsParagraph ->
+            htmlClass "se paragraph"
+
+        AsTextColumn ->
+            htmlClass "se page"
+
+
+
+{- Mapping -}
+
+
+map : (msg -> msg1) -> Element msg -> Element msg1
+map fn el =
+    case el of
+        Styled styled ->
+            Styled
+                { styles = styled.styles
+                , html = \add context -> Html.map fn <| styled.html add context
+                }
+
+        Unstyled html ->
+            Unstyled (Html.map fn << html)
+
+        Text str ->
+            Text str
+
+        Empty ->
+            Empty
+
+
+mapAttr : (msg -> msg1) -> Attribute aligned msg -> Attribute aligned msg1
+mapAttr fn attr =
+    case attr of
+        NoAttribute ->
+            NoAttribute
+
+        Describe description ->
+            Describe description
+
+        AlignX x ->
+            AlignX x
+
+        AlignY y ->
+            AlignY y
+
+        Width x ->
+            Width x
+
+        Height x ->
+            Height x
+
+        -- invalidation key "border-color" as opposed to "border-color-10-10-10" that will be the key for the class
+        Class x y ->
+            Class x y
+
+        StyleClass style ->
+            StyleClass style
+
+        Nearby location on element ->
+            Nearby location on (map fn element)
+
+        Attr htmlAttr ->
+            Attr (Html.Attributes.map fn htmlAttr)
+
+        TextShadow shadow ->
+            TextShadow shadow
+
+        BoxShadow shadow ->
+            BoxShadow shadow
+
+        Filter filter ->
+            Filter filter
+
+
+mapAttrFromStyle : (msg -> msg1) -> Attribute Never msg -> Attribute () msg1
+mapAttrFromStyle fn attr =
+    case attr of
+        NoAttribute ->
+            NoAttribute
+
+        Describe description ->
+            Describe description
+
+        AlignX x ->
+            AlignX x
+
+        AlignY y ->
+            AlignY y
+
+        Width x ->
+            Width x
+
+        Height x ->
+            Height x
+
+        -- invalidation key "border-color" as opposed to "border-color-10-10-10" that will be the key for the class
+        Class x y ->
+            Class x y
+
+        StyleClass style ->
+            StyleClass style
+
+        Nearby location on element ->
+            Nearby location on (map fn element)
+
+        Attr htmlAttr ->
+            Attr (Html.Attributes.map fn htmlAttr)
+
+        TextShadow shadow ->
+            TextShadow shadow
+
+        BoxShadow shadow ->
+            BoxShadow shadow
+
+        Filter filter ->
+            Filter filter
+
+
+unwrapDecorations : List (Attribute Never Never) -> List Style
+unwrapDecorations attrs =
+    let
+        joinShadows x styles =
+            case x of
+                Shadows name shadowProps ->
+                    case styles.shadows of
+                        Nothing ->
+                            { styles | shadows = Just ( name, shadowProps ) }
+
+                        Just ( existingName, existingShadow ) ->
+                            { styles | shadows = Just ( existingName ++ name, existingShadow ++ ", " ++ shadowProps ) }
+
+                _ ->
+                    { styles | styles = x :: styles.styles }
+
+        addShadow styles =
+            case styles.shadows of
+                Nothing ->
+                    styles.styles
+
+                Just ( shadowName, shadowProps ) ->
+                    Shadows shadowName shadowProps :: styles.styles
+    in
+    attrs
+        |> List.filterMap (onlyStyles << removeNever)
+        |> List.foldr joinShadows { shadows = Nothing, styles = [] }
+        |> addShadow
+
+
+removeNever : Attribute Never Never -> Attribute () msg
+removeNever style =
+    mapAttrFromStyle Basics.never style
+
+
+tag : String -> Style -> Style
+tag label style =
+    case style of
+        Single class prop val ->
+            Single (label ++ "-" ++ class) prop val
+
+        Colored class prop val ->
+            Colored (label ++ "-" ++ class) prop val
+
+        Style class props ->
+            Style (label ++ "-" ++ class) props
+
+        Transparency class o ->
+            Transparency (label ++ "-" ++ class) o
+
+        x ->
+            x
+
+
+onlyStyles : Attribute aligned msg -> Maybe Style
+onlyStyles attr =
+    case attr of
+        StyleClass style ->
+            Just style
+
+        TextShadow shadow ->
+            let
+                stringName =
+                    formatTextShadow shadow
+            in
+            Just <| Shadows ("txt-shadow-" ++ className stringName) stringName
+
+        BoxShadow shadow ->
+            let
+                stringName =
+                    formatBoxShadow shadow
+            in
+            Just <| Shadows ("box-shadow-" ++ className stringName) stringName
+
+        _ ->
+            Nothing

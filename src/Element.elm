@@ -1,7 +1,10 @@
 module Element
     exposing
-        ( Attribute
+        ( Attr
+        , Attribute
         , Column
+        , Decoration
+        , Device
         , Element
         , FocusStyle
         , IndexedColumn
@@ -15,28 +18,31 @@ module Element
         , alignLeft
         , alignRight
         , alignTop
-        , attribute
+        , alpha
         , behind
         , below
-        , center
+        , centerX
         , centerY
+        , classifyDevice
         , clip
         , clipX
         , clipY
         , column
         , decorativeImage
-        , description
         , download
         , downloadAs
         , el
         , empty
         , fill
+        , fillBetween
         , fillPortion
+        , fillPortionBetween
         , focusStyle
+        , focused
         , forceHover
         , height
-        , hidden
         , html
+        , htmlAttribute
         , image
         , inFront
         , indexedTable
@@ -45,13 +51,16 @@ module Element
         , link
         , map
         , mapAttribute
-        , mouseOverScale
+        , modular
+        , mouseDown
+        , mouseOver
         , moveDown
         , moveLeft
         , moveRight
         , moveUp
         , newTabLink
         , noHover
+        , noStaticStyleSheet
         , onLeft
         , onRight
         , padding
@@ -73,41 +82,42 @@ module Element
         , table
         , text
         , textColumn
+        , transparent
         , width
         )
 
 {-|
 
 
-## Basic Elements
+# Basic Elements
 
 @docs Element, Attribute, empty, text, el
 
 
-## Rows and Columns
+# Rows and Columns
 
 Rows and columns are the most common layouts.
 
 @docs row, column
 
 
-## Text Layout
+# Text Layout
 
 Text needs it's own layout primitives.
 
 @docs paragraph, textColumn
 
 
-## Data Table
+# Data Table
 
 @docs Table, Column, table
 
 @docs IndexedTable, IndexedColumn, indexedTable
 
 
-## Rendering
+# Rendering
 
-@docs layout, layoutWith, Option, forceHover, noHover, focusStyle, FocusStyle
+@docs layout, layoutWith, Option, noStaticStyleSheet, forceHover, noHover, focusStyle, FocusStyle
 
 
 # Links and Images
@@ -119,12 +129,9 @@ Text needs it's own layout primitives.
 
 # Attributes
 
-@docs Attribute, hidden, description, pointer
+@docs Attribute, transparent, alpha, pointer
 
-
-## Width and Height
-
-@docs width, height, Length, px, shrink, fill, fillPortion
+@docs width, height, Length, px, shrink, fill, fillPortion, fillBetween, fillPortionBetween
 
 
 ## Padding and Spacing
@@ -154,29 +161,27 @@ Here's what we can expect.
 
 Alignment can be used to align an `Element` within another `Element`.
 
-    Element.el [ center, alignTop ] (text "I'm centered and aligned top!")
+    Element.el [ centerX, alignTop ] (text "I'm centered and aligned top!")
 
 If alignment is set on elements in a layout such as `row`, then the element will push the other elements in that direction. Here's an example.
 
     Element.row []
         [ Element.el [] Element.empty
         , Element.el [ alignLeft ] Element.empty
-        , Element.el [ center ] Element.empty
+        , Element.el [ centerX ] Element.empty
         , Element.el [ alignRight ] Element.empty
         ]
 
 will result in a layout like
 
-    |-|-| |-| |-|
+    |-|-|     |-|        |-|
 
 Where there are two elements on the left, one in the center, and on on the right.
 
-@docs center, centerY, alignLeft, alignRight, alignTop, alignBottom
+@docs centerX, centerY, alignLeft, alignRight, alignTop, alignBottom
 
 
-## Nearby Elements
-
-It can be nice to position an element relative to another element, _without
+# Nearby Elements
 
 Let's say we want a dropdown menu. Essentially we want to say: _put this element below this other element, but don't affect the layout when you do_.
 
@@ -199,12 +204,17 @@ This is very useful for things like dropdown menus or tooltips.
 @docs above, below, onRight, onLeft, inFront, behind
 
 
-## Adjustment
+# Temporary Styling
 
-@docs moveRight, moveUp, moveLeft, moveDown, rotate, scale, mouseOverScale
+@docs Attr, Decoration, mouseOver, mouseDown, focused
 
 
-## Clipping and Scrollbars
+# Adjustment
+
+@docs moveRight, moveUp, moveLeft, moveDown, rotate, scale
+
+
+# Clipping and Scrollbars
 
 Clip the content if it overflows.
 
@@ -212,7 +222,17 @@ Clip the content if it overflows.
 
 If these are present, the element will add a scrollbar if necessary.
 
-@docs scrollbars, scrollbarY, scrollbarX
+@docs scrollbars, scrollbarX, scrollbarY
+
+
+# Responsiveness
+
+@docs Device, classifyDevice
+
+
+# Scaling
+
+@docs modular
 
 
 ## Mapping
@@ -222,13 +242,11 @@ If these are present, the element will add a scrollbar if necessary.
 
 ## Compatibility
 
-@docs html, attribute
+@docs html, htmlAttribute
 
 -}
 
 import Color exposing (Color)
-import Element.Background as Background
-import Element.Font as Font
 import Html exposing (Html)
 import Html.Attributes
 import Internal.Model as Internal
@@ -236,7 +254,6 @@ import Internal.Model as Internal
 
 {-| The basic building block of your layout. Here we create a
 
-    import Background
     import Element
 
     view =
@@ -247,9 +264,22 @@ type alias Element msg =
     Internal.Element msg
 
 
-{-| -}
+{-| Standard attribute which cannot be a decoration.
+-}
 type alias Attribute msg =
-    Internal.Attribute msg
+    Internal.Attribute () msg
+
+
+{-| This is a special attribute that counts as both a `Attribute msg` and a `Decoration`.
+-}
+type alias Attr decorative msg =
+    Internal.Attribute decorative msg
+
+
+{-| Only decorations
+-}
+type alias Decoration =
+    Internal.Attribute Never Never
 
 
 {-| -}
@@ -259,8 +289,8 @@ html =
 
 
 {-| -}
-attribute : Html.Attribute msg -> Attribute msg
-attribute =
+htmlAttribute : Html.Attribute msg -> Attribute msg
+htmlAttribute =
     Internal.Attr
 
 
@@ -287,7 +317,8 @@ px =
     Internal.Px
 
 
-{-| -}
+{-| Shrink to an element to fit it's contents.
+-}
 shrink : Length
 shrink =
     Internal.Content
@@ -300,9 +331,21 @@ fill =
     Internal.Fill 1
 
 
+{-| Fill the available space as long as it's between the pixel bounds.
+-}
+fillBetween : { min : Maybe Int, max : Maybe Int } -> Length
+fillBetween { min, max } =
+    Internal.FillBetween
+        { portion = 1
+        , min = min
+        , max = max
+        }
 
--- between =
---     Internal.Between
+
+{-| -}
+fillPortionBetween : { portion : Int, min : Maybe Int, max : Maybe Int } -> Length
+fillPortionBetween =
+    Internal.FillBetween
 
 
 {-| Sometimes you may not want to split available space evenly. In this case you can use `fillPortion` to define which elements should have what portion of the available space.
@@ -328,19 +371,10 @@ layout =
 layoutWith : { options : List Option } -> List (Attribute msg) -> Element msg -> Html msg
 layoutWith { options } attrs child =
     Internal.renderRoot options
-        (Background.color Color.white
-            :: Font.color Color.darkCharcoal
-            :: Font.size 20
-            :: Font.family
-                [ Font.typeface "Open Sans"
-                , Font.typeface "Helvetica"
-                , Font.typeface "Verdana"
-                , Font.sansSerif
-                ]
-            :: Internal.htmlClass "style-elements se el"
+        (Internal.htmlClass "style-elements se el"
             :: Internal.Class "x-content-align" "content-center-x"
             :: Internal.Class "y-content-align" "content-center-y"
-            :: attrs
+            :: (Internal.rootStyle ++ attrs)
         )
         child
 
@@ -348,6 +382,18 @@ layoutWith { options } attrs child =
 {-| -}
 type alias Option =
     Internal.Option
+
+
+{-| Style elements embeds two StyleSheets, one that is constant, and one that changes dynamically based on styles collected from the elments being rendered.
+
+This option will stop the static/constant stylesheet from rendering.
+
+Make sure to render the constant/static stylesheet at least once on your page!
+
+-}
+noStaticStyleSheet : Option
+noStaticStyleSheet =
+    Internal.RenderModeOption Internal.NoStaticStyleSheet
 
 
 {-| -}
@@ -478,10 +524,8 @@ el attrs child =
         Nothing
         (width shrink
             :: height shrink
-            -- :: centerY
-            :: center
-            :: Internal.Class "x-content-align" "content-center-x"
-            :: Internal.Class "y-content-align" "content-center-y"
+            -- :: Internal.Class "x-content-align" "content-center-x"
+            -- :: Internal.Class "y-content-align" "content-center-y"
             :: attrs
         )
         (Internal.Unkeyed [ child ])
@@ -495,9 +539,10 @@ row attrs children =
         Internal.noStyleSheet
         Internal.asRow
         Nothing
-        (Internal.Class "x-content-align" "content-center-x"
+        (Internal.Class "x-content-align" "content-left"
             :: Internal.Class "y-content-align" "content-center-y"
             :: width fill
+            :: height shrink
             :: attrs
         )
         (Internal.Unkeyed <| Internal.rowEdgeFillers children)
@@ -510,7 +555,7 @@ column attrs children =
         Internal.asColumn
         Nothing
         (Internal.Class "y-content-align" "content-top"
-            :: Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "x-content-align" "content-left"
             :: height fill
             :: width fill
             :: attrs
@@ -650,7 +695,7 @@ tableHelper attrs config =
             Internal.StyleClass <|
                 Internal.GridTemplateStyle
                     { spacing = ( px sX, px sY )
-                    , columns = List.repeat (List.length config.columns) Internal.Content
+                    , columns = List.repeat (List.length config.columns) (Internal.Fill 1)
                     , rows = List.repeat (List.length config.data) Internal.Content
                     }
 
@@ -675,7 +720,16 @@ tableHelper attrs config =
                 InternalIndexedColumn column ->
                     { cursor
                         | elements =
-                            onGrid cursor.row cursor.column (column.view cursor.row cell)
+                            onGrid cursor.row
+                                cursor.column
+                                (column.view
+                                    (if maybeHeaders == Nothing then
+                                        cursor.row - 1
+                                     else
+                                        cursor.row - 2
+                                    )
+                                    cell
+                                )
                                 :: cursor.elements
                         , column = cursor.column + 1
                     }
@@ -716,7 +770,6 @@ tableHelper attrs config =
         Internal.asGrid
         Nothing
         (width fill
-            :: center
             :: template
             :: attrs
         )
@@ -779,7 +832,7 @@ The main difference between a `column` and a `textColumn` is that `textColumn` w
 
 In the following example, we have a `textColumn` where one child has `alignLeft`.
 
-    Elment.textColumn [ spacing 10, padding 10 ]
+    Element.textColumn [ spacing 10, padding 10 ]
         [ paragraph [] [ text "lots of text ...." ]
         , el [ alignLeft ] empty
         , paragraph [] [ text "lots of text ...." ]
@@ -796,7 +849,7 @@ textColumn attrs children =
         Internal.noStyleSheet
         Internal.asTextColumn
         Nothing
-        (width (px 650) :: attrs)
+        (width (px 550) :: attrs)
         (Internal.Unkeyed children)
 
 
@@ -904,8 +957,8 @@ link attrs { url, label } =
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
             :: width shrink
             :: height shrink
-            :: centerY
-            :: center
+            :: Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -922,8 +975,8 @@ newTabLink attrs { url, label } =
             :: Internal.Attr (Html.Attributes.target "_blank")
             :: width shrink
             :: height shrink
-            :: centerY
-            :: center
+            :: Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -940,8 +993,8 @@ download attrs { url, label } =
             :: Internal.Attr (Html.Attributes.download True)
             :: width shrink
             :: height shrink
-            :: centerY
-            :: center
+            :: Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -958,57 +1011,47 @@ downloadAs attrs { url, filename, label } =
             :: Internal.Attr (Html.Attributes.downloadAs filename)
             :: width shrink
             :: height shrink
-            :: centerY
-            :: center
+            :: Internal.Class "x-content-align" "content-center-x"
+            :: Internal.Class "y-content-align" "content-center-y"
             :: attrs
         )
         (Internal.Unkeyed [ label ])
 
 
 {-| -}
-description : String -> Attribute msg
-description =
-    Internal.Describe << Internal.Label
+below : Element msg -> Attribute msg
+below element =
+    Internal.Nearby Internal.Below True element
 
 
 {-| -}
-below : Bool -> Element msg -> Attribute msg
-below on element =
-    if on then
-        Internal.Nearby Internal.Below on element
-    else
-        Internal.NoAttribute
-
-
-{-| `above` takes a `Bool` first so that you can easily toggle showing and hiding the element.
--}
-above : Bool -> Element msg -> Attribute msg
-above on element =
-    Internal.Nearby Internal.Above on element
+above : Element msg -> Attribute msg
+above element =
+    Internal.Nearby Internal.Above True element
 
 
 {-| -}
-onRight : Bool -> Element msg -> Attribute msg
-onRight on element =
-    Internal.Nearby Internal.OnRight on element
+onRight : Element msg -> Attribute msg
+onRight element =
+    Internal.Nearby Internal.OnRight True element
 
 
 {-| -}
-onLeft : Bool -> Element msg -> Attribute msg
-onLeft on element =
-    Internal.Nearby Internal.OnLeft on element
+onLeft : Element msg -> Attribute msg
+onLeft element =
+    Internal.Nearby Internal.OnLeft True element
 
 
 {-| -}
-inFront : Bool -> Element msg -> Attribute msg
-inFront on element =
-    Internal.Nearby Internal.InFront on element
+inFront : Element msg -> Attribute msg
+inFront element =
+    Internal.Nearby Internal.InFront True element
 
 
 {-| -}
-behind : Bool -> Element msg -> Attribute msg
-behind on element =
-    Internal.Nearby Internal.Behind on element
+behind : Element msg -> Attribute msg
+behind element =
+    Internal.Nearby Internal.Behind True element
 
 
 {-| -}
@@ -1024,52 +1067,39 @@ height =
 
 
 {-| -}
-scale : Float -> Attribute msg
+scale : Float -> Attr decorative msg
 scale n =
-    Internal.Transform Nothing (Internal.Scale n n 1)
+    Internal.StyleClass (Internal.Transform (Internal.Scale n n 1))
 
 
 {-| -}
-mouseOverScale : Float -> Attribute msg
-mouseOverScale n =
-    Internal.Transform (Just Internal.Hover) (Internal.Scale n n 1)
-
-
-{-| -}
-rotate : Float -> Attribute msg
+rotate : Float -> Attr decorative msg
 rotate angle =
-    Internal.Transform Nothing (Internal.Rotate 0 0 1 angle)
-
-
-
--- {-| -}
--- mouseOverRotate : Float -> Attribute msg
--- mouseOverRotate angle =
---     Internal.Transform (Just Internal.Hover) (Internal.Rotate 0 0 1 angle)
+    Internal.StyleClass (Internal.Transform (Internal.Rotate 0 0 1 angle))
 
 
 {-| -}
-moveUp : Float -> Attribute msg
+moveUp : Float -> Attr decorative msg
 moveUp y =
-    Internal.Transform Nothing (Internal.Move Nothing (Just (negate y)) Nothing)
+    Internal.StyleClass (Internal.Transform (Internal.Move Nothing (Just (negate y)) Nothing))
 
 
 {-| -}
-moveDown : Float -> Attribute msg
+moveDown : Float -> Attr decorative msg
 moveDown y =
-    Internal.Transform Nothing (Internal.Move Nothing (Just y) Nothing)
+    Internal.StyleClass (Internal.Transform (Internal.Move Nothing (Just y) Nothing))
 
 
 {-| -}
-moveRight : Float -> Attribute msg
+moveRight : Float -> Attr decorative msg
 moveRight x =
-    Internal.Transform Nothing (Internal.Move (Just x) Nothing Nothing)
+    Internal.StyleClass (Internal.Transform (Internal.Move (Just x) Nothing Nothing))
 
 
 {-| -}
-moveLeft : Float -> Attribute msg
+moveLeft : Float -> Attr decorative msg
 moveLeft x =
-    Internal.Transform Nothing (Internal.Move (Just (negate x)) Nothing Nothing)
+    Internal.StyleClass (Internal.Transform (Internal.Move (Just (negate x)) Nothing Nothing))
 
 
 {-| -}
@@ -1092,8 +1122,8 @@ paddingEach { top, right, bottom, left } =
 
 
 {-| -}
-center : Attribute msg
-center =
+centerX : Attribute msg
+centerX =
     Internal.AlignX Internal.CenterX
 
 
@@ -1149,13 +1179,41 @@ spacingXY x y =
     Internal.StyleClass (Internal.SpacingStyle x y)
 
 
-{-| -}
-hidden : Bool -> Attribute msg
-hidden on =
+{-| Make an element transparent and have it ignore any mouse or touch events, though it will stil take up space.
+-}
+transparent : Bool -> Attr decorative msg
+transparent on =
     if on then
-        Internal.class "hidden"
+        Internal.StyleClass (Internal.Transparency "transparent" 1.0)
     else
-        Internal.NoAttribute
+        Internal.StyleClass (Internal.Transparency "visible" 0.0)
+
+
+{-| A capped value between 0.0 and 1.0, where 0.0 is transparent and 1.0 is fully opaque.
+
+Semantically equavalent to html opacity.
+
+-}
+alpha : Float -> Attr decorative msg
+alpha o =
+    let
+        transparency =
+            o
+                |> max 0.0
+                |> min 1.0
+                |> (\x -> 1 - x)
+    in
+    Internal.StyleClass <| Internal.Transparency ("transparency-" ++ Internal.floatClass transparency) transparency
+
+
+
+-- {-| -}
+-- hidden : Bool -> Attribute msg
+-- hidden on =
+--     if on then
+--         Internal.class "hidden"
+--     else
+--         Internal.NoAttribute
 
 
 {-| -}
@@ -1201,12 +1259,88 @@ pointer =
     Internal.Class "cursor" "cursor-pointer"
 
 
-type Device
-    = Device
+{-| -}
+type alias Device =
+    { width : Int
+    , height : Int
+    , phone : Bool
+    , tablet : Bool
+    , desktop : Bool
+    , bigDesktop : Bool
+    , portrait : Bool
+    }
 
 
-{-| <meta name="viewport" content="width=device-width, initial-scale=1">
+{-| Takes in a Window.Size and returns a device profile which can be used for responsiveness.
 -}
-classifyDevice : { window | width : Int } -> Device
-classifyDevice window =
-    Device
+classifyDevice : { window | height : Int, width : Int } -> Device
+classifyDevice { width, height } =
+    { width = width
+    , height = height
+    , phone = width <= 600
+    , tablet = width > 600 && width <= 1200
+    , desktop = width > 1200 && width <= 1800
+    , bigDesktop = width > 1800
+    , portrait = width < height
+    }
+
+
+{-| When designing it's nice to use a modular scale to set spacial rythms.
+scaled =
+Scale.modular 16 1.25
+
+A modular scale starts with a number, and multiplies it by a ratio a number of times.
+Then, when setting font sizes you can use:
+
+       Font.size (scaled 1) -- results in 16
+
+       Font.size (scaled 2) -- 16 * 1.25 results in 20
+
+       Font.size (scaled 4) -- 16 * 1.25 ^ (4 - 1) results in 31.25
+
+We can also provide negative numbers to scale below 16px.
+
+       Font.size (scaled -1) -- 16 * 1.25 ^ (-1) results in 12.8
+
+-}
+modular : Float -> Float -> Int -> Float
+modular normal ratio scale =
+    if scale == 0 then
+        normal
+    else if scale < 0 then
+        normal * ratio ^ toFloat scale
+    else
+        normal * ratio ^ (toFloat scale - 1)
+
+
+{-| -}
+mouseOver : List Decoration -> Attribute msg
+mouseOver decs =
+    Internal.StyleClass <|
+        Internal.PseudoSelector Internal.Hover
+            (decs
+                |> Internal.unwrapDecorations
+                |> List.map (Internal.tag "hover")
+            )
+
+
+{-| -}
+mouseDown : List Decoration -> Attribute msg
+mouseDown decs =
+    Internal.StyleClass <|
+        Internal.PseudoSelector Internal.Active
+            (decs
+                |> Internal.unwrapDecorations
+                |> List.map (Internal.tag "active")
+            )
+
+
+{-| -}
+focused : List Decoration -> Attribute msg
+focused decs =
+    Internal.StyleClass <|
+        Internal.PseudoSelector Internal.Focus
+            (decs
+                |> Internal.unwrapDecorations
+                |> List.map (Internal.tag "focus")
+            )

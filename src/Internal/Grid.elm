@@ -15,6 +15,7 @@ type RelativePosition
     | OnLeft
     | Above
     | Below
+    | InFront
 
 
 type Layout
@@ -23,31 +24,33 @@ type Layout
     | Column
 
 
-type alias Around msg =
-    { right : Maybe (PositionedElement msg)
-    , left : Maybe (PositionedElement msg)
-    , primary : Internal.Element msg
-    , primaryWidth : Internal.Length
+type alias Around alignment msg =
+    { right : Maybe (PositionedElement alignment msg)
+    , left : Maybe (PositionedElement alignment msg)
+    , primary : ( Maybe String, List (Internal.Attribute alignment msg), List (Internal.Element msg) )
+
+    -- , primaryWidth : Internal.Length
     , defaultWidth : Internal.Length
-    , below : Maybe (PositionedElement msg)
-    , above : Maybe (PositionedElement msg)
+    , below : Maybe (PositionedElement alignment msg)
+    , above : Maybe (PositionedElement alignment msg)
+    , inFront : Maybe (PositionedElement alignment msg)
     }
 
 
-type alias PositionedElement msg =
+type alias PositionedElement alignment msg =
     { layout : Layout
     , child : List (Internal.Element msg)
-    , attrs : List (Internal.Attribute msg)
+    , attrs : List (Internal.Attribute alignment msg)
     , width : Int
     , height : Int
     }
 
 
-relative : Maybe String -> List (Internal.Attribute msg) -> Around msg -> Internal.Element msg
+relative : Maybe String -> List (Internal.Attribute alignment msg) -> Around alignment msg -> Internal.Element msg
 relative node attributes around =
     let
         ( sX, sY ) =
-            Internal.getSpacing attributes ( 5, 5 )
+            Internal.getSpacing attributes ( 7, 7 )
 
         make positioned =
             Internal.element Internal.noStyleSheet
@@ -62,18 +65,13 @@ relative node attributes around =
     Internal.element Internal.noStyleSheet
         Internal.asGrid
         node
-        (-- :: Element.width Element.shrink
-         -- :: Element.height Element.shrink
-         -- :: Internal.Class "y-content-align" "content-top"
-         Element.center
-            :: (template ++ attributes)
-        )
+        (template ++ attributes)
         (Internal.Unkeyed
             children
         )
 
 
-createGrid : ( Int, Int ) -> Around msg -> ( List (Internal.Attribute msg1), List (Element.Element msg) )
+createGrid : ( Int, Int ) -> Around alignment msg -> ( List (Internal.Attribute alignment msg1), List (Element.Element msg) )
 createGrid ( spacingX, spacingY ) nearby =
     let
         rowCount =
@@ -140,6 +138,9 @@ createGrid ( spacingX, spacingY ) nearby =
                 OnLeft ->
                     rows.primary
 
+                InFront ->
+                    rows.primary
+
         colCoord pos =
             case pos of
                 Above ->
@@ -154,6 +155,9 @@ createGrid ( spacingX, spacingY ) nearby =
                 OnLeft ->
                     columns.left
 
+                InFront ->
+                    columns.primary
+
         place pos el =
             build (rowCoord pos) (colCoord pos) spacingX spacingY el
     in
@@ -162,9 +166,14 @@ createGrid ( spacingX, spacingY ) nearby =
                 { spacing = ( Internal.Px spacingX, Internal.Px spacingY )
                 , columns =
                     List.filterMap identity
-                        [ Maybe.map (always nearby.defaultWidth) nearby.left
-                        , Just nearby.primaryWidth
-                        , Maybe.map (always nearby.defaultWidth) nearby.right
+                        [ nearby.left
+                            |> Maybe.map (\el -> Maybe.withDefault nearby.defaultWidth (getWidth el.attrs))
+                        , nearby.primary
+                            |> (\( node, attrs, el ) -> getWidth attrs)
+                            |> Maybe.withDefault nearby.defaultWidth
+                            |> Just
+                        , nearby.right
+                            |> Maybe.map (\el -> Maybe.withDefault nearby.defaultWidth (getWidth el.attrs))
                         ]
                 , rows = List.map (always Internal.Content) (List.range 1 rowCount)
                 }
@@ -172,28 +181,32 @@ createGrid ( spacingX, spacingY ) nearby =
       ]
     , List.filterMap identity
         [ Just <|
-            Internal.element Internal.noStyleSheet
-                Internal.asEl
-                Nothing
-                [ Internal.StyleClass
-                    (Internal.GridPosition
-                        { row = rows.primary
-                        , col = columns.primary
-                        , width = 1
-                        , height = 1
-                        }
-                    )
-                ]
-                (Internal.Unkeyed [ nearby.primary ])
+            case nearby.primary of
+                ( primaryNode, primaryAttrs, primaryChildren ) ->
+                    Internal.element Internal.noStyleSheet
+                        Internal.asEl
+                        primaryNode
+                        (Internal.StyleClass
+                            (Internal.GridPosition
+                                { row = rows.primary
+                                , col = columns.primary
+                                , width = 1
+                                , height = 1
+                                }
+                            )
+                            :: primaryAttrs
+                        )
+                        (Internal.Unkeyed primaryChildren)
         , Maybe.map (place OnLeft) nearby.left
         , Maybe.map (place OnRight) nearby.right
         , Maybe.map (place Above) nearby.above
         , Maybe.map (place Below) nearby.below
+        , Maybe.map (place InFront) nearby.inFront
         ]
     )
 
 
-build : Int -> Int -> Int -> Int -> { a | attrs : List (Internal.Attribute msg), height : Int, layout : Layout, width : Int, child : List (Internal.Element msg) } -> Internal.Element msg
+build : Int -> Int -> Int -> Int -> { a | attrs : List (Internal.Attribute alignment msg), height : Int, layout : Layout, width : Int, child : List (Internal.Element msg) } -> Internal.Element msg
 build rowCoord colCoord spacingX spacingY positioned =
     let
         attributes =
@@ -211,10 +224,10 @@ build rowCoord colCoord spacingX spacingY positioned =
     case positioned.layout of
         GridElement ->
             Internal.element Internal.noStyleSheet
-                Internal.asColumn
+                Internal.asEl
                 Nothing
                 attributes
-                (Internal.Unkeyed <| Internal.columnEdgeFillers positioned.child)
+                (Internal.Unkeyed <| positioned.child)
 
         Row ->
             Internal.element Internal.noStyleSheet
@@ -229,3 +242,22 @@ build rowCoord colCoord spacingX spacingY positioned =
                 Nothing
                 attributes
                 (Internal.Unkeyed <| Internal.columnEdgeFillers positioned.child)
+
+
+getWidth : List (Internal.Attribute align msg) -> Maybe Internal.Length
+getWidth attrs =
+    let
+        widthPlease attr found =
+            case found of
+                Just x ->
+                    Just x
+
+                Nothing ->
+                    case attr of
+                        Internal.Width w ->
+                            Just w
+
+                        _ ->
+                            Nothing
+    in
+    List.foldr widthPlease Nothing attrs
