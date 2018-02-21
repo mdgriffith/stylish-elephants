@@ -34,7 +34,7 @@ Here are the new defaults.
 *column*
 
 - width fill
-- height shrink
+- height fill
 - children aligned left and top
 
 *textColumn*
