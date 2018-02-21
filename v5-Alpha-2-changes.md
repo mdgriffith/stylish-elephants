@@ -110,7 +110,7 @@ You can just use `above`/`below` when you need to show a validation message and 
 Notices were originally annotated as errors or warnings so that `aria-invalid` could be attached.  However, it seems to me that having the changes be announced politely is better than having the screen reader just say "Yo, something's invalid".  You now have more control over the feedback!  Craft your messages well :)
 
 
-Type aliases for the records used for inputs were also removed because it gives nicer error messages which reference specific fields instead of the top level type alias.
+Type aliases for the records used for inputs were also removed because it gives a nicer error message which references specific fields instead of the top level type alias.
 
 
 
