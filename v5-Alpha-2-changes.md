@@ -85,7 +85,7 @@ This also introduced some new type aliases for attributes.
 
 `Attribute msg` - What you're used to.  This **cannot** be used in a mouseOver/focused/etc.
 
-`Attr decorative msg` - A new attribute alias for attributes that can be used as a noraml attribute or in `mouseOver`, `focused`, etc.
+`Attr decorative msg` - A new attribute alias for attributes that can be used as a normal attribute or in `mouseOver`, `focused`, etc.  I like to think of this as a *Decorative Attribute*.
 
 
 # Input
