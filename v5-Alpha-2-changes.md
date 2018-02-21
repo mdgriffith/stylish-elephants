@@ -19,30 +19,30 @@ The parent will set the default alignment for the children and the children can 
 
 Here are the new defaults. 
 
-*el*(and all special els like `link`, `download`, etc.)
+**el**(and all special els like `link`, `download`, etc.)
 
 - width/height shrink
 - child aligned left and top
 
-*row*
+**row**
 
 - width fill
 - height shrink
 - child aligned left and centered y 
 
 
-*column*
+**column**
 
 - width fill
 - height fill
 - children aligned left and top
 
-*textColumn*
+**textColumn**
 
 - `width (px 550)`  This is shooting for ~60 characters per line at 20px sized font for readability
 - `height shrink`
 
-*paragraph*
+**paragraph**
 
 - `width fill`
 - `height shrink`
@@ -105,10 +105,12 @@ If you still need to have a select menu, you can either:
 
 *Input.Notices* have been removed, which includes warnings and errors.  Accessibility is important to this library and this change is actually meant to make it easier to have good form validation feedback.
 
-You can just use `above`/`below` when you need to show a validation message and it will be announced politely to users using screen readers.  Notices were originally annotated as errors or warnings  so that `aria-invalid` could be attached, though it seems to me having the changes being announced politely is better than having the screen reader just say "Yo, something's invalid".  You now have more control over the feedback!  Craft your messages well :)
+You can just use `above`/`below` when you need to show a validation message and it will be announced politely to users using screen readers.
+
+Notices were originally annotated as errors or warnings so that `aria-invalid` could be attached.  However, it seems to me that having the changes be announced politely is better than having the screen reader just say "Yo, something's invalid".  You now have more control over the feedback!  Craft your messages well :)
 
 
-Type aliases for the Records used for inputs were also removed because it gives nicer error messages which reference specific fields instead of the top level type alias.
+Type aliases for the records used for inputs were also removed because it gives nicer error messages which reference specific fields instead of the top level type alias.
 
 
 
