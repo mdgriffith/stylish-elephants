@@ -408,26 +408,26 @@ alignXName : HAlign -> String
 alignXName align =
     case align of
         Left ->
-            "self-left"
+            "aligned-horizontally self-left"
 
         Right ->
-            "self-right"
+            "aligned-horizontally self-right"
 
         CenterX ->
-            "self-center-x"
+            "aligned-horizontally self-center-x"
 
 
 alignYName : VAlign -> String
 alignYName align =
     case align of
         Top ->
-            "self-top"
+            "aligned-vertically self-top"
 
         Bottom ->
-            "self-bottom"
+            "aligned-vertically self-bottom"
 
         CenterY ->
-            "self-center-y"
+            "aligned-vertically self-center-y"
 
 
 noAreas : List (Attribute aligned msg) -> List (Attribute aligned msg)
@@ -739,11 +739,11 @@ gatherAttributes attr gathered =
                                 ( "min-width-" ++ intToString px, Single (".min-width-" ++ intToString px) "min-width" (intToString px ++ "px") )
 
                             renderMax px =
-                                ( ".max-width-" ++ intToString px, Single (".max-width-" ++ intToString px) "max-width" (intToString px ++ "px") )
+                                ( "max-width-" ++ intToString px, Single (".max-width-" ++ intToString px) "max-width" (intToString px ++ "px") )
 
                             base =
                                 Just
-                                    ( "width-fill-portion width-fill-" ++ toString fill.portion
+                                    ( "width-fill-between width-fill-" ++ toString fill.portion
                                     , Single (".se.row > " ++ (styleName <| "width-fill-" ++ toString fill.portion)) "flex-grow" (toString (fill.portion * 100000))
                                     )
 
@@ -817,7 +817,7 @@ gatherAttributes attr gathered =
 
                             base =
                                 Just
-                                    ( "height-fill-portion height-fill-" ++ toString fill.portion
+                                    ( "height-fill-between height-fill-" ++ toString fill.portion
                                     , Single (".se.column > " ++ (styleName <| "height-fill-" ++ toString fill.portion)) "flex-grow" (toString (fill.portion * 100000))
                                     )
 
@@ -1479,8 +1479,7 @@ asElement embedMode children context rendered =
 
                                 Unkeyed unkeyed ->
                                     Unkeyed
-                                        (Internal.Style.rulesElement
-                                            :: toStyleSheet options styles
+                                        (toStyleSheet options styles
                                             :: unkeyed
                                         )
 
@@ -1791,8 +1790,16 @@ renderRoot optionList attributes child =
     let
         options =
             optionsToRecord optionList
+
+        embedStyle =
+            case options.mode of
+                NoStaticStyleSheet ->
+                    OnlyDynamic options
+
+                _ ->
+                    StaticRootAndDynamic options
     in
-    element (StaticRootAndDynamic options) asEl Nothing attributes (Unkeyed [ child ])
+    element embedStyle asEl Nothing attributes (Unkeyed [ child ])
         |> toHtml options
 
 
@@ -2290,7 +2297,7 @@ toStyleSheetString options stylesheet =
                             "grid-column-gap:" ++ toGridLength (Tuple.first template.spacing) ++ ";"
 
                         gapY =
-                            "grid-row-gap:" ++ toGridLength (Tuple.first template.spacing) ++ ";"
+                            "grid-row-gap:" ++ toGridLength (Tuple.second template.spacing) ++ ";"
 
                         modernGrid =
                             class ++ "{" ++ columns ++ rows ++ gapX ++ gapY ++ "}"
