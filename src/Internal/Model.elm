@@ -1966,7 +1966,7 @@ toStyleSheetString options stylesheet =
                     renderStyle force
                         maybePseudo
                         (".font-size-" ++ intToString i)
-                        [ Property "font-size" (intToString i)
+                        [ Property "font-size" (intToString i ++ "px")
                         ]
 
                 FontFamily name typefaces ->
