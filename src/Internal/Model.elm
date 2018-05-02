@@ -1,6 +1,7 @@
 module Internal.Model exposing (..)
 
-{-| -}
+{-| This is the style rendering engine.
+-}
 
 import Color exposing (Color)
 import Html exposing (Html)
