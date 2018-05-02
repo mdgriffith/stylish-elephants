@@ -44,19 +44,13 @@ module Element.Border
 import Color exposing (Color)
 import Element exposing (Attr, Attribute)
 import Internal.Model as Internal
+import Internal.Style as Style exposing (classes)
 
 
 {-| -}
 color : Color -> Attr decorative msg
 color clr =
     Internal.StyleClass (Internal.Colored ("border-color-" ++ Internal.formatColorClass clr) "border-color" clr)
-
-
-
--- {-| -}
--- mouseOverColor : Color -> Attribute msg
--- mouseOverColor clr =
---     hover (Colored ("hover-border-color-" ++ Internal.formatColorClass clr) "border-color" clr)
 
 
 {-| -}
@@ -90,22 +84,30 @@ widthEach { bottom, top, left, right } =
         )
 
 
+
+-- {-| No Borders
+-- -}
+-- none : Attribute msg
+-- none =
+--     Class "border" "border-none"
+
+
 {-| -}
 solid : Attribute msg
 solid =
-    Internal.Class "border" "border-solid"
+    Internal.Class "border" classes.borderSolid
 
 
 {-| -}
 dashed : Attribute msg
 dashed =
-    Internal.Class "border" "border-dashed"
+    Internal.Class "border" classes.borderDashed
 
 
 {-| -}
 dotted : Attribute msg
 dotted =
-    Internal.Class "border" "border-dotted"
+    Internal.Class "border" classes.borderDotted
 
 
 {-| Round all corners.

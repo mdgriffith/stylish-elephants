@@ -32,11 +32,8 @@ module Element
         , download
         , downloadAs
         , el
-        , empty
         , fill
-        , fillBetween
         , fillPortion
-        , fillPortionBetween
         , focusStyle
         , focused
         , forceHover
@@ -51,6 +48,8 @@ module Element
         , link
         , map
         , mapAttribute
+        , maximum
+        , minimum
         , modular
         , mouseDown
         , mouseOver
@@ -61,6 +60,7 @@ module Element
         , newTabLink
         , noHover
         , noStaticStyleSheet
+        , none
         , onLeft
         , onRight
         , padding
@@ -91,7 +91,7 @@ module Element
 
 # Basic Elements
 
-@docs Element, Attribute, empty, text, el
+@docs Element, Attribute, none, text, el
 
 
 # Rows and Columns
@@ -131,7 +131,7 @@ Text needs it's own layout primitives.
 
 @docs Attribute, transparent, alpha, pointer
 
-@docs width, height, Length, px, shrink, fill, fillPortion, fillBetween, fillPortionBetween
+@docs width, height, Length, px, shrink, fill, fillPortion, minimum, maximum
 
 
 ## Padding and Spacing
@@ -143,9 +143,9 @@ Padding is what you'd expect, the distance between the outer edge and the conten
 So, if we have the following row, with some padding and spacing.
 
     Element.row [ padding 10, spacing 7 ]
-        [ Element.el [] empty
-        , Element.el [] empty
-        , Element.el [] empty
+        [ Element.el [] none
+        , Element.el [] none
+        , Element.el [] none
         ]
 
 Here's what we can expect.
@@ -166,10 +166,10 @@ Alignment can be used to align an `Element` within another `Element`.
 If alignment is set on elements in a layout such as `row`, then the element will push the other elements in that direction. Here's an example.
 
     Element.row []
-        [ Element.el [] Element.empty
-        , Element.el [ alignLeft ] Element.empty
-        , Element.el [ centerX ] Element.empty
-        , Element.el [ alignRight ] Element.empty
+        [ Element.el [] Element.none
+        , Element.el [ alignLeft ] Element.none
+        , Element.el [ centerX ] Element.none
+        , Element.el [ alignRight ] Element.none
         ]
 
 will result in a layout like
@@ -187,7 +187,7 @@ Let's say we want a dropdown menu. Essentially we want to say: _put this element
 
     Elemenet.row []
         [ Element.el
-            [ Element.below True (Element.text "I'm below!")
+            [ Element.below (Element.text "I'm below!")
             ]
             (Element.text "I'm normal!")
         ]
@@ -250,6 +250,7 @@ import Color exposing (Color)
 import Html exposing (Html)
 import Html.Attributes
 import Internal.Model as Internal
+import Internal.Style exposing (classes)
 
 
 {-| The basic building block of your layout. Here we create a
@@ -331,21 +332,32 @@ fill =
     Internal.Fill 1
 
 
-{-| Fill the available space as long as it's between the pixel bounds.
--}
-fillBetween : { min : Maybe Int, max : Maybe Int } -> Length
-fillBetween { min, max } =
-    Internal.FillBetween
-        { portion = 1
-        , min = min
-        , max = max
-        }
+{-| -}
+minimum : Int -> Length -> Length
+minimum i l =
+    Internal.Min i l
 
 
 {-| -}
-fillPortionBetween : { portion : Int, min : Maybe Int, max : Maybe Int } -> Length
-fillPortionBetween =
-    Internal.FillBetween
+maximum : Int -> Length -> Length
+maximum i l =
+    Internal.Max i l
+
+
+
+-- {-| Fill the available space as long as it's between the pixel bounds.
+-- -}
+-- fillBetween : { min : Maybe Int, max : Maybe Int } -> Length
+-- fillBetween { min, max } =
+--     Internal.FillBetween
+--         { portion = 1
+--         , min = min
+--         , max = max
+--         }
+-- {-| -}
+-- fillPortionBetween : { portion : Int, min : Maybe Int, max : Maybe Int } -> Length
+-- fillPortionBetween =
+--     Internal.FillBetween
 
 
 {-| Sometimes you may not want to split available space evenly. In this case you can use `fillPortion` to define which elements should have what portion of the available space.
@@ -372,8 +384,8 @@ layoutWith : { options : List Option } -> List (Attribute msg) -> Element msg ->
 layoutWith { options } attrs child =
     Internal.renderRoot options
         (Internal.htmlClass "style-elements se el"
-            :: Internal.Class "x-content-align" "content-center-x"
-            :: Internal.Class "y-content-align" "content-center-y"
+            :: Internal.Class "x-content-align" classes.contentCenterX
+            :: Internal.Class "y-content-align" classes.contentCenterY
             :: (Internal.rootStyle ++ attrs)
         )
         child
@@ -449,43 +461,10 @@ forceHover =
     Internal.HoverOption Internal.ForceHover
 
 
-
--- {-| A helper function. This:
---     when (x == 5) (text "yay, it's 5")
--- is sugar for
---     if (x == 5) then
---         text "yay, it's 5"
---     else
---         empty
--- -}
--- when : Bool -> Element msg -> Element msg
--- when bool elm =
---     if bool then
---         elm
---     else
---         empty
--- {-| Another helper function that defaults to `empty`
---     whenJust (Just ("Hi!")) text
--- is sugar for
---     case maybe of
---         Nothing ->
---             empty
---         Just x ->
---             text x
--- -}
--- whenJust : Maybe a -> (a -> Element msg) -> Element msg
--- whenJust maybe view =
---     case maybe of
---         Nothing ->
---             empty
---         Just thing ->
---             view thing
-
-
 {-| Nothing to see here!
 -}
-empty : Element msg
-empty =
+none : Element msg
+none =
     Internal.Empty
 
 
@@ -524,8 +503,6 @@ el attrs child =
         Nothing
         (width shrink
             :: height shrink
-            -- :: Internal.Class "x-content-align" "content-center-x"
-            -- :: Internal.Class "y-content-align" "content-center-y"
             :: attrs
         )
         (Internal.Unkeyed [ child ])
@@ -539,13 +516,13 @@ row attrs children =
         Internal.noStyleSheet
         Internal.asRow
         Nothing
-        (Internal.Class "x-content-align" "content-left"
-            :: Internal.Class "y-content-align" "content-center-y"
+        (Internal.Class "x-content-align" classes.contentLeft
+            :: Internal.Class "y-content-align" classes.contentCenterY
             :: width fill
             :: height shrink
             :: attrs
         )
-        (Internal.Unkeyed <| Internal.rowEdgeFillers children)
+        (Internal.Unkeyed children)
 
 
 {-| -}
@@ -554,13 +531,13 @@ column attrs children =
     Internal.element Internal.noStyleSheet
         Internal.asColumn
         Nothing
-        (Internal.Class "y-content-align" "content-top"
-            :: Internal.Class "x-content-align" "content-left"
+        (Internal.Class "y-content-align" classes.contentTop
+            :: Internal.Class "x-content-align" classes.contentLeft
             :: height fill
             :: width fill
             :: attrs
         )
-        (Internal.Unkeyed <| Internal.columnEdgeFillers children)
+        (Internal.Unkeyed children)
 
 
 {-| -}
@@ -821,7 +798,18 @@ Which will look something like
 -}
 paragraph : List (Attribute msg) -> List (Element msg) -> Element msg
 paragraph attrs children =
-    Internal.element Internal.noStyleSheet Internal.asParagraph (Just "p") (Internal.adjustParagraphSpacing attrs) (Internal.Unkeyed children)
+    Internal.element Internal.noStyleSheet
+        Internal.asParagraph
+        (Just "p")
+        (width
+            (fill
+                |> minimum 500
+                |> maximum 750
+            )
+            :: spacing 5
+            :: attrs
+        )
+        (Internal.Unkeyed children)
 
 
 {-| Now that we have a paragraph, we need someway to attach a bunch of paragraph's together.
@@ -834,7 +822,7 @@ In the following example, we have a `textColumn` where one child has `alignLeft`
 
     Element.textColumn [ spacing 10, padding 10 ]
         [ paragraph [] [ text "lots of text ...." ]
-        , el [ alignLeft ] empty
+        , el [ alignLeft ] none
         , paragraph [] [ text "lots of text ...." ]
         ]
 
@@ -849,7 +837,13 @@ textColumn attrs children =
         Internal.noStyleSheet
         Internal.asTextColumn
         Nothing
-        (width (px 550) :: attrs)
+        (width
+            (fill
+                |> minimum 500
+                |> maximum 750
+            )
+            :: attrs
+        )
         (Internal.Unkeyed children)
 
 
@@ -957,8 +951,8 @@ link attrs { url, label } =
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" "content-center-x"
-            :: Internal.Class "y-content-align" "content-center-y"
+            :: Internal.Class "x-content-align" classes.contentCenterX
+            :: Internal.Class "y-content-align" classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -975,8 +969,8 @@ newTabLink attrs { url, label } =
             :: Internal.Attr (Html.Attributes.target "_blank")
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" "content-center-x"
-            :: Internal.Class "y-content-align" "content-center-y"
+            :: Internal.Class "x-content-align" classes.contentCenterX
+            :: Internal.Class "y-content-align" classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -993,8 +987,8 @@ download attrs { url, label } =
             :: Internal.Attr (Html.Attributes.download True)
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" "content-center-x"
-            :: Internal.Class "y-content-align" "content-center-y"
+            :: Internal.Class "x-content-align" classes.contentCenterX
+            :: Internal.Class "y-content-align" classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -1011,8 +1005,8 @@ downloadAs attrs { url, filename, label } =
             :: Internal.Attr (Html.Attributes.downloadAs filename)
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" "content-center-x"
-            :: Internal.Class "y-content-align" "content-center-y"
+            :: Internal.Class "x-content-align" classes.contentCenterX
+            :: Internal.Class "y-content-align" classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -1021,37 +1015,37 @@ downloadAs attrs { url, filename, label } =
 {-| -}
 below : Element msg -> Attribute msg
 below element =
-    Internal.Nearby Internal.Below True element
+    Internal.Nearby Internal.Below element
 
 
 {-| -}
 above : Element msg -> Attribute msg
 above element =
-    Internal.Nearby Internal.Above True element
+    Internal.Nearby Internal.Above element
 
 
 {-| -}
 onRight : Element msg -> Attribute msg
 onRight element =
-    Internal.Nearby Internal.OnRight True element
+    Internal.Nearby Internal.OnRight element
 
 
 {-| -}
 onLeft : Element msg -> Attribute msg
 onLeft element =
-    Internal.Nearby Internal.OnLeft True element
+    Internal.Nearby Internal.OnLeft element
 
 
 {-| -}
 inFront : Element msg -> Attribute msg
 inFront element =
-    Internal.Nearby Internal.InFront True element
+    Internal.Nearby Internal.InFront element
 
 
 {-| -}
 behind : Element msg -> Attribute msg
 behind element =
-    Internal.Nearby Internal.Behind True element
+    Internal.Nearby Internal.Behind element
 
 
 {-| -}
@@ -1160,7 +1154,7 @@ alignRight =
 {-| -}
 spaceEvenly : Attribute msg
 spaceEvenly =
-    Internal.Class "x-align" "space-evenly"
+    Internal.Class "x-align" (.spaceEvenly Internal.Style.classes)
 
 
 {-| -}
@@ -1219,51 +1213,49 @@ alpha o =
 {-| -}
 scrollbars : Attribute msg
 scrollbars =
-    Internal.Class "overflow" "scrollbars"
+    Internal.Class "overflow" classes.scrollbars
 
 
 {-| -}
 scrollbarY : Attribute msg
 scrollbarY =
-    Internal.Class "overflow" "scrollbars-y"
+    Internal.Class "overflow" classes.scrollbarsY
 
 
 {-| -}
 scrollbarX : Attribute msg
 scrollbarX =
-    Internal.Class "overflow" "scrollbars-x"
+    Internal.Class "overflow" classes.scrollbarsX
 
 
 {-| -}
 clip : Attribute msg
 clip =
-    Internal.Class "overflow" "clip"
+    Internal.Class "overflow" classes.clip
 
 
 {-| -}
 clipY : Attribute msg
 clipY =
-    Internal.Class "overflow" "clip-y"
+    Internal.Class "overflow" classes.clipY
 
 
 {-| -}
 clipX : Attribute msg
 clipX =
-    Internal.Class "overflow" "clip-x"
+    Internal.Class "overflow" classes.clipX
 
 
 {-| Set the cursor to the pointer hand.
 -}
 pointer : Attribute msg
 pointer =
-    Internal.Class "cursor" "cursor-pointer"
+    Internal.Class "cursor" classes.cursorPointer
 
 
 {-| -}
 type alias Device =
-    { width : Int
-    , height : Int
-    , phone : Bool
+    { phone : Bool
     , tablet : Bool
     , desktop : Bool
     , bigDesktop : Bool
@@ -1275,9 +1267,7 @@ type alias Device =
 -}
 classifyDevice : { window | height : Int, width : Int } -> Device
 classifyDevice { width, height } =
-    { width = width
-    , height = height
-    , phone = width <= 600
+    { phone = width <= 600
     , tablet = width > 600 && width <= 1200
     , desktop = width > 1200 && width <= 1800
     , bigDesktop = width > 1800

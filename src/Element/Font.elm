@@ -17,7 +17,6 @@ module Element.Font
         , justify
         , letterSpacing
         , light
-        , lineHeight
         , medium
         , monospace
         , regular
@@ -46,7 +45,6 @@ module Element.Font
         Element.el
             [ Font.color blue
             , Font.size 18
-            , Font.lineHeight 1.3 -- line height is given as a ratio of Font.size.
             , Font.family
                 [ Font.typeface "Open Sans"
                 , Font.sansSerif
@@ -54,9 +52,9 @@ module Element.Font
             ]
             (Element.text "Woohoo, I'm stylish text")
 
-**Note**: `Font.color`, `Font.size`, `Font.family`, and `Font.lineHeight` are all inherited, meaning you can set them at the top of your view and all subsequent nodes will have that value.
+**Note**: `Font.color`, `Font.size`, and `Font.family` are inherited, meaning you can set them at the top of your view and all subsequent nodes will have that value.
 
-@docs color, size, lineHeight
+@docs color, size
 
 
 ## Typefaces
@@ -107,6 +105,7 @@ module Element.Font
 import Color exposing (Color)
 import Element exposing (Attr, Attribute)
 import Internal.Model as Internal
+import Internal.Style exposing (classes)
 
 
 {-| -}
@@ -174,21 +173,7 @@ external { url, name } =
 -}
 size : Int -> Attr decorative msg
 size size =
-    Internal.StyleClass (Internal.Single ("font-size-" ++ toString size) "font-size" (toString size ++ "px"))
-
-
-{-| This is the only unitless value in the library that isn't `px`.
-
-It's given as a _proportion_ of the `Font.size`.
-
-This means the final lineHeight in px is:
-
-      Font.size * Font.lineHeight == lineHeightInPx
-
--}
-lineHeight : Float -> Attr decorative msg
-lineHeight =
-    Internal.StyleClass << Internal.LineHeight
+    Internal.StyleClass (Internal.FontSize size)
 
 
 {-| In `px`.
@@ -214,113 +199,113 @@ wordSpacing offset =
 -}
 alignLeft : Attribute msg
 alignLeft =
-    Internal.class "text-left"
+    Internal.class classes.textLeft
 
 
 {-| Align the font to the right.
 -}
 alignRight : Attribute msg
 alignRight =
-    Internal.class "text-right"
+    Internal.class classes.textRight
 
 
 {-| Center align the font.
 -}
 center : Attribute msg
 center =
-    Internal.class "text-center"
+    Internal.class classes.textCenter
 
 
 {-| -}
 justify : Attribute msg
 justify =
-    Internal.class "text-justify"
+    Internal.class classes.textJustify
 
 
 
 -- {-| -}
 -- justifyAll : Attribute msg
 -- justifyAll =
---     Internal.class "text-justify-all"
+--     Internal.class classesTextJustifyAll
 
 
 {-| -}
 underline : Attribute msg
 underline =
-    Internal.class "underline"
+    Internal.class classes.underline
 
 
 {-| -}
 strike : Attribute msg
 strike =
-    Internal.class "strike"
+    Internal.class classes.strike
 
 
 {-| -}
 italic : Attribute msg
 italic =
-    Internal.class "italic"
+    Internal.class classes.italic
 
 
 {-| -}
 bold : Attribute msg
 bold =
-    Internal.class "bold"
+    Internal.class classes.bold
 
 
 {-| -}
 light : Attribute msg
 light =
-    Internal.class "text-light"
+    Internal.class classes.textLight
 
 
 {-| -}
 hairline : Attribute msg
 hairline =
-    Internal.class "text-thin"
+    Internal.class classes.textThin
 
 
 {-| -}
 extraLight : Attribute msg
 extraLight =
-    Internal.class "text-extra-light"
+    Internal.class classes.textExtraLight
 
 
 {-| -}
 regular : Attribute msg
 regular =
-    Internal.class "text-normal-weight"
+    Internal.class classes.textNormalWeight
 
 
 {-| -}
 semiBold : Attribute msg
 semiBold =
-    Internal.class "text-semi-bold"
+    Internal.class classes.textSemiBold
 
 
 {-| -}
 medium : Attribute msg
 medium =
-    Internal.class "text-medium"
+    Internal.class classes.textMedium
 
 
 {-| -}
 extraBold : Attribute msg
 extraBold =
-    Internal.class "text-extra-bold"
+    Internal.class classes.textExtraBold
 
 
 {-| -}
 heavy : Attribute msg
 heavy =
-    Internal.class "text-heavy"
+    Internal.class classes.textHeavy
 
 
 {-| This will reset bold and italic.
 -}
 unitalicized : Attribute msg
 unitalicized =
-    Internal.class "text-unitalicized"
+    Internal.class classes.textUnitalicized
 
 
 {-| -}
