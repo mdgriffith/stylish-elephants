@@ -827,12 +827,6 @@ multilineContentHeightFromLineHeight newlineCount lineHeight maybePadding =
 multilineContentHeight : Int -> Int -> Maybe ( Int, Int, Int, Int ) -> Attribute msg
 multilineContentHeight newlineCount spacing maybePadding =
     let
-        _ =
-            Debug.log "manual height" ( maybePadding, spacing, newlineCount )
-
-        _ =
-            Debug.log "spacing" ((newlineCount - 1) * spacing)
-
         heightValue count =
             case maybePadding of
                 Nothing ->

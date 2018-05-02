@@ -1,7 +1,6 @@
 module Internal.Model exposing (..)
 
-{-| This is the style rendering engine.
--}
+{-| -}
 
 import Color exposing (Color)
 import Html exposing (Html)
@@ -1573,7 +1572,7 @@ textElement str =
         [ VirtualDom.property "className"
             (Json.string "se text width-content height-content")
         ]
-        [ VirtualDom.text (Debug.log "text element" str) ]
+        [ VirtualDom.text str ]
 
 
 textElementFill : String -> VirtualDom.Node msg
@@ -1582,7 +1581,7 @@ textElementFill str =
         [ VirtualDom.property "className"
             (Json.string "se text width-fill height-fill")
         ]
-        [ VirtualDom.text (Debug.log "filled element" str) ]
+        [ VirtualDom.text str ]
 
 
 type Children x
