@@ -29,6 +29,8 @@ view =
 ## Full Diff
 
 ```
+This is a MAJOR change.
+
 ------ Changes to module Element - MAJOR ------
 
     Added:
@@ -69,7 +71,7 @@ view =
 ------ Changes to module Element.Background - MAJOR ------
 
     Added:
-        fitted : String -> Element.Attribute msg
+        uncropped : String -> Element.Attribute msg
 
     Removed:
         fittedImage : String -> Element.Attribute msg
