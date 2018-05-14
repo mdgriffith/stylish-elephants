@@ -1,32 +1,19 @@
 module Element.Input
     exposing
         ( Label
-          -- , Menu
-          -- , Notice
         , Option
         , OptionState(..)
         , Placeholder
         , Radio
-          -- , Select
         , button
         , checkbox
         , currentPassword
         , email
-          -- , errorAbove
-          -- , errorBelow
-          -- , errorLeft
-          -- , errorRight
         , focusedOnLoad
-          -- , warningAbove
-          -- , warningBelow
-          -- , warningLeft
-          -- , warningRight
         , labelAbove
         , labelBelow
         , labelLeft
         , labelRight
-          -- , menuAbove
-          -- , menuBelow
         , multiline
         , newPassword
         , option
@@ -35,7 +22,6 @@ module Element.Input
         , radio
         , radioRow
         , search
-          -- , select
         , spellChecked
         , text
         , username
@@ -65,8 +51,7 @@ module Element.Input
 
 -}
 
-import Color exposing (..)
-import Element exposing (Attribute, Element)
+import Element exposing (Attribute, Color, Element)
 import Element.Background as Background
 import Element.Border as Border
 import Element.Events as Events
@@ -75,7 +60,6 @@ import Element.Region as Region
 import Html
 import Html.Attributes
 import Html.Events
-import Internal.Events as Events
 import Internal.Grid
 import Internal.Model as Internal
 import Internal.Style exposing (classes)
@@ -85,6 +69,21 @@ import Json.Decode as Json
 {-| -}
 type Placeholder msg
     = Placeholder (List (Attribute msg)) (Element msg)
+
+
+white =
+    Element.rgb 1 1 1
+
+
+darkGrey =
+    Element.rgb (186 / 255) (189 / 255) (182 / 255)
+
+
+charcoal =
+    Element.rgb
+        (136 / 255)
+        (138 / 255)
+        (133 / 255)
 
 
 {-| -}
@@ -231,7 +230,7 @@ focusDefault attrs =
     if List.any hasFocusStyle attrs then
         Internal.NoAttribute
     else
-        Internal.class "focusable"
+        Internal.htmlClass "focusable"
 
 
 hasFocusStyle attr =
@@ -530,6 +529,10 @@ type alias Text msg =
     }
 
 
+type Padding
+    = Padding Int Int Int Int
+
+
 {-|
 
     attributes
@@ -570,23 +573,6 @@ textHelper textInput attrs textOptions =
                 Just checkMsg ->
                     [ Internal.Attr (Html.Events.onInput checkMsg) ]
 
-        -- lineHeight =
-        --     if textInput.type_ == TextArea then
-        --         attrs
-        --             |> List.filterMap
-        --                 (\x ->
-        --                     case x of
-        --                         Internal.StyleClass (Internal.LineHeight x) ->
-        --                             Just x
-        --                         _ ->
-        --                             Nothing
-        --                 )
-        --             |> List.reverse
-        --             |> List.head
-        --             |> Maybe.withDefault 1.5
-        --             |> (Internal.StyleClass << Internal.LineHeight)
-        --     else
-        --         Internal.NoAttribute
         noNearbys =
             List.filter (not << forNearby) attributes
 
@@ -618,48 +604,60 @@ textHelper textInput attrs textOptions =
 
                 TextArea ->
                     let
-                        ( maybePadding, heightContent, maybeSpacing, adjustedAttributes ) =
+                        { maybePadding, heightContent, maybeSpacing, adjustedAttributes } =
                             attributes
                                 |> List.foldr
-                                    (\attr ( pad, height, spaced, newAttrs ) ->
+                                    (\attr found ->
                                         case attr of
                                             Internal.Describe _ ->
-                                                -- Skip
-                                                ( pad, height, spaced, newAttrs )
+                                                found
 
                                             Internal.Height val ->
-                                                case height of
+                                                case found.heightContent of
                                                     Nothing ->
                                                         case val of
                                                             Internal.Content ->
-                                                                ( pad, Just val, spaced, Internal.class classes.overflowHidden :: newAttrs )
+                                                                { found
+                                                                    | heightContent = Just val
+                                                                    , adjustedAttributes = attr :: found.adjustedAttributes
+                                                                }
 
                                                             _ ->
-                                                                ( pad, Just val, spaced, newAttrs )
+                                                                { found | heightContent = Just val }
 
                                                     Just i ->
-                                                        ( pad, height, spaced, newAttrs )
+                                                        found
 
                                             Internal.StyleClass (Internal.PaddingStyle t r b l) ->
-                                                case pad of
+                                                case found.maybePadding of
                                                     Nothing ->
-                                                        ( Just ( t, r, b, l ), height, spaced, attr :: newAttrs )
+                                                        { found
+                                                            | maybePadding = Just (Padding t r b l)
+                                                            , adjustedAttributes = attr :: found.adjustedAttributes
+                                                        }
 
                                                     _ ->
-                                                        ( pad, height, spaced, newAttrs )
+                                                        found
 
                                             Internal.StyleClass (Internal.SpacingStyle x y) ->
-                                                case spaced of
+                                                case found.maybeSpacing of
                                                     Nothing ->
-                                                        ( pad, height, Just y, attr :: newAttrs )
+                                                        { found
+                                                            | maybeSpacing = Just y
+                                                            , adjustedAttributes = attr :: found.adjustedAttributes
+                                                        }
 
                                                     _ ->
-                                                        ( pad, height, spaced, newAttrs )
+                                                        found
 
                                             _ ->
-                                                ( pad, height, spaced, attr :: newAttrs )
+                                                { found | adjustedAttributes = attr :: found.adjustedAttributes }
                                     )
-                                    ( Nothing, Nothing, Nothing, [] )
+                                    { maybePadding = Nothing
+                                    , heightContent = Nothing
+                                    , maybeSpacing = Nothing
+                                    , adjustedAttributes = []
+                                    }
 
                         -- NOTE: This is where default text spacing is set
                         spacing =
@@ -684,8 +682,20 @@ textHelper textInput attrs textOptions =
                                                     else
                                                         x
                                                )
+
+                                    heightValue count =
+                                        case maybePadding of
+                                            Nothing ->
+                                                "calc(" ++ String.fromInt count ++ "em + " ++ String.fromInt (count * spacing) ++ "px)"
+
+                                            Just (Padding t r b l) ->
+                                                "calc(" ++ String.fromInt count ++ "em + " ++ String.fromInt ((t + b) + (count * spacing)) ++ "px)"
                                 in
-                                multilineContentHeight newlineCount spacing maybePadding
+                                Internal.StyleClass
+                                    (Internal.Single ("textarea-height-" ++ String.fromInt newlineCount)
+                                        "height"
+                                        (heightValue newlineCount)
+                                    )
 
                             Just x ->
                                 Internal.Height x
@@ -713,8 +723,6 @@ textHelper textInput attrs textOptions =
                         Internal.StyleClass (Internal.SpacingStyle _ _) ->
                             True
 
-                        -- Internal.StyleClass (Internal.LineHeight _) ->
-                        --     True
                         Internal.StyleClass (Internal.FontSize _) ->
                             True
 
@@ -763,8 +771,8 @@ textHelper textInput attrs textOptions =
     onGrid (Internal.Class "cursor" "cursor-text" :: parentAttributes)
         (List.filterMap identity
             [ case textOptions.label of
-                Label pos attrs child ->
-                    Just ( pos, attrs, child )
+                Label pos labelAttrs child ->
+                    Just ( pos, labelAttrs, child )
             , case textOptions.placeholder of
                 Nothing ->
                     case nearbys of
@@ -779,67 +787,26 @@ textHelper textInput attrs textOptions =
                                 )
 
                 -- nearbys
-                Just (Placeholder placeholderAttrs placeholder) ->
+                Just (Placeholder placeholderAttrs placeholderEl) ->
                     if String.trim textOptions.text == "" then
                         Just
                             ( Internal.Grid.InFront
                             , Font.color charcoal
                                 :: Internal.Class "text-selection" classes.noTextSelection
                                 :: defaultTextPadding
-                                -- :: lineHeight
                                 :: Element.height Element.fill
                                 :: Element.width Element.fill
                                 :: (inputPadding
                                         ++ nearbys
                                         ++ placeholderAttrs
                                    )
-                            , placeholder
+                            , placeholderEl
                             )
                     else
                         Nothing
             ]
         )
         inputElement
-
-
-{-| Manually calculate height for a <textarea> with a manual lineHeight
--}
-multilineContentHeightFromLineHeight : Float -> Float -> Maybe ( number, a, number, b ) -> Attribute msg
-multilineContentHeightFromLineHeight newlineCount lineHeight maybePadding =
-    let
-        heightValue count =
-            case maybePadding of
-                Nothing ->
-                    toString (count * lineHeight) ++ "em"
-
-                Just ( t, r, b, l ) ->
-                    "calc(" ++ toString (count * lineHeight) ++ "em + " ++ toString (t + b) ++ "px)"
-    in
-    Internal.StyleClass
-        (Internal.Single ("textarea-height-" ++ toString newlineCount)
-            "height"
-            (heightValue newlineCount)
-        )
-
-
-{-| Manually calculate height for a <textarea> with a manual spacing
--}
-multilineContentHeight : Int -> Int -> Maybe ( Int, Int, Int, Int ) -> Attribute msg
-multilineContentHeight newlineCount spacing maybePadding =
-    let
-        heightValue count =
-            case maybePadding of
-                Nothing ->
-                    "calc(" ++ toString count ++ "em + " ++ toString (count * spacing) ++ "px)"
-
-                Just ( t, r, b, l ) ->
-                    "calc(" ++ toString count ++ "em + " ++ toString ((t + b) + (count * spacing)) ++ "px)"
-    in
-    Internal.StyleClass
-        (Internal.Single ("textarea-height-" ++ toString newlineCount)
-            "height"
-            (heightValue newlineCount)
-        )
 
 
 {-| -}
@@ -1009,18 +976,18 @@ multiline :
         , spellcheck : Bool
         }
     -> Element msg
-multiline attrs multiline =
+multiline attrs multi =
     textHelper
         { type_ =
             TextArea
-        , spellchecked = multiline.spellcheck
+        , spellchecked = multi.spellcheck
         , autofill = Nothing
         }
         attrs
-        { onChange = multiline.onChange
-        , text = multiline.text
-        , placeholder = multiline.placeholder
-        , label = multiline.label
+        { onChange = multi.onChange
+        , text = multi.text
+        , placeholder = multi.placeholder
+        , label = multi.label
         }
 
 
@@ -1100,58 +1067,12 @@ onGrid attributes elementsOnGrid input =
         (List.foldl gatherPositioned nonePositioned elementsOnGrid)
 
 
-
--- {-| -}
--- positionLabels : List (Attribute msg) -> Label msg -> Maybe (Notice msg) -> Element msg -> Element msg
--- positionLabels attributes label notice input =
---     Internal.Grid.relative (Just "label")
---         attributes
---         ({ right = Nothing
---          , left = Nothing
---          , primary = input
---          , primaryWidth = Internal.Fill 1
---          , defaultWidth = Internal.Content
---          , below = Nothing
---          , above = Nothing
---          , inFront = Nothing
---          }
---             |> (\group ->
---                     case label of
---                         Label position labelAttrs child ->
---                             place position
---                                 { layout = Internal.Grid.GridElement
---                                 , child = [ child ]
---                                 , attrs = Element.alignLeft :: labelAttrs
---                                 , width = 1
---                                 , height = 1
---                                 }
---                                 group
---                )
---             |> (\group ->
---                     case notice of
---                         Nothing ->
---                             group
---                         Just (Notice position labelAttrs child) ->
---                             place position
---                                 { layout = Internal.Grid.GridElement
---                                 , child = [ child ]
---                                 , attrs = Element.alignLeft :: labelAttrs
---                                 , width = 1
---                                 , height = 1
---                                 }
---                                 group
---                )
---         )
-
-
 {-| -}
 type alias Radio option msg =
     { onChange : Maybe (option -> msg)
     , options : List (Option option msg)
     , selected : Maybe option
     , label : Label msg
-
-    -- , notice : Maybe (Notice msg)
     }
 
 
@@ -1170,14 +1091,14 @@ type OptionState
 
 {-| -}
 option : value -> Element msg -> Option value msg
-option value text =
-    Option value (defaultRadioOption text)
+option val txt =
+    Option val (defaultRadioOption txt)
 
 
 {-| -}
 optionWith : value -> (OptionState -> Element msg) -> Option value msg
-optionWith value view =
-    Option value view
+optionWith val view =
+    Option val view
 
 
 {-|
@@ -1233,7 +1154,7 @@ defaultRadioOption optionLabel status =
             , Border.rounded 7
             , case status of
                 Selected ->
-                    Internal.class "focusable"
+                    Internal.htmlClass "focusable"
 
                 _ ->
                     Internal.NoAttribute
@@ -1271,29 +1192,26 @@ defaultRadioOption optionLabel status =
             , Border.color <|
                 case status of
                     Idle ->
-                        Color.rgb 208 208 208
+                        Element.rgb (208 / 255) (208 / 255) (208 / 255)
 
                     Focused ->
-                        Color.rgb 208 208 208
+                        Element.rgb (208 / 255) (208 / 255) (208 / 255)
 
                     Selected ->
-                        Color.rgb 59 153 252
+                        Element.rgb (59 / 255) (153 / 255) (252 / 255)
             ]
             Element.none
-        , Element.el [ Element.width Element.fill, Internal.class "unfocusable" ] optionLabel
+        , Element.el [ Element.width Element.fill, Internal.htmlClass "unfocusable" ] optionLabel
         ]
 
 
 radioHelper : Orientation -> List (Attribute msg) -> Radio option msg -> Element msg
 radioHelper orientation attrs input =
     let
-        spacing =
-            Internal.getSpacingAttribute attrs ( 5, 5 )
-
-        renderOption (Option value view) =
+        renderOption (Option val view) =
             let
                 status =
-                    if Just value == input.selected then
+                    if Just val == input.selected then
                         Selected
                     else
                         Idle
@@ -1311,7 +1229,7 @@ radioHelper orientation attrs input =
                         Internal.NoAttribute
 
                     Just send ->
-                        Events.onClick (send value)
+                        Events.onClick (send val)
                 , case status of
                     Selected ->
                         Internal.Attr <|
@@ -1337,45 +1255,37 @@ radioHelper orientation attrs input =
                     column attrs
                         (List.map renderOption input.options)
 
-        toggleSelected =
-            case input.selected of
-                Nothing ->
-                    Nothing
-
-                Just selected ->
-                    Nothing
-
         prevNext =
             case input.options of
                 [] ->
                     Nothing
 
-                (Option value _) :: _ ->
-                    List.foldl track ( NotFound, value, value ) input.options
+                (Option val _) :: _ ->
+                    List.foldl track ( NotFound, val, val ) input.options
                         |> (\( found, b, a ) ->
                                 case found of
                                     NotFound ->
-                                        Just ( b, value )
+                                        Just ( b, val )
 
                                     BeforeFound ->
-                                        Just ( b, value )
+                                        Just ( b, val )
 
                                     _ ->
                                         Just ( b, a )
                            )
 
-        track option ( found, prev, nxt ) =
-            case option of
-                Option value _ ->
+        track opt ( found, prev, nxt ) =
+            case opt of
+                Option val _ ->
                     case found of
                         NotFound ->
-                            if Just value == input.selected then
+                            if Just val == input.selected then
                                 ( BeforeFound, prev, nxt )
                             else
-                                ( found, value, nxt )
+                                ( found, val, nxt )
 
                         BeforeFound ->
-                            ( AfterFound, prev, value )
+                            ( AfterFound, prev, val )
 
                         AfterFound ->
                             ( found, prev, nxt )
@@ -1396,7 +1306,7 @@ radioHelper orientation attrs input =
 
         labelVisible =
             case input.label of
-                Label orientation labelAttrs _ ->
+                Label _ labelAttrs _ ->
                     List.isEmpty <|
                         Internal.get labelAttrs <|
                             \attr ->
@@ -1414,8 +1324,8 @@ radioHelper orientation attrs input =
             if not labelVisible && not inputVisible then
                 let
                     pseudos =
-                        flip List.filterMap attrs <|
-                            \attr ->
+                        List.filterMap
+                            (\attr ->
                                 case attr of
                                     Internal.StyleClass style ->
                                         case style of
@@ -1444,6 +1354,8 @@ radioHelper orientation attrs input =
 
                                     _ ->
                                         Nothing
+                            )
+                            attrs
                 in
                 Internal.StyleClass (Internal.Transparency "transparent" 1.0) :: pseudos
             else
@@ -1476,7 +1388,7 @@ radioHelper orientation attrs input =
                 List.filterMap identity
                     [ Just Element.alignLeft
                     , Just (tabindex 0)
-                    , Just (Internal.class "focus")
+                    , Just (Internal.htmlClass "focus")
                     , Just Region.announce
                     , Just <|
                         Internal.Attr <|
@@ -1515,246 +1427,6 @@ radioHelper orientation attrs input =
         optionArea
 
 
-{-| -}
-type alias Select option msg =
-    { onChange :
-        Maybe
-            ({ option : Maybe option
-             , menuOpen : Bool
-             }
-             -> msg
-            )
-    , selected :
-        { option : Maybe option
-        , menuOpen : Bool
-        }
-    , menu : Menu option msg
-    , placeholder : Maybe (Element msg)
-    , label : Label msg
-    }
-
-
-{-| -}
-type Menu option msg
-    = Menu MenuPosition (List (Attribute msg)) (List (Option option msg))
-
-
-type MenuPosition
-    = MenuAbove
-    | MenuBelow
-
-
-{-| -}
-menuAbove : List (Attribute msg) -> List (Option option msg) -> Menu option msg
-menuAbove attrs =
-    Menu MenuAbove (defaultTextBoxStyle ++ attrs)
-
-
-{-| -}
-menuBelow : List (Attribute msg) -> List (Option option msg) -> Menu option msg
-menuBelow attrs =
-    Menu MenuBelow (defaultTextBoxStyle ++ attrs)
-
-
-{-| -}
-select : List (Attribute msg) -> Select option msg -> Element msg
-select attrs input =
-    let
-        spacing =
-            Internal.getSpacingAttribute attrs ( 5, 5 )
-
-        renderOption (Option value view) =
-            let
-                status =
-                    if Just value == input.selected.option then
-                        Selected
-                    else
-                        Idle
-            in
-            Element.el
-                [ Element.width Element.fill
-                , Element.pointer
-                , case input.onChange of
-                    Nothing ->
-                        Internal.NoAttribute
-
-                    Just send ->
-                        Events.onClick (send { menuOpen = False, option = Just value })
-                , case status of
-                    Selected ->
-                        Internal.class "focusable"
-
-                    _ ->
-                        Internal.NoAttribute
-                , case status of
-                    Selected ->
-                        Internal.Attr <|
-                            Html.Attributes.attribute "aria-checked"
-                                "true"
-
-                    _ ->
-                        Internal.Attr <|
-                            Html.Attributes.attribute "aria-checked"
-                                "false"
-                , Internal.Attr <|
-                    Html.Attributes.attribute "role" "radio"
-                ]
-                (view status)
-
-        renderSelectedOption (Option value view) =
-            let
-                status =
-                    if Just value == input.selected.option then
-                        Selected
-                    else
-                        Idle
-            in
-            Element.el
-                [ Element.width Element.fill
-                , Element.pointer
-
-                -- , case status of
-                --     Selected ->
-                --         Internal.class "focusable"
-                --     _ ->
-                --         Internal.NoAttribute
-                ]
-                (view status)
-
-        toggleSelected =
-            case input.selected.option of
-                Nothing ->
-                    Nothing
-
-                Just selected ->
-                    Nothing
-
-        box =
-            Element.el
-                ((case input.menu of
-                    Menu orientation attrs options ->
-                        case orientation of
-                            MenuAbove ->
-                                Element.above
-                                    (column (Internal.class "show-on-focus" :: Background.color white :: attrs)
-                                        (List.map renderOption options)
-                                    )
-
-                            MenuBelow ->
-                                Element.below
-                                    (column (Internal.class "show-on-focus" :: Background.color white :: attrs)
-                                        (List.map renderOption options)
-                                    )
-                 )
-                    :: Border.width 1
-                    :: Border.color darkGrey
-                    :: Border.rounded 5
-                    :: defaultTextPadding
-                    :: Element.width Element.fill
-                    :: Element.pointer
-                    :: attrs
-                )
-                (case prevNext of
-                    Nothing ->
-                        Element.none
-
-                    Just ( prev, selected, next ) ->
-                        case selected of
-                            Nothing ->
-                                case input.placeholder of
-                                    Nothing ->
-                                        Element.text "-"
-
-                                    Just placeholder ->
-                                        placeholder
-
-                            Just sel ->
-                                renderSelectedOption sel
-                )
-
-        prevNext =
-            case input.menu of
-                Menu _ attrs options ->
-                    case options of
-                        [] ->
-                            Nothing
-
-                        (Option value _) :: _ ->
-                            List.foldl track ( NotFound, value, Nothing, value ) options
-                                |> (\( found, b, selected, a ) ->
-                                        case found of
-                                            NotFound ->
-                                                Just ( b, selected, value )
-
-                                            BeforeFound ->
-                                                Just ( b, selected, value )
-
-                                            _ ->
-                                                Just ( b, selected, a )
-                                   )
-
-        track option ( found, prev, selected, nxt ) =
-            case option of
-                Option value _ ->
-                    case found of
-                        NotFound ->
-                            if Just value == input.selected.option then
-                                ( BeforeFound, prev, Just option, nxt )
-                            else
-                                ( found, value, selected, nxt )
-
-                        BeforeFound ->
-                            ( AfterFound, prev, selected, value )
-
-                        AfterFound ->
-                            ( found, prev, selected, nxt )
-    in
-    applyLabel
-        (case input.onChange of
-            Nothing ->
-                [ Element.width Element.fill
-                , Element.alignLeft
-                ]
-
-            Just onChange ->
-                List.filterMap identity
-                    [ Just Element.alignLeft
-                    , Just (tabindex 0)
-                    , Just (Element.width Element.fill)
-                    , Just <|
-                        Internal.Attr <|
-                            Html.Attributes.attribute "role" "radiogroup"
-                    , case prevNext of
-                        Nothing ->
-                            Nothing
-
-                        Just ( prev, selected, next ) ->
-                            Just
-                                (onKeyLookup <|
-                                    \code ->
-                                        -- if code == leftArrow then
-                                        --     Just (onChange prev)
-                                        -- else if code == upArrow then
-                                        --     Just (onChange prev)
-                                        -- else if code == rightArrow then
-                                        --     Just (onChange next)
-                                        -- else if code == downArrow then
-                                        --     Just (onChange next)
-                                        -- else if code == space then
-                                        --     case input.selected of
-                                        --         Nothing ->
-                                        --             Just (onChange prev)
-                                        --         _ ->
-                                        --             Nothing
-                                        -- else
-                                        Nothing
-                                )
-                    ]
-        )
-        input.label
-        box
-
-
 type Found
     = NotFound
     | BeforeFound
@@ -1767,25 +1439,25 @@ type Orientation
 
 
 column : List (Attribute msg) -> List (Internal.Element msg) -> Internal.Element msg
-column attrs children =
+column attributes children =
     Internal.element Internal.noStyleSheet
         Internal.asColumn
         Nothing
         (Element.height Element.shrink
             :: Element.width Element.fill
-            :: attrs
+            :: attributes
         )
         (Internal.Unkeyed children)
 
 
 row : List (Attribute msg) -> List (Internal.Element msg) -> Internal.Element msg
-row attrs children =
+row attributes children =
     Internal.element
         Internal.noStyleSheet
         Internal.asRow
         Nothing
         (Element.width Element.fill
-            :: attrs
+            :: attributes
         )
         (Internal.Unkeyed children)
 
@@ -1889,31 +1561,29 @@ onKey desiredCode msg =
             Json.field "key" Json.string
                 |> Json.andThen decode
     in
-    Events.onWithOptions "keyup"
-        { stopPropagation = False
-        , preventDefault = True
-        }
-        isKey
+    Internal.Attr <|
+        Html.Events.preventDefaultOn "keyup"
+            (Json.map (\fired -> ( fired, True )) isKey)
 
 
-preventKeydown : String -> a -> Attribute a
-preventKeydown desiredCode msg =
-    let
-        decode code =
-            if code == desiredCode then
-                Json.succeed msg
-            else
-                Json.fail "Not the enter key"
 
-        isKey =
-            Json.field "key" Json.string
-                |> Json.andThen decode
-    in
-    Events.onWithOptions "keydown"
-        { stopPropagation = False
-        , preventDefault = True
-        }
-        isKey
+-- preventKeydown : String -> a -> Attribute a
+-- preventKeydown desiredCode msg =
+--     let
+--         decode code =
+--             if code == desiredCode then
+--                 Json.succeed msg
+--             else
+--                 Json.fail "Not the enter key"
+--         isKey =
+--             Json.field "key" Json.string
+--                 |> Json.andThen decode
+--     in
+--     Events.onWithOptions "keydown"
+--         { stopPropagation = False
+--         , preventDefault = True
+--         }
+--         isKey
 
 
 {-| -}
@@ -1932,7 +1602,7 @@ onKeyLookup lookup =
             Json.field "key" Json.string
                 |> Json.andThen decode
     in
-    Events.on "keyup" isKey
+    Internal.Attr <| Html.Events.on "keyup" isKey
 
 
 {-| -}
@@ -1952,9 +1622,10 @@ type_ =
     Internal.Attr << Html.Attributes.type_
 
 
-checked : Bool -> Attribute msg
-checked =
-    Internal.Attr << Html.Attributes.checked
+
+-- checked : Bool -> Attribute msg
+-- checked =
+--     Internal.Attr << Html.Attributes.checked
 
 
 selected : Bool -> Attribute msg
@@ -2031,36 +1702,31 @@ defaultTextPadding =
 defaultCheckbox : Bool -> Element msg
 defaultCheckbox checked =
     Element.el
-        [ Internal.class "focusable"
+        [ Internal.htmlClass "focusable"
         , Element.width (Element.px 14)
         , Element.height (Element.px 14)
-
-        -- , Font.family
-        --     [ Font.typeface "georgia"
-        --     , Font.serif
-        --     ]
         , Font.color white
         , Font.size 9
         , Font.center
         , Border.rounded 3
         , Border.color <|
             if checked then
-                Color.rgb 59 153 252
+                Element.rgb (59 / 255) (153 / 255) (252 / 255)
             else
-                Color.rgb 211 211 211
+                Element.rgb (211 / 255) (211 / 255) (211 / 255)
         , Border.shadow <|
             { offset = ( 0, 0 )
             , blur = 1
             , size = 1
             , color =
                 if checked then
-                    Color.rgba 238 238 238 0
+                    Element.rgba (238 / 255) (238 / 255) (238 / 255) 0
                 else
-                    Color.rgb 238 238 238
+                    Element.rgb (238 / 255) (238 / 255) (238 / 255)
             }
         , Background.color <|
             if checked then
-                Color.rgb 59 153 252
+                Element.rgb (59 / 255) (153 / 255) (252 / 255)
             else
                 white
         , Border.width <|

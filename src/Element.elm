@@ -2,6 +2,7 @@ module Element
     exposing
         ( Attr
         , Attribute
+        , Color
         , Column
         , Decoration
         , Device
@@ -69,6 +70,8 @@ module Element
         , paragraph
         , pointer
         , px
+        , rgb
+        , rgba
         , rotate
         , row
         , scale
@@ -129,9 +132,14 @@ Text needs it's own layout primitives.
 
 # Attributes
 
-@docs Attribute, transparent, alpha, pointer
+@docs transparent, alpha, pointer
 
 @docs width, height, Length, px, shrink, fill, fillPortion, minimum, maximum
+
+
+# Color
+
+@docs Color, rgba, rgb
 
 
 ## Padding and Spacing
@@ -246,11 +254,27 @@ If these are present, the element will add a scrollbar if necessary.
 
 -}
 
-import Color exposing (Color)
 import Html exposing (Html)
 import Html.Attributes
 import Internal.Model as Internal
 import Internal.Style exposing (classes)
+
+
+{-| -}
+type alias Color =
+    Internal.Color
+
+
+{-| -}
+rgba : Float -> Float -> Float -> Float -> Color
+rgba =
+    Internal.Rgba
+
+
+{-| -}
+rgb : Float -> Float -> Float -> Color
+rgb r g b =
+    Internal.Rgba r g b 1
 
 
 {-| The basic building block of your layout. Here we create a
@@ -383,7 +407,7 @@ layout =
 layoutWith : { options : List Option } -> List (Attribute msg) -> Element msg -> Html msg
 layoutWith { options } attrs child =
     Internal.renderRoot options
-        (Internal.htmlClass "style-elements se el"
+        (Internal.htmlClass (String.join " " [ classes.root, classes.any, classes.single ])
             :: Internal.Class "x-content-align" classes.contentCenterX
             :: Internal.Class "y-content-align" classes.contentCenterY
             :: (Internal.rootStyle ++ attrs)
@@ -676,30 +700,30 @@ tableHelper attrs config =
                     , rows = List.repeat (List.length config.data) Internal.Content
                     }
 
-        onGrid row column el =
+        onGrid rowLevel columnLevel elem =
             Internal.element
                 Internal.noStyleSheet
                 Internal.asEl
                 Nothing
                 [ Internal.StyleClass
                     (Internal.GridPosition
-                        { row = row
-                        , col = column
+                        { row = rowLevel
+                        , col = columnLevel
                         , width = 1
                         , height = 1
                         }
                     )
                 ]
-                (Internal.Unkeyed [ el ])
+                (Internal.Unkeyed [ elem ])
 
         add cell columnConfig cursor =
             case columnConfig of
-                InternalIndexedColumn column ->
+                InternalIndexedColumn col ->
                     { cursor
                         | elements =
                             onGrid cursor.row
                                 cursor.column
-                                (column.view
+                                (col.view
                                     (if maybeHeaders == Nothing then
                                         cursor.row - 1
                                      else
@@ -711,10 +735,10 @@ tableHelper attrs config =
                         , column = cursor.column + 1
                     }
 
-                InternalColumn column ->
+                InternalColumn col ->
                     { cursor
                         | elements =
-                            onGrid cursor.row cursor.column (column.view cell)
+                            onGrid cursor.row cursor.column (col.view cell)
                                 :: cursor.elements
                         , column = cursor.column + 1
                     }
@@ -984,7 +1008,7 @@ download attrs { url, label } =
         Internal.asEl
         (Just "a")
         (Internal.Attr (Html.Attributes.href url)
-            :: Internal.Attr (Html.Attributes.download True)
+            :: Internal.Attr (Html.Attributes.download "")
             :: width shrink
             :: height shrink
             :: Internal.Class "x-content-align" classes.contentCenterX
@@ -1002,7 +1026,7 @@ downloadAs attrs { url, filename, label } =
         Internal.asEl
         (Just "a")
         (Internal.Attr (Html.Attributes.href url)
-            :: Internal.Attr (Html.Attributes.downloadAs filename)
+            :: Internal.Attr (Html.Attributes.download filename)
             :: width shrink
             :: height shrink
             :: Internal.Class "x-content-align" classes.contentCenterX
@@ -1266,12 +1290,12 @@ type alias Device =
 {-| Takes in a Window.Size and returns a device profile which can be used for responsiveness.
 -}
 classifyDevice : { window | height : Int, width : Int } -> Device
-classifyDevice { width, height } =
-    { phone = width <= 600
-    , tablet = width > 600 && width <= 1200
-    , desktop = width > 1200 && width <= 1800
-    , bigDesktop = width > 1800
-    , portrait = width < height
+classifyDevice window =
+    { phone = window.width <= 600
+    , tablet = window.width > 600 && window.width <= 1200
+    , desktop = window.width > 1200 && window.width <= 1800
+    , bigDesktop = window.width > 1800
+    , portrait = window.width < window.height
     }
 
 
@@ -1294,13 +1318,13 @@ We can also provide negative numbers to scale below 16px.
 
 -}
 modular : Float -> Float -> Int -> Float
-modular normal ratio scale =
-    if scale == 0 then
+modular normal ratio rescale =
+    if rescale == 0 then
         normal
-    else if scale < 0 then
-        normal * ratio ^ toFloat scale
+    else if rescale < 0 then
+        normal * ratio ^ toFloat rescale
     else
-        normal * ratio ^ (toFloat scale - 1)
+        normal * ratio ^ (toFloat rescale - 1)
 
 
 {-| -}

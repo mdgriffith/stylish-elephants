@@ -21,6 +21,4 @@ main =
             ]
         ]
     <|
-        el
-            [ width (px 200), height (px 200) ]
-            (text "Hello stylish friend!")
+        el [] (text "Hello stylish friend!")

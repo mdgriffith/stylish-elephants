@@ -2,7 +2,6 @@ module Internal.Model exposing (..)
 
 {-| -}
 
-import Color exposing (Color)
 import Html exposing (Html)
 import Html.Attributes
 import Internal.Style exposing (classes)
@@ -183,12 +182,9 @@ type Location
     | Behind
 
 
-type alias TransformationAlias a =
-    { a
-        | rotate : Maybe ( Float, Float, Float, Float )
-        , translate : Maybe ( Maybe Float, Maybe Float, Maybe Float )
-        , scale : Maybe ( Float, Float, Float )
-    }
+{-| -}
+type Color
+    = Rgba Float Float Float Float
 
 
 type NodeName
@@ -206,8 +202,8 @@ type alias Gathered msg =
     , height : Maybe Length
     , nearbys : Maybe (List ( Location, Element msg ))
     , filters : Maybe String
-    , boxShadows : Maybe String
-    , textShadows : Maybe String
+    , boxShadows : Maybe ( String, String )
+    , textShadows : Maybe ( String, String )
     , transform : Maybe (Decorated TransformationGroup)
     , has : Set String
     }
@@ -222,45 +218,14 @@ type alias Decorated x =
 
 
 type alias TransformationGroup =
-    { rotate : Maybe ( Float, Float, Float, Float )
+    { rotate : Maybe Rotation
     , translate : Maybe ( Maybe Float, Maybe Float, Maybe Float )
     , scale : Maybe ( Float, Float, Float )
     }
 
 
-class : String -> Attribute aligned msg
-class x =
-    Class x x
-
-
-{-| -}
-embed : (a -> Element msg) -> a -> LayoutContext -> Html msg
-embed fn a =
-    case fn a of
-        Unstyled html ->
-            html
-
-        Styled styled ->
-            styled.html
-                (Just
-                    (toStyleSheetString
-                        { hover = AllowHover
-                        , focus =
-                            { borderColor = Nothing
-                            , shadow = Nothing
-                            , backgroundColor = Nothing
-                            }
-                        , mode = Layout
-                        }
-                        styled.styles
-                    )
-                )
-
-        Text text ->
-            always (Html.text text)
-
-        Empty ->
-            always (Html.text "")
+type Rotation
+    = Rotation Float Float Float Float
 
 
 {-| -}
@@ -273,12 +238,12 @@ unstyled =
 renderNode : Gathered msg -> Children (VirtualDom.Node msg) -> Maybe String -> LayoutContext -> VirtualDom.Node msg
 renderNode { alignment, attributes, node, width, height } children styles context =
     let
-        createNode node attrs styles =
+        createNode nodeName attrs withStyles =
             case children of
                 Keyed keyed ->
-                    VirtualDom.keyedNode node
+                    VirtualDom.keyedNode nodeName
                         attrs
-                        (case styles of
+                        (case withStyles of
                             Nothing ->
                                 keyed
 
@@ -290,9 +255,9 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                         )
 
                 Unkeyed unkeyed ->
-                    VirtualDom.node node
+                    VirtualDom.node nodeName
                         attrs
-                        (case styles of
+                        (case withStyles of
                             Nothing ->
                                 unkeyed
 
@@ -311,7 +276,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                 Embedded nodeName internal ->
                     VirtualDom.node nodeName
                         attributes
-                        [ createNode internal [ Html.Attributes.class "se el" ] styles
+                        [ createNode internal [ Html.Attributes.class (classes.any ++ " " ++ classes.single) ] styles
                         ]
     in
     case context of
@@ -326,14 +291,32 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                             VirtualDom.node
                                 "u"
                                 -- "alignRight"
-                                [ Html.Attributes.class "se el container align-container-right content-center-y" ]
+                                [ Html.Attributes.class
+                                    (String.join " "
+                                        [ classes.any
+                                        , classes.single
+                                        , classes.container
+                                        , classes.contentCenterY
+                                        , classes.alignContainerRight
+                                        ]
+                                    )
+                                ]
                                 [ html ]
 
                         Aligned (Just CenterX) _ ->
                             VirtualDom.node
                                 "s"
                                 -- "centerX"
-                                [ Html.Attributes.class "se el container align-container-center-x content-center-y" ]
+                                [ Html.Attributes.class
+                                    (String.join " "
+                                        [ classes.any
+                                        , classes.single
+                                        , classes.container
+                                        , classes.contentCenterY
+                                        , classes.alignContainerCenterX
+                                        ]
+                                    )
+                                ]
                                 [ html ]
 
                         _ ->
@@ -350,14 +333,32 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                             VirtualDom.node
                                 -- "centerY"
                                 "s"
-                                [ Html.Attributes.class "se el container align-container-center-y" ]
+                                [ Html.Attributes.class
+                                    --"se el container align-container-center-y"
+                                    (String.join " "
+                                        [ classes.any
+                                        , classes.single
+                                        , classes.container
+                                        , classes.alignContainerCenterY
+                                        ]
+                                    )
+                                ]
                                 [ html ]
 
                         Aligned _ (Just Bottom) ->
                             VirtualDom.node
                                 "u"
                                 -- "alignBottom"
-                                [ Html.Attributes.class "se el container align-container-bottom" ]
+                                [ Html.Attributes.class
+                                    -- "se el container align-container-bottom"
+                                    (String.join " "
+                                        [ classes.any
+                                        , classes.single
+                                        , classes.container
+                                        , classes.alignContainerBottom
+                                        ]
+                                    )
+                                ]
                                 [ html ]
 
                         _ ->
@@ -504,7 +505,7 @@ stackOn maybePseudo transform gathered =
                         }
             }
 
-        Just focus ->
+        Just Focus ->
             let
                 focus =
                     states.focus
@@ -546,7 +547,7 @@ stackTransforms transform group =
 
         Rotate x y z angle ->
             { group
-                | rotate = addIfNothing (Just ( x, y, z, angle )) group.rotate
+                | rotate = addIfNothing (Just (Rotation x y z angle)) group.rotate
             }
 
         Scale x y z ->
@@ -558,14 +559,14 @@ stackTransforms transform group =
 gatherAttributes : Attribute aligned msg -> Gathered msg -> Gathered msg
 gatherAttributes attr gathered =
     let
-        className name =
+        classNameAttr name =
             VirtualDom.property "className" (Json.string name)
 
         styleName name =
             "." ++ name
 
-        formatStyleClass style =
-            case style of
+        formatStyleClass styleType =
+            case styleType of
                 Transform x ->
                     Transform x
 
@@ -575,14 +576,14 @@ gatherAttributes attr gathered =
                 PseudoSelector selector style ->
                     PseudoSelector selector (List.map formatStyleClass style)
 
-                Style class props ->
-                    Style (styleName class) props
+                Style cls props ->
+                    Style (styleName cls) props
 
-                Single class name val ->
-                    Single (styleName class) name val
+                Single cls name val ->
+                    Single (styleName cls) name val
 
-                Colored class name val ->
-                    Colored (styleName class) name val
+                Colored cls name val ->
+                    Colored (styleName cls) name val
 
                 SpacingStyle x y ->
                     SpacingStyle x y
@@ -609,17 +610,17 @@ gatherAttributes attr gathered =
         NoAttribute ->
             gathered
 
-        Class key class ->
+        Class key exactClassName ->
             if Set.member key gathered.has then
                 gathered
             else
                 { gathered
-                    | attributes = className class :: gathered.attributes
+                    | attributes = classNameAttr exactClassName :: gathered.attributes
                     , has = Set.insert key gathered.has
                 }
 
-        Attr attr ->
-            { gathered | attributes = attr :: gathered.attributes }
+        Attr attribute ->
+            { gathered | attributes = attribute :: gathered.attributes }
 
         StyleClass style ->
             let
@@ -635,10 +636,10 @@ gatherAttributes attr gathered =
                             | attributes =
                                 case styleProp of
                                     PseudoSelector _ _ ->
-                                        VirtualDom.property "className" (Json.string "transition") :: className (getStyleName styleProp) :: gatheredProps.attributes
+                                        VirtualDom.property "className" (Json.string "transition") :: classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
 
                                     _ ->
-                                        className (getStyleName styleProp) :: gatheredProps.attributes
+                                        classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
                             , styles = formatStyleClass styleProp :: gatheredProps.styles
                             , has = Set.insert key gatheredProps.has
                         }
@@ -652,8 +653,8 @@ gatherAttributes attr gathered =
                         ( transformationProps, otherProps ) =
                             List.partition (\x -> forTransforms x /= Nothing) props
 
-                        forTransforms attr =
-                            case attr of
+                        forTransforms attribute =
+                            case attribute of
                                 Transform x ->
                                     Just x
 
@@ -677,36 +678,36 @@ gatherAttributes attr gathered =
                         case w of
                             Px px ->
                                 { gath
-                                    | attributes = className ("width-exact width-px-" ++ toString px) :: gath.attributes
-                                    , styles = Single (styleName <| "width-px-" ++ toString px) "width" (toString px ++ "px") :: gath.styles
+                                    | attributes = classNameAttr ("width-exact width-px-" ++ String.fromInt px) :: gath.attributes
+                                    , styles = Single (styleName <| "width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: gath.styles
                                 }
 
                             Content ->
                                 { gath
-                                    | attributes = className (.widthContent Internal.Style.classes) :: gath.attributes
+                                    | attributes = classNameAttr (.widthContent Internal.Style.classes) :: gath.attributes
                                 }
 
                             Fill portion ->
                                 if portion == 1 then
                                     { gath
-                                        | attributes = className (.widthFill Internal.Style.classes) :: gath.attributes
+                                        | attributes = classNameAttr (.widthFill Internal.Style.classes) :: gath.attributes
                                     }
                                 else
                                     { gath
                                         | width = Just width
-                                        , attributes = className ("width-fill-portion width-fill-" ++ toString portion) :: gath.attributes
+                                        , attributes = classNameAttr ("width-fill-portion width-fill-" ++ String.fromInt portion) :: gath.attributes
                                         , styles =
-                                            Single (".se.row > " ++ (styleName <| "width-fill-" ++ toString portion)) "flex-grow" (toString (portion * 100000)) :: gath.styles
+                                            Single (".se.row > " ++ (styleName <| "width-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
                                     }
 
                             Min minSize len ->
                                 let
                                     ( cls, style ) =
-                                        ( "min-width-" ++ intToString minSize, Single (".min-width-" ++ intToString minSize) "min-width" (intToString minSize ++ "px") )
+                                        ( "min-width-" ++ String.fromInt minSize, Single (".min-width-" ++ String.fromInt minSize) "min-width" (String.fromInt minSize ++ "px") )
 
                                     newGathered =
                                         { gath
-                                            | attributes = className cls :: gath.attributes
+                                            | attributes = classNameAttr cls :: gath.attributes
                                             , styles =
                                                 style :: gath.styles
                                         }
@@ -716,11 +717,11 @@ gatherAttributes attr gathered =
                             Max maxSize len ->
                                 let
                                     ( cls, style ) =
-                                        ( "max-width-" ++ intToString maxSize, Single (".max-width-" ++ intToString maxSize) "max-width" (intToString maxSize ++ "px") )
+                                        ( "max-width-" ++ String.fromInt maxSize, Single (".max-width-" ++ String.fromInt maxSize) "max-width" (String.fromInt maxSize ++ "px") )
 
                                     newGathered =
                                         { gath
-                                            | attributes = className cls :: gath.attributes
+                                            | attributes = classNameAttr cls :: gath.attributes
                                             , styles =
                                                 style :: gath.styles
                                         }
@@ -738,35 +739,35 @@ gatherAttributes attr gathered =
                         case h of
                             Px px ->
                                 { gath
-                                    | attributes = className ("height-px-" ++ toString px) :: gath.attributes
-                                    , styles = Single (styleName <| "height-px-" ++ toString px) "height" (toString px ++ "px") :: gath.styles
+                                    | attributes = classNameAttr ("height-px-" ++ String.fromInt px) :: gath.attributes
+                                    , styles = Single (styleName <| "height-px-" ++ String.fromInt px) "height" (String.fromInt px ++ "px") :: gath.styles
                                 }
 
                             Content ->
                                 { gath
-                                    | attributes = className (.heightContent Internal.Style.classes) :: gath.attributes
+                                    | attributes = classNameAttr (.heightContent Internal.Style.classes) :: gath.attributes
                                 }
 
                             Fill portion ->
                                 if portion == 1 then
                                     { gath
-                                        | attributes = className (.heightFill Internal.Style.classes) :: gath.attributes
+                                        | attributes = classNameAttr (.heightFill Internal.Style.classes) :: gath.attributes
                                     }
                                 else
                                     { gath
-                                        | attributes = className ("height-fill-portion height-fill-" ++ toString portion) :: gath.attributes
+                                        | attributes = classNameAttr ("height-fill-portion height-fill-" ++ String.fromInt portion) :: gath.attributes
                                         , styles =
-                                            Single (".se.column > " ++ (styleName <| "height-fill-" ++ toString portion)) "flex-grow" (toString (portion * 100000)) :: gath.styles
+                                            Single (".se.column > " ++ (styleName <| "height-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
                                     }
 
                             Min minSize len ->
                                 let
                                     ( cls, style ) =
-                                        ( "min-height-" ++ intToString minSize, Single (".min-height-" ++ intToString minSize) "min-height" (intToString minSize ++ "px") )
+                                        ( "min-height-" ++ String.fromInt minSize, Single (".min-height-" ++ String.fromInt minSize) "min-height" (String.fromInt minSize ++ "px") )
 
                                     newGathered =
                                         { gath
-                                            | attributes = className cls :: gath.attributes
+                                            | attributes = classNameAttr cls :: gath.attributes
                                             , styles =
                                                 style :: gath.styles
                                         }
@@ -776,11 +777,11 @@ gatherAttributes attr gathered =
                             Max maxSize len ->
                                 let
                                     ( cls, style ) =
-                                        ( "max-height-" ++ intToString maxSize, Single (".max-height-" ++ intToString maxSize) "max-height" (intToString maxSize ++ "px") )
+                                        ( "max-height-" ++ String.fromInt maxSize, Single (".max-height-" ++ String.fromInt maxSize) "max-height" (String.fromInt maxSize ++ "px") )
 
                                     newGathered =
                                         { gath
-                                            | attributes = className cls :: gath.attributes
+                                            | attributes = classNameAttr cls :: gath.attributes
                                             , styles =
                                                 style :: gath.styles
                                         }
@@ -809,7 +810,7 @@ gatherAttributes attr gathered =
                     if i <= 1 then
                         { gathered | node = addNodeName "h1" gathered.node }
                     else if i < 7 then
-                        { gathered | node = addNodeName ("h" ++ toString i) gathered.node }
+                        { gathered | node = addNodeName ("h" ++ String.fromInt i) gathered.node }
                     else
                         { gathered | node = addNodeName "h6" gathered.node }
 
@@ -862,7 +863,7 @@ gatherAttributes attr gathered =
             case gathered.alignment of
                 Unaligned ->
                     { gathered
-                        | attributes = className (alignXName x) :: gathered.attributes
+                        | attributes = classNameAttr (alignXName x) :: gathered.attributes
                         , alignment = Aligned (Just x) Nothing
                     }
 
@@ -871,7 +872,7 @@ gatherAttributes attr gathered =
 
                 Aligned _ y ->
                     { gathered
-                        | attributes = className (alignXName x) :: gathered.attributes
+                        | attributes = classNameAttr (alignXName x) :: gathered.attributes
                         , alignment = Aligned (Just x) y
                     }
 
@@ -879,7 +880,7 @@ gatherAttributes attr gathered =
             case gathered.alignment of
                 Unaligned ->
                     { gathered
-                        | attributes = className (alignYName y) :: gathered.attributes
+                        | attributes = classNameAttr (alignYName y) :: gathered.attributes
                         , alignment = Aligned Nothing (Just y)
                     }
 
@@ -888,33 +889,33 @@ gatherAttributes attr gathered =
 
                 Aligned x _ ->
                     { gathered
-                        | attributes = className (alignYName y) :: gathered.attributes
+                        | attributes = classNameAttr (alignYName y) :: gathered.attributes
                         , alignment = Aligned x (Just y)
                     }
 
-        Filter filter ->
+        Filter cssFilters ->
             case gathered.filters of
                 Nothing ->
-                    { gathered | filters = Just (filterName filter) }
+                    { gathered | filters = Just (filterName cssFilters) }
 
                 Just existing ->
-                    { gathered | filters = Just (filterName filter ++ " " ++ existing) }
+                    { gathered | filters = Just (filterName cssFilters ++ " " ++ existing) }
 
         BoxShadow shadow ->
             case gathered.boxShadows of
                 Nothing ->
-                    { gathered | boxShadows = Just (formatBoxShadow shadow) }
+                    { gathered | boxShadows = Just ( boxShadowName shadow, formatBoxShadow shadow ) }
 
-                Just existing ->
-                    { gathered | boxShadows = Just (formatBoxShadow shadow ++ ", " ++ existing) }
+                Just ( existingClass, existing ) ->
+                    { gathered | boxShadows = Just ( boxShadowName shadow ++ "-" ++ existingClass, formatBoxShadow shadow ++ ", " ++ existing ) }
 
         TextShadow shadow ->
             case gathered.textShadows of
                 Nothing ->
-                    { gathered | textShadows = Just (formatTextShadow shadow) }
+                    { gathered | textShadows = Just ( textShadowName shadow, formatTextShadow shadow ) }
 
-                Just existing ->
-                    { gathered | textShadows = Just (formatTextShadow shadow ++ ", " ++ existing) }
+                Just ( existingClass, existing ) ->
+                    { gathered | textShadows = Just ( textShadowName shadow ++ "-" ++ existingClass, formatTextShadow shadow ++ ", " ++ existing ) }
 
 
 floorAtZero : Int -> Int
@@ -923,6 +924,16 @@ floorAtZero x =
         x
     else
         0
+
+
+{-| -}
+urlClassName : String -> String
+urlClassName x =
+    x
+        |> uncapitalize
+        |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[^a-zA-Z0-9_-]")) (\_ -> "")
+        |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[A-Z0-9]+")) (\{ match } -> " " ++ String.toLower match)
+        |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[\\s+]")) (\_ -> "")
 
 
 
@@ -998,7 +1009,30 @@ renderNearbyGroupAbsolute nearbys =
         create ( location, elem ) =
             Html.div
                 [ Html.Attributes.class <|
-                    locationClass location
+                    case location of
+                        Above ->
+                            String.join " "
+                                [ classes.any, classes.single, classes.above ]
+
+                        Below ->
+                            String.join " "
+                                [ classes.any, classes.single, classes.below ]
+
+                        OnRight ->
+                            String.join " "
+                                [ classes.any, classes.single, classes.onRight ]
+
+                        OnLeft ->
+                            String.join " "
+                                [ classes.any, classes.single, classes.onLeft ]
+
+                        InFront ->
+                            String.join " "
+                                [ classes.any, classes.single, classes.inFront ]
+
+                        Behind ->
+                            String.join " "
+                                [ classes.any, classes.single, classes.behind ]
                 ]
                 [ case elem of
                     Empty ->
@@ -1014,7 +1048,6 @@ renderNearbyGroupAbsolute nearbys =
                         styled.html Nothing asEl
                 ]
     in
-    -- Html.div [ Html.Attributes.class "se el nearby" ]
     List.map create nearbys
 
 
@@ -1033,45 +1066,35 @@ uncapitalize str =
 
 
 {-| -}
-className : String -> String
-className x =
-    x
-        |> uncapitalize
-        |> Regex.replace Regex.All (Regex.regex "[^a-zA-Z0-9_-]") (\_ -> "")
-        |> Regex.replace Regex.All (Regex.regex "[A-Z0-9]+") (\{ match } -> " " ++ String.toLower match)
-        |> Regex.replace Regex.All (Regex.regex "[\\s+]") (\_ -> "")
-
-
-{-| -}
 renderTransformationGroup : Maybe PseudoClass -> TransformationGroup -> Maybe ( String, Style )
 renderTransformationGroup maybePseudo group =
     let
         translate =
-            flip Maybe.map
-                group.translate
+            Maybe.map
                 (\( x, y, z ) ->
                     "translate3d("
-                        ++ toString (Maybe.withDefault 0 x)
+                        ++ String.fromFloat (Maybe.withDefault 0 x)
                         ++ "px, "
-                        ++ toString (Maybe.withDefault 0 y)
+                        ++ String.fromFloat (Maybe.withDefault 0 y)
                         ++ "px, "
-                        ++ toString (Maybe.withDefault 0 z)
+                        ++ String.fromFloat (Maybe.withDefault 0 z)
                         ++ "px)"
                 )
+                group.translate
 
         scale =
-            flip Maybe.map
-                group.scale
+            Maybe.map
                 (\( x, y, z ) ->
-                    "scale3d(" ++ toString x ++ ", " ++ toString y ++ ", " ++ toString z ++ ")"
+                    "scale3d(" ++ String.fromFloat x ++ ", " ++ String.fromFloat y ++ ", " ++ String.fromFloat z ++ ")"
                 )
+                group.scale
 
         rotate =
-            flip Maybe.map
-                group.rotate
-                (\( x, y, z, angle ) ->
-                    "rotate3d(" ++ toString x ++ "," ++ toString y ++ "," ++ toString z ++ "," ++ toString angle ++ "rad)"
+            Maybe.map
+                (\(Rotation x y z angle) ->
+                    "rotate3d(" ++ String.fromFloat x ++ "," ++ String.fromFloat y ++ "," ++ String.fromFloat z ++ "," ++ String.fromFloat angle ++ "rad)"
                 )
+                group.rotate
 
         transformations =
             List.filterMap identity
@@ -1083,8 +1106,7 @@ renderTransformationGroup maybePseudo group =
         name =
             String.join "-" <|
                 List.filterMap identity
-                    [ flip Maybe.map
-                        group.translate
+                    [ Maybe.map
                         (\( x, y, z ) ->
                             "move-"
                                 ++ floatClass (Maybe.withDefault 0 x)
@@ -1093,16 +1115,17 @@ renderTransformationGroup maybePseudo group =
                                 ++ "-"
                                 ++ floatClass (Maybe.withDefault 0 z)
                         )
-                    , flip Maybe.map
-                        group.scale
+                        group.translate
+                    , Maybe.map
                         (\( x, y, z ) ->
                             "scale" ++ floatClass x ++ "-" ++ floatClass y ++ "-" ++ floatClass z
                         )
-                    , flip Maybe.map
-                        group.rotate
-                        (\( x, y, z, angle ) ->
+                        group.scale
+                    , Maybe.map
+                        (\(Rotation x y z angle) ->
                             "rotate-" ++ floatClass x ++ "-" ++ floatClass y ++ "-" ++ floatClass z ++ "-" ++ floatClass angle
                         )
+                        group.rotate
                     ]
     in
     case transformations of
@@ -1166,33 +1189,27 @@ finalize gathered =
                         |> add (Maybe.andThen (renderTransformationGroup (Just Hover)) transform.hover)
                         |> add (Maybe.andThen (renderTransformationGroup (Just Active)) transform.active)
 
-        addFilters ( classes, styles ) =
-            case gathered.filters of
-                Nothing ->
-                    ( classes, styles )
-
-                Just filter ->
-                    let
-                        name =
-                            "filter-" ++ className filter
-                    in
-                    ( name :: classes
-                    , Single ("." ++ name) "filter" filter
-                        :: styles
-                    )
-
+        -- addFilters ( classes, styles ) =
+        --     case gathered.filters of
+        --         Nothing ->
+        --             ( classes, styles )
+        --         Just filt ->
+        --             let
+        --                 name =
+        --                     "filter-" ++ className filt
+        --             in
+        --             ( name :: classes
+        --             , Single ("." ++ name) "filter" filt
+        --                 :: styles
+        --             )
         addBoxShadows ( classes, styles ) =
             case gathered.boxShadows of
                 Nothing ->
                     ( classes, styles )
 
-                Just shades ->
-                    let
-                        name =
-                            "box-shadow-" ++ className shades
-                    in
-                    ( name :: classes
-                    , Single ("." ++ name) "box-shadow" shades
+                Just ( shadowClass, shades ) ->
+                    ( shadowClass :: classes
+                    , Single ("." ++ shadowClass) "box-shadow" shades
                         :: styles
                     )
 
@@ -1201,27 +1218,23 @@ finalize gathered =
                 Nothing ->
                     ( classes, styles )
 
-                Just shades ->
-                    let
-                        name =
-                            "text-shadow-" ++ className shades
-                    in
-                    ( name :: classes
-                    , Single ("." ++ name) "text-shadow" shades
+                Just ( shadowClass, shades ) ->
+                    ( shadowClass :: classes
+                    , Single ("." ++ shadowClass) "text-shadow" shades
                         :: styles
                     )
 
-        ( classes, styles ) =
+        ( newClasses, newStyles ) =
             ( [], gathered.styles )
-                |> addFilters
+                -- |> addFilters
                 |> addBoxShadows
                 |> addTextShadows
                 |> addTransform
     in
     { gathered
-        | styles = styles
+        | styles = newStyles
         , attributes =
-            Html.Attributes.class (String.join " " classes) :: gathered.attributes
+            Html.Attributes.class (String.join " " newClasses) :: gathered.attributes
     }
 
 
@@ -1234,6 +1247,28 @@ type EmbedStyle
 noStyleSheet : EmbedStyle
 noStyleSheet =
     NoStyleSheet
+
+
+contextClasses : LayoutContext -> Attribute aligned msg
+contextClasses context =
+    case context of
+        AsRow ->
+            htmlClass (classes.any ++ " " ++ classes.row)
+
+        AsColumn ->
+            htmlClass (classes.any ++ " " ++ classes.column)
+
+        AsEl ->
+            htmlClass (classes.any ++ " " ++ classes.single)
+
+        AsGrid ->
+            htmlClass (classes.any ++ " " ++ classes.grid)
+
+        AsParagraph ->
+            htmlClass (classes.any ++ " " ++ classes.paragraph)
+
+        AsTextColumn ->
+            htmlClass (classes.any ++ " " ++ classes.page)
 
 
 element : EmbedStyle -> LayoutContext -> Maybe String -> List (Attribute aligned msg) -> Children (Element msg) -> Element msg
@@ -1362,13 +1397,13 @@ asElement embedMode children context rendered =
                             case htmlChildren of
                                 Keyed keyed ->
                                     Keyed <|
-                                        ( "static-stylesheet", Internal.Style.rulesElement )
+                                        ( "static-stylesheet", Html.node "style" [] [ Html.text Internal.Style.rules ] )
                                             :: ( "dynamic-stylesheet", toStyleSheet options styles )
                                             :: keyed
 
                                 Unkeyed unkeyed ->
                                     Unkeyed
-                                        (Internal.Style.rulesElement
+                                        (Html.node "style" [] [ Html.text Internal.Style.rules ]
                                             :: toStyleSheet options styles
                                             :: unkeyed
                                         )
@@ -1377,14 +1412,14 @@ asElement embedMode children context rendered =
                             case htmlChildren of
                                 Keyed keyed ->
                                     Keyed <|
-                                        ( "static-stylesheet", Internal.Style.rulesElement )
+                                        ( "static-stylesheet", Html.node "style" [] [ Html.text Internal.Style.rules ] )
                                             :: ( "dynamic-stylesheet", toStyleSheet options styles )
                                             :: keyed
                                             ++ List.map (\x -> ( "nearby-elements-pls", x )) nearby
 
                                 Unkeyed unkeyed ->
                                     Unkeyed
-                                        (Internal.Style.rulesElement
+                                        (Html.node "style" [] [ Html.text Internal.Style.rules ]
                                             :: toStyleSheet options styles
                                             :: unkeyed
                                             ++ nearby
@@ -1454,7 +1489,7 @@ filter attrs =
                     NoAttribute ->
                         ( found, has )
 
-                    Class key class ->
+                    Class key _ ->
                         ( x :: found, has )
 
                     Attr attr ->
@@ -1496,7 +1531,7 @@ filter attrs =
                         else
                             ( x :: found, Set.insert "align-y" has )
 
-                    Filter filter ->
+                    Filter _ ->
                         ( x :: found, has )
 
                     BoxShadow shadow ->
@@ -1527,13 +1562,13 @@ getSpacing : List (Attribute aligned msg) -> ( Int, Int ) -> ( Int, Int )
 getSpacing attrs default =
     attrs
         |> List.foldr
-            (\x acc ->
+            (\attr acc ->
                 case acc of
                     Just x ->
                         Just x
 
                     Nothing ->
-                        case x of
+                        case attr of
                             StyleClass (SpacingStyle x y) ->
                                 Just ( x, y )
 
@@ -1548,13 +1583,13 @@ getSpacingAttribute : List (Attribute aligned msg) -> ( Int, Int ) -> Attribute 
 getSpacingAttribute attrs default =
     attrs
         |> List.foldr
-            (\x acc ->
+            (\attr acc ->
                 case acc of
                     Just x ->
                         Just x
 
                     Nothing ->
-                        case x of
+                        case attr of
                             StyleClass (SpacingStyle x y) ->
                                 Just ( x, y )
 
@@ -1570,7 +1605,15 @@ textElement : String -> VirtualDom.Node msg
 textElement str =
     VirtualDom.node "div"
         [ VirtualDom.property "className"
-            (Json.string "se text width-content height-content")
+            (Json.string
+                (String.join " "
+                    [ classes.any
+                    , classes.text
+                    , classes.widthContent
+                    , classes.heightContent
+                    ]
+                )
+            )
         ]
         [ VirtualDom.text str ]
 
@@ -1579,7 +1622,14 @@ textElementFill : String -> VirtualDom.Node msg
 textElementFill str =
     VirtualDom.node "div"
         [ VirtualDom.property "className"
-            (Json.string "se text width-fill height-fill")
+            (Json.string <|
+                String.join " "
+                    [ classes.any
+                    , classes.text
+                    , classes.widthFill
+                    , classes.heightFill
+                    ]
+            )
         ]
         [ VirtualDom.text str ]
 
@@ -1682,8 +1732,8 @@ rootStyle =
             , SansSerif
             ]
     in
-    [ StyleClass (Colored ("bg-color-" ++ formatColorClass (Color.rgba 255 255 255 0)) "background-color" (Color.rgba 255 255 255 0))
-    , StyleClass (Colored ("font-color-" ++ formatColorClass Color.darkCharcoal) "color" Color.darkCharcoal)
+    [ StyleClass (Colored ("bg-color-" ++ formatColorClass (Rgba 1 1 1 0)) "background-color" (Rgba 1 1 1 0))
+    , StyleClass (Colored ("font-color-" ++ formatColorClass (Rgba 0 0 0 0)) "color" (Rgba 0 0 0 0))
     , StyleClass (Single "font-size-20" "font-size" "20px")
     , StyleClass <|
         FontFamily (List.foldl renderFontClassName "font-" families)
@@ -1745,10 +1795,13 @@ renderFocusStyle focus =
                     Property "box-shadow"
                         (formatBoxShadow
                             { color = shadow.color
-                            , offset = shadow.offset
+                            , offset =
+                                shadow.offset
+                                    |> Tuple.mapFirst toFloat
+                                    |> Tuple.mapSecond toFloat
                             , inset = False
-                            , blur = shadow.blur
-                            , size = shadow.size
+                            , blur = toFloat shadow.blur
+                            , size = toFloat shadow.size
                             }
                         )
                 )
@@ -1764,7 +1817,8 @@ focusDefaultStyle =
     , borderColor = Nothing
     , shadow =
         Just
-            { color = Color.rgb 155 203 255
+            { color =
+                Rgba (155 / 255) (203 / 255) 1 1
             , offset = ( 0, 0 )
             , blur = 3
             , size = 3
@@ -1801,7 +1855,7 @@ optionsToRecord options =
                         _ ->
                             record
 
-        finalize record =
+        andFinally record =
             { hover =
                 case record.hover of
                     Nothing ->
@@ -1825,7 +1879,7 @@ optionsToRecord options =
                         actualMode
             }
     in
-    finalize <|
+    andFinally <|
         List.foldr combine
             { hover = Nothing
             , focus = Nothing
@@ -1957,15 +2011,15 @@ toStyleSheetString options stylesheet =
                         renderStyle force
                             maybePseudo
                             ("." ++ name)
-                            [ Property "opacity" (toString opacity)
+                            [ Property "opacity" (String.fromFloat opacity)
                             , Property "pointer-events" "auto"
                             ]
 
                 FontSize i ->
                     renderStyle force
                         maybePseudo
-                        (".font-size-" ++ intToString i)
-                        [ Property "font-size" (intToString i ++ "px")
+                        (".font-size-" ++ String.fromInt i)
+                        [ Property "font-size" (String.fromInt i ++ "px")
                         ]
 
                 FontFamily name typefaces ->
@@ -1992,34 +2046,34 @@ toStyleSheetString options stylesheet =
                 SpacingStyle x y ->
                     let
                         class =
-                            ".spacing-" ++ toString x ++ "-" ++ toString y
+                            ".spacing-" ++ String.fromInt x ++ "-" ++ String.fromInt y
 
                         xPx =
-                            toString x ++ "px"
+                            String.fromInt x ++ "px"
 
                         yPx =
-                            toString y ++ "px"
+                            String.fromInt y ++ "px"
 
                         row =
-                            Internal.Style.dot (.row Internal.Style.classes)
+                            "." ++ .row Internal.Style.classes
 
                         column =
-                            Internal.Style.dot (.column Internal.Style.classes)
+                            "." ++ .column Internal.Style.classes
 
                         page =
-                            Internal.Style.dot (.page Internal.Style.classes)
+                            "." ++ .page Internal.Style.classes
 
                         paragraph =
-                            Internal.Style.dot (.paragraph Internal.Style.classes)
+                            "." ++ .paragraph Internal.Style.classes
 
                         left =
-                            Internal.Style.dot (.alignLeft Internal.Style.classes)
+                            "." ++ .alignLeft Internal.Style.classes
 
                         right =
-                            Internal.Style.dot (.alignRight Internal.Style.classes)
+                            "." ++ .alignRight Internal.Style.classes
 
                         any =
-                            Internal.Style.dot (.any Internal.Style.classes)
+                            "." ++ .any Internal.Style.classes
                     in
                     List.foldl (++)
                         ""
@@ -2031,12 +2085,12 @@ toStyleSheetString options stylesheet =
                         , renderStyle force
                             maybePseudo
                             (class ++ paragraph)
-                            [ Property "line-height" ("calc(1em + " ++ toString y ++ "px)")
+                            [ Property "line-height" ("calc(1em + " ++ String.fromInt y ++ "px)")
                             ]
                         , renderStyle force
                             maybePseudo
                             ("textarea" ++ class)
-                            [ Property "line-height" ("calc(1em + " ++ toString y ++ "px)")
+                            [ Property "line-height" ("calc(1em + " ++ String.fromInt y ++ "px)")
                             ]
                         , renderStyle force
                             maybePseudo
@@ -2055,7 +2109,7 @@ toStyleSheetString options stylesheet =
                             , Property "display" "block"
                             , Property "height" "0"
                             , Property "width" "0"
-                            , Property "margin-top" (toString (-1 * (y // 2)) ++ "px")
+                            , Property "margin-top" (String.fromInt (-1 * (y // 2)) ++ "px")
                             ]
                         , renderStyle force
                             maybePseudo
@@ -2064,7 +2118,7 @@ toStyleSheetString options stylesheet =
                             , Property "display" "block"
                             , Property "height" "0"
                             , Property "width" "0"
-                            , Property "margin-bottom" (toString (-1 * (y // 2)) ++ "px")
+                            , Property "margin-bottom" (String.fromInt (-1 * (y // 2)) ++ "px")
                             ]
                         ]
 
@@ -2072,25 +2126,25 @@ toStyleSheetString options stylesheet =
                     let
                         class =
                             ".pad-"
-                                ++ toString top
+                                ++ String.fromInt top
                                 ++ "-"
-                                ++ toString right
+                                ++ String.fromInt right
                                 ++ "-"
-                                ++ toString bottom
+                                ++ String.fromInt bottom
                                 ++ "-"
-                                ++ toString left
+                                ++ String.fromInt left
                     in
                     renderStyle force
                         maybePseudo
                         class
                         [ Property "padding"
-                            (toString top
+                            (String.fromInt top
                                 ++ "px "
-                                ++ toString right
+                                ++ String.fromInt right
                                 ++ "px "
-                                ++ toString bottom
+                                ++ String.fromInt bottom
                                 ++ "px "
-                                ++ toString left
+                                ++ String.fromInt left
                                 ++ "px"
                             )
                         ]
@@ -2119,7 +2173,7 @@ toStyleSheetString options stylesheet =
                         toGridLengthHelper minimum maximum x =
                             case x of
                                 Px px ->
-                                    toString px ++ "px"
+                                    String.fromInt px ++ "px"
 
                                 Content ->
                                     case ( minimum, maximum ) of
@@ -2127,27 +2181,27 @@ toStyleSheetString options stylesheet =
                                             "max-content"
 
                                         ( Just minSize, Nothing ) ->
-                                            "minmax(" ++ intToString minSize ++ "px, " ++ "max-content)"
+                                            "minmax(" ++ String.fromInt minSize ++ "px, " ++ "max-content)"
 
                                         ( Nothing, Just maxSize ) ->
-                                            "minmax(max-content, " ++ intToString maxSize ++ "px)"
+                                            "minmax(max-content, " ++ String.fromInt maxSize ++ "px)"
 
                                         ( Just minSize, Just maxSize ) ->
-                                            "minmax(" ++ intToString minSize ++ "px, " ++ intToString maxSize ++ "px)"
+                                            "minmax(" ++ String.fromInt minSize ++ "px, " ++ String.fromInt maxSize ++ "px)"
 
                                 Fill i ->
                                     case ( minimum, maximum ) of
                                         ( Nothing, Nothing ) ->
-                                            intToString i ++ "fr"
+                                            String.fromInt i ++ "fr"
 
                                         ( Just minSize, Nothing ) ->
-                                            "minmax(" ++ intToString minSize ++ "px, " ++ intToString i ++ "fr" ++ "fr)"
+                                            "minmax(" ++ String.fromInt minSize ++ "px, " ++ String.fromInt i ++ "fr" ++ "fr)"
 
                                         ( Nothing, Just maxSize ) ->
-                                            "minmax(max-content, " ++ intToString maxSize ++ "px)"
+                                            "minmax(max-content, " ++ String.fromInt maxSize ++ "px)"
 
                                         ( Just minSize, Just maxSize ) ->
-                                            "minmax(" ++ intToString minSize ++ "px, " ++ intToString maxSize ++ "px)"
+                                            "minmax(" ++ String.fromInt minSize ++ "px, " ++ String.fromInt maxSize ++ "px)"
 
                                 Min m len ->
                                     toGridLengthHelper (Just m) maximum len
@@ -2200,27 +2254,27 @@ toStyleSheetString options stylesheet =
                     let
                         class =
                             ".grid-pos-"
-                                ++ intToString position.row
+                                ++ String.fromInt position.row
                                 ++ "-"
-                                ++ intToString position.col
+                                ++ String.fromInt position.col
                                 ++ "-"
-                                ++ intToString position.width
+                                ++ String.fromInt position.width
                                 ++ "-"
-                                ++ intToString position.height
+                                ++ String.fromInt position.height
 
                         msPosition =
                             String.join " "
                                 [ "-ms-grid-row: "
-                                    ++ intToString position.row
+                                    ++ String.fromInt position.row
                                     ++ ";"
                                 , "-ms-grid-row-span: "
-                                    ++ intToString position.height
+                                    ++ String.fromInt position.height
                                     ++ ";"
                                 , "-ms-grid-column: "
-                                    ++ intToString position.col
+                                    ++ String.fromInt position.col
                                     ++ ";"
                                 , "-ms-grid-column-span: "
-                                    ++ intToString position.width
+                                    ++ String.fromInt position.width
                                     ++ ";"
                                 ]
 
@@ -2230,14 +2284,14 @@ toStyleSheetString options stylesheet =
                         modernPosition =
                             String.join " "
                                 [ "grid-row: "
-                                    ++ intToString position.row
+                                    ++ String.fromInt position.row
                                     ++ " / "
-                                    ++ intToString (position.row + position.height)
+                                    ++ String.fromInt (position.row + position.height)
                                     ++ ";"
                                 , "grid-column: "
-                                    ++ intToString position.col
+                                    ++ String.fromInt position.col
                                     ++ " / "
-                                    ++ intToString (position.col + position.width)
+                                    ++ String.fromInt (position.col + position.width)
                                     ++ ";"
                                 ]
 
@@ -2316,42 +2370,49 @@ lengthClassName : Length -> String
 lengthClassName x =
     case x of
         Px px ->
-            intToString px ++ "px"
+            String.fromInt px ++ "px"
 
         Content ->
             "auto"
 
         Fill i ->
-            intToString i ++ "fr"
+            String.fromInt i ++ "fr"
 
         Min min len ->
-            "min" ++ toString min ++ lengthClassName len
+            "min" ++ String.fromInt min ++ lengthClassName len
 
         Max max len ->
-            "max" ++ toString max ++ lengthClassName len
+            "max" ++ String.fromInt max ++ lengthClassName len
 
 
-formatDropShadow : { d | blur : a, color : Color, offset : ( b, c ) } -> String
 formatDropShadow shadow =
     String.join " "
-        [ toString (Tuple.first shadow.offset) ++ "px"
-        , toString (Tuple.second shadow.offset) ++ "px"
-        , toString shadow.blur ++ "px"
+        [ String.fromFloat (Tuple.first shadow.offset) ++ "px"
+        , String.fromFloat (Tuple.second shadow.offset) ++ "px"
+        , String.fromFloat shadow.blur ++ "px"
         , formatColor shadow.color
         ]
 
 
-formatTextShadow : { d | blur : a, color : Color, offset : ( b, c ) } -> String
 formatTextShadow shadow =
     String.join " "
-        [ toString (Tuple.first shadow.offset) ++ "px"
-        , toString (Tuple.second shadow.offset) ++ "px"
-        , toString shadow.blur ++ "px"
+        [ String.fromFloat (Tuple.first shadow.offset) ++ "px"
+        , String.fromFloat (Tuple.second shadow.offset) ++ "px"
+        , String.fromFloat shadow.blur ++ "px"
         , formatColor shadow.color
         ]
 
 
-formatBoxShadow : { e | blur : a, color : Color, inset : Bool, offset : ( b, c ), size : d } -> String
+textShadowName shadow =
+    String.join ""
+        [ "txt"
+        , String.fromFloat (Tuple.first shadow.offset) ++ "px"
+        , String.fromFloat (Tuple.second shadow.offset) ++ "px"
+        , String.fromFloat shadow.blur ++ "px"
+        , formatColor shadow.color
+        ]
+
+
 formatBoxShadow shadow =
     String.join " " <|
         List.filterMap identity
@@ -2359,12 +2420,26 @@ formatBoxShadow shadow =
                 Just "inset"
               else
                 Nothing
-            , Just <| toString (Tuple.first shadow.offset) ++ "px"
-            , Just <| toString (Tuple.second shadow.offset) ++ "px"
-            , Just <| toString shadow.blur ++ "px"
-            , Just <| toString shadow.size ++ "px"
+            , Just <| String.fromFloat (Tuple.first shadow.offset) ++ "px"
+            , Just <| String.fromFloat (Tuple.second shadow.offset) ++ "px"
+            , Just <| String.fromFloat shadow.blur ++ "px"
+            , Just <| String.fromFloat shadow.size ++ "px"
             , Just <| formatColor shadow.color
             ]
+
+
+boxShadowName shadow =
+    String.join "" <|
+        [ if shadow.inset then
+            "box-inset"
+          else
+            "box-"
+        , String.fromFloat (Tuple.first shadow.offset) ++ "px"
+        , String.fromFloat (Tuple.second shadow.offset) ++ "px"
+        , String.fromFloat shadow.blur ++ "px"
+        , String.fromFloat shadow.size ++ "px"
+        , formatColorClass shadow.color
+        ]
 
 
 filterName : FilterType -> String
@@ -2374,31 +2449,31 @@ filterName filtr =
             "url(" ++ url ++ ")"
 
         Blur x ->
-            "blur(" ++ toString x ++ "px)"
+            "blur(" ++ String.fromFloat x ++ "px)"
 
         Brightness x ->
-            "brightness(" ++ toString x ++ "%)"
+            "brightness(" ++ String.fromFloat x ++ "%)"
 
         Contrast x ->
-            "contrast(" ++ toString x ++ "%)"
+            "contrast(" ++ String.fromFloat x ++ "%)"
 
         Grayscale x ->
-            "grayscale(" ++ toString x ++ "%)"
+            "grayscale(" ++ String.fromFloat x ++ "%)"
 
         HueRotate x ->
-            "hueRotate(" ++ toString x ++ "deg)"
+            "hueRotate(" ++ String.fromFloat x ++ "deg)"
 
         Invert x ->
-            "invert(" ++ toString x ++ "%)"
+            "invert(" ++ String.fromFloat x ++ "%)"
 
         OpacityFilter x ->
-            "opacity(" ++ toString x ++ "%)"
+            "opacity(" ++ String.fromFloat x ++ "%)"
 
         Saturate x ->
-            "saturate(" ++ toString x ++ "%)"
+            "saturate(" ++ String.fromFloat x ++ "%)"
 
         Sepia x ->
-            "sepia(" ++ toString x ++ "%)"
+            "sepia(" ++ String.fromFloat x ++ "%)"
 
         DropShadow shadow ->
             let
@@ -2414,64 +2489,25 @@ filterName filtr =
 
 floatClass : Float -> String
 floatClass x =
-    intToString (round (x * 100))
-
-
-intToString : Int -> String
-intToString i =
-    case i of
-        0 ->
-            "0"
-
-        1 ->
-            "1"
-
-        2 ->
-            "2"
-
-        3 ->
-            "3"
-
-        4 ->
-            "4"
-
-        5 ->
-            "5"
-
-        100 ->
-            "100"
-
-        255 ->
-            -- included because of colors
-            "255"
-
-        _ ->
-            toString i
+    String.fromInt (round (x * 100))
 
 
 formatColor : Color -> String
-formatColor color =
-    let
-        { red, green, blue, alpha } =
-            Color.toRgb color
-    in
-    ("rgba(" ++ intToString red)
-        ++ ("," ++ intToString green)
-        ++ ("," ++ intToString blue)
-        ++ ("," ++ toString alpha ++ ")")
+formatColor (Rgba red green blue alpha) =
+    "rgba("
+        ++ String.fromInt (round (red * 255))
+        ++ ("," ++ String.fromInt (round (green * 255)))
+        ++ ("," ++ String.fromInt (round (blue * 255)))
+        ++ ("," ++ String.fromFloat alpha ++ ")")
 
 
 formatColorClass : Color -> String
-formatColorClass color =
-    let
-        { red, green, blue, alpha } =
-            Color.toRgb color
-    in
-    intToString red
+formatColorClass (Rgba red green blue alpha) =
+    floatClass red
         ++ "-"
-        ++ intToString green
+        ++ floatClass green
         ++ "-"
-        ++ intToString blue
+        ++ floatClass blue
         ++ "-"
         ++ floatClass alpha
 
@@ -2492,8 +2528,8 @@ psuedoClassName class =
 {-| This is a key to know which styles should override which other styles.
 -}
 styleKey : Style -> String
-styleKey style =
-    case style of
+styleKey s =
+    case s of
         Shadows _ _ ->
             "shadows"
 
@@ -2534,11 +2570,6 @@ styleKey style =
             "transform"
 
 
-isInt : Int -> Int
-isInt x =
-    x
-
-
 getStyleName : Style -> String
 getStyleName style =
     case style of
@@ -2555,7 +2586,7 @@ getStyleName style =
             name
 
         FontSize i ->
-            "font-size-" ++ toString (isInt i)
+            "font-size-" ++ String.fromInt i
 
         Single class _ _ ->
             class
@@ -2564,17 +2595,17 @@ getStyleName style =
             class
 
         SpacingStyle x y ->
-            "spacing-" ++ toString (isInt x) ++ "-" ++ toString (isInt y)
+            "spacing-" ++ String.fromInt x ++ "-" ++ String.fromInt y
 
         PaddingStyle top right bottom left ->
             "pad-"
-                ++ toString top
+                ++ String.fromInt top
                 ++ "-"
-                ++ toString right
+                ++ String.fromInt right
                 ++ "-"
-                ++ toString bottom
+                ++ String.fromInt bottom
                 ++ "-"
-                ++ toString left
+                ++ String.fromInt left
 
         GridTemplateStyle template ->
             "grid-rows-"
@@ -2588,13 +2619,13 @@ getStyleName style =
 
         GridPosition pos ->
             "grid-pos-"
-                ++ toString pos.row
+                ++ String.fromInt pos.row
                 ++ "-"
-                ++ toString pos.col
+                ++ String.fromInt pos.col
                 ++ "-"
-                ++ toString pos.width
+                ++ String.fromInt pos.width
                 ++ "-"
-                ++ toString pos.height
+                ++ String.fromInt pos.height
 
         PseudoSelector selector subStyle ->
             psuedoClassName selector
@@ -2603,28 +2634,6 @@ getStyleName style =
 
         Transform _ ->
             "transformation"
-
-
-locationClass : Location -> String
-locationClass location =
-    case location of
-        Above ->
-            "se el above"
-
-        Below ->
-            "se el below"
-
-        OnRight ->
-            "se el on-right"
-
-        OnLeft ->
-            "se el on-left"
-
-        InFront ->
-            "se el infront"
-
-        Behind ->
-            "se el behind"
 
 
 
@@ -2659,28 +2668,6 @@ asParagraph =
 asTextColumn : LayoutContext
 asTextColumn =
     AsTextColumn
-
-
-contextClasses : LayoutContext -> Attribute aligned msg
-contextClasses context =
-    case context of
-        AsRow ->
-            htmlClass (classes.any ++ " " ++ classes.row)
-
-        AsColumn ->
-            htmlClass (classes.any ++ " " ++ classes.column)
-
-        AsEl ->
-            htmlClass (classes.any ++ " " ++ classes.single)
-
-        AsGrid ->
-            htmlClass (classes.any ++ " " ++ classes.grid)
-
-        AsParagraph ->
-            htmlClass (classes.any ++ " " ++ classes.paragraph)
-
-        AsTextColumn ->
-            htmlClass (classes.any ++ " " ++ classes.page)
 
 
 
@@ -2734,8 +2721,8 @@ mapAttr fn attr =
         StyleClass style ->
             StyleClass style
 
-        Nearby location element ->
-            Nearby location (map fn element)
+        Nearby location elem ->
+            Nearby location (map fn elem)
 
         Attr htmlAttr ->
             Attr (Html.Attributes.map fn htmlAttr)
@@ -2746,8 +2733,8 @@ mapAttr fn attr =
         BoxShadow shadow ->
             BoxShadow shadow
 
-        Filter filter ->
-            Filter filter
+        Filter filt ->
+            Filter filt
 
 
 mapAttrFromStyle : (msg -> msg1) -> Attribute Never msg -> Attribute () msg1
@@ -2778,8 +2765,8 @@ mapAttrFromStyle fn attr =
         StyleClass style ->
             StyleClass style
 
-        Nearby location element ->
-            Nearby location (map fn element)
+        Nearby location elem ->
+            Nearby location (map fn elem)
 
         Attr htmlAttr ->
             Attr (Html.Attributes.map fn htmlAttr)
@@ -2790,8 +2777,8 @@ mapAttrFromStyle fn attr =
         BoxShadow shadow ->
             BoxShadow shadow
 
-        Filter filter ->
-            Filter filter
+        Filter filt ->
+            Filter filt
 
 
 unwrapDecorations : List (Attribute Never Never) -> List Style
@@ -2859,14 +2846,14 @@ onlyStyles attr =
                 stringName =
                     formatTextShadow shadow
             in
-            Just <| Shadows ("txt-shadow-" ++ className stringName) stringName
+            Just <| Shadows ("txt-shadow-" ++ textShadowName shadow) stringName
 
         BoxShadow shadow ->
             let
                 stringName =
                     formatBoxShadow shadow
             in
-            Just <| Shadows ("box-shadow-" ++ className stringName) stringName
+            Just <| Shadows ("box-shadow-" ++ boxShadowName shadow) stringName
 
         _ ->
             Nothing

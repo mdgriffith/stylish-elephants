@@ -1,4 +1,4 @@
-module Internal.Style exposing (..)
+module Internal.Style exposing (classes, dot, rules, rulesElement)
 
 {-| -}
 
@@ -168,6 +168,10 @@ classes =
     -- space evenly
     , spaceEvenly = "space-evenly"
     , container = "container"
+    , alignContainerRight = "align-container-right"
+    , alignContainerBottom = "align-container-bottom"
+    , alignContainerCenterX = "align-container-center-x"
+    , alignContainerCenterY = "align-container-center-y"
 
     -- content alignments
     , contentTop = "content-top"
@@ -539,7 +543,7 @@ emptyIntermediate selector closing =
 
 
 renderRules : Intermediate -> List Rule -> Intermediate
-renderRules (Intermediate parent) rules =
+renderRules (Intermediate parent) rulesToRender =
     let
         generateIntermediates rule rendered =
             case rule of
@@ -592,11 +596,11 @@ renderRules (Intermediate parent) rules =
                                 :: rendered.others
                     }
     in
-    Intermediate <| List.foldr generateIntermediates parent rules
+    Intermediate <| List.foldr generateIntermediates parent rulesToRender
 
 
 render : List Class -> String
-render classes =
+render classNames =
     let
         renderValues values =
             values
@@ -615,10 +619,10 @@ render classes =
             renderClass rule
                 ++ String.join "\n" (List.map renderIntermediate rule.others)
     in
-    classes
+    classNames
         |> List.foldr
-            (\(Class name rules) existing ->
-                renderRules (emptyIntermediate name "") rules :: existing
+            (\(Class name styleRules) existing ->
+                renderRules (emptyIntermediate name "") styleRules :: existing
             )
             []
         |> List.map renderIntermediate
@@ -626,7 +630,7 @@ render classes =
 
 
 renderCompact : List Class -> String
-renderCompact classes =
+renderCompact styleClasses =
     let
         renderValues values =
             values
@@ -645,10 +649,10 @@ renderCompact classes =
             renderClass rule
                 ++ String.join "" (List.map renderIntermediate rule.others)
     in
-    classes
+    styleClasses
         |> List.foldr
-            (\(Class name rules) existing ->
-                renderRules (emptyIntermediate name "") rules :: existing
+            (\(Class name styleRules) existing ->
+                renderRules (emptyIntermediate name "") styleRules :: existing
             )
             []
         |> List.map renderIntermediate
@@ -1340,7 +1344,7 @@ rules =
                     [ Prop "display" "none"
                     ]
                 , Batch <|
-                    flip List.map locations <|
+                    (\fn -> List.map fn locations) <|
                         \loc ->
                             case loc of
                                 Above ->

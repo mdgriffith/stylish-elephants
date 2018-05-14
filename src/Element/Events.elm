@@ -31,8 +31,8 @@ module Element.Events
 
 -}
 
-import Html.Events
 import Element exposing (Attribute)
+import Html.Events
 import Internal.Model as Internal
 import Json.Decode as Json
 import VirtualDom
@@ -211,43 +211,12 @@ on event decode =
     Internal.Attr <| Html.Events.on event decode
 
 
-{-| Same as `on` but you can set a few options.
--}
-onWithOptions : String -> Html.Events.Options -> Json.Decoder msg -> Attribute msg
-onWithOptions event options decode =
-    Internal.Attr <| Html.Events.onWithOptions event options decode
 
-
-
--- COMMON DECODERS
-
-
-{-| Options for an event listener. If `stopPropagation` is true, it means the
-event stops traveling through the DOM so it will not trigger any other event
-listeners. If `preventDefault` is true, any built-in browser behavior related
-to the event is prevented. For example, this is used with touch events when you
-want to treat them as gestures of your own, not as scrolls.
--}
-type alias Options =
-    { stopPropagation : Bool
-    , preventDefault : Bool
-    }
-
-
-{-| Everything is `False` by default.
-
-    defaultOptions =
-        { stopPropagation = False
-        , preventDefault = False
-        }
-
--}
-defaultOptions : Options
-defaultOptions =
-    VirtualDom.defaultOptions
-
-
-
+-- {-| Same as `on` but you can set a few options.
+-- -}
+-- onWithOptions : String -> Html.Events.Options -> Json.Decoder msg -> Attribute msg
+-- onWithOptions event options decode =
+--     Internal.Attr <| Html.Events.onWithOptions event options decode
 -- COMMON DECODERS
 
 

@@ -102,8 +102,7 @@ module Element.Font
 
 -}
 
-import Color exposing (Color)
-import Element exposing (Attr, Attribute)
+import Element exposing (Attr, Attribute, Color)
 import Internal.Model as Internal
 import Internal.Style exposing (classes)
 
@@ -172,8 +171,8 @@ external { url, name } =
 {-| Font sizes are always given as `px`.
 -}
 size : Int -> Attr decorative msg
-size size =
-    Internal.StyleClass (Internal.FontSize size)
+size i =
+    Internal.StyleClass (Internal.FontSize i)
 
 
 {-| In `px`.
@@ -184,7 +183,7 @@ letterSpacing offset =
         Internal.Single
             ("letter-spacing-" ++ Internal.floatClass offset)
             "letter-spacing"
-            (toString offset ++ "px")
+            (String.fromFloat offset ++ "px")
 
 
 {-| In `px`.
@@ -192,34 +191,34 @@ letterSpacing offset =
 wordSpacing : Float -> Attribute msg
 wordSpacing offset =
     Internal.StyleClass <|
-        Internal.Single ("word-spacing-" ++ Internal.floatClass offset) "word-spacing" (toString offset ++ "px")
+        Internal.Single ("word-spacing-" ++ Internal.floatClass offset) "word-spacing" (String.fromFloat offset ++ "px")
 
 
 {-| Align the font to the left.
 -}
 alignLeft : Attribute msg
 alignLeft =
-    Internal.class classes.textLeft
+    Internal.Class classes.textLeft classes.textLeft
 
 
 {-| Align the font to the right.
 -}
 alignRight : Attribute msg
 alignRight =
-    Internal.class classes.textRight
+    Internal.Class classes.textRight classes.textRight
 
 
 {-| Center align the font.
 -}
 center : Attribute msg
 center =
-    Internal.class classes.textCenter
+    Internal.Class classes.textCenter classes.textCenter
 
 
 {-| -}
 justify : Attribute msg
 justify =
-    Internal.class classes.textJustify
+    Internal.Class classes.textJustify classes.textJustify
 
 
 
@@ -232,80 +231,80 @@ justify =
 {-| -}
 underline : Attribute msg
 underline =
-    Internal.class classes.underline
+    Internal.Class classes.underline classes.underline
 
 
 {-| -}
 strike : Attribute msg
 strike =
-    Internal.class classes.strike
+    Internal.Class classes.strike classes.strike
 
 
 {-| -}
 italic : Attribute msg
 italic =
-    Internal.class classes.italic
+    Internal.Class classes.italic classes.italic
 
 
 {-| -}
 bold : Attribute msg
 bold =
-    Internal.class classes.bold
+    Internal.Class classes.bold classes.bold
 
 
 {-| -}
 light : Attribute msg
 light =
-    Internal.class classes.textLight
+    Internal.Class classes.textLight classes.textLight
 
 
 {-| -}
 hairline : Attribute msg
 hairline =
-    Internal.class classes.textThin
+    Internal.Class classes.textThin classes.textThin
 
 
 {-| -}
 extraLight : Attribute msg
 extraLight =
-    Internal.class classes.textExtraLight
+    Internal.Class classes.textExtraLight classes.textExtraLight
 
 
 {-| -}
 regular : Attribute msg
 regular =
-    Internal.class classes.textNormalWeight
+    Internal.Class classes.textNormalWeight classes.textNormalWeight
 
 
 {-| -}
 semiBold : Attribute msg
 semiBold =
-    Internal.class classes.textSemiBold
+    Internal.Class classes.textSemiBold classes.textSemiBold
 
 
 {-| -}
 medium : Attribute msg
 medium =
-    Internal.class classes.textMedium
+    Internal.Class classes.textMedium classes.textMedium
 
 
 {-| -}
 extraBold : Attribute msg
 extraBold =
-    Internal.class classes.textExtraBold
+    Internal.Class classes.textExtraBold classes.textExtraBold
 
 
 {-| -}
 heavy : Attribute msg
 heavy =
-    Internal.class classes.textHeavy
+    Internal.Class classes.textHeavy classes.textHeavy
 
 
 {-| This will reset bold and italic.
 -}
 unitalicized : Attribute msg
 unitalicized =
-    Internal.class classes.textUnitalicized
+    Internal.Class classes.textUnitalicized classes.textUnitalicized
 
 
 {-| -}
@@ -315,20 +314,20 @@ shadow :
     , color : Color
     }
     -> Attr decorative msg
-shadow { offset, blur, color } =
+shadow shade =
     Internal.TextShadow
-        { offset = offset
-        , blur = blur
-        , color = color
+        { offset = shade.offset
+        , blur = shade.blur
+        , color = shade.color
         }
 
 
 {-| A glow is just a simplified shadow
 -}
 glow : Color -> Float -> Attr decorative msg
-glow color size =
+glow clr i =
     Internal.TextShadow
         { offset = ( 0, 0 )
-        , blur = size * 2
-        , color = color
+        , blur = i * 2
+        , color = clr
         }

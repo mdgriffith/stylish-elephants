@@ -41,8 +41,7 @@ module Element.Border
 
 -}
 
-import Color exposing (Color)
-import Element exposing (Attr, Attribute)
+import Element exposing (Attr, Attribute, Color)
 import Internal.Model as Internal
 import Internal.Style as Style exposing (classes)
 
@@ -56,29 +55,29 @@ color clr =
 {-| -}
 width : Int -> Attribute msg
 width v =
-    Internal.StyleClass (Internal.Single ("border-" ++ toString v) "border-width" (toString v ++ "px"))
+    Internal.StyleClass (Internal.Single ("border-" ++ String.fromInt v) "border-width" (String.fromInt v ++ "px"))
 
 
 {-| Set horizontal and vertical borders.
 -}
 widthXY : Int -> Int -> Attribute msg
 widthXY x y =
-    Internal.StyleClass (Internal.Single ("border-" ++ toString x ++ "-" ++ toString y) "border-width" (toString y ++ "px " ++ toString x ++ "px"))
+    Internal.StyleClass (Internal.Single ("border-" ++ String.fromInt x ++ "-" ++ String.fromInt y) "border-width" (String.fromInt y ++ "px " ++ String.fromInt x ++ "px"))
 
 
 {-| -}
 widthEach : { bottom : Int, left : Int, right : Int, top : Int } -> Attribute msg
 widthEach { bottom, top, left, right } =
     Internal.StyleClass
-        (Internal.Single ("border-" ++ toString top ++ "-" ++ toString right ++ toString bottom ++ "-" ++ toString left)
+        (Internal.Single ("border-" ++ String.fromInt top ++ "-" ++ String.fromInt right ++ String.fromInt bottom ++ "-" ++ String.fromInt left)
             "border-width"
-            (toString top
+            (String.fromInt top
                 ++ "px "
-                ++ toString right
+                ++ String.fromInt right
                 ++ "px "
-                ++ toString bottom
+                ++ String.fromInt bottom
                 ++ "px "
-                ++ toString left
+                ++ String.fromInt left
                 ++ "px"
             )
         )
@@ -114,22 +113,22 @@ dotted =
 -}
 rounded : Int -> Attribute msg
 rounded radius =
-    Internal.StyleClass (Internal.Single ("border-radius-" ++ toString radius) "border-radius" (toString radius ++ "px"))
+    Internal.StyleClass (Internal.Single ("border-radius-" ++ String.fromInt radius) "border-radius" (String.fromInt radius ++ "px"))
 
 
 {-| -}
 roundEach : { topLeft : Int, topRight : Int, bottomLeft : Int, bottomRight : Int } -> Attribute msg
 roundEach { topLeft, topRight, bottomLeft, bottomRight } =
     Internal.StyleClass
-        (Internal.Single ("border-radius-" ++ toString topLeft ++ "-" ++ toString topRight ++ toString bottomLeft ++ "-" ++ toString bottomRight)
+        (Internal.Single ("border-radius-" ++ String.fromInt topLeft ++ "-" ++ String.fromInt topRight ++ String.fromInt bottomLeft ++ "-" ++ String.fromInt bottomRight)
             "border-radius"
-            (toString topLeft
+            (String.fromInt topLeft
                 ++ "px "
-                ++ toString topRight
+                ++ String.fromInt topRight
                 ++ "px "
-                ++ toString bottomRight
+                ++ String.fromInt bottomRight
                 ++ "px "
-                ++ toString bottomLeft
+                ++ String.fromInt bottomLeft
                 ++ "px"
             )
         )
@@ -138,23 +137,23 @@ roundEach { topLeft, topRight, bottomLeft, bottomRight } =
 {-| A simple glow by specifying the color and size.
 -}
 glow : Color -> Float -> Attr decorative msg
-glow color size =
+glow clr size =
     box
         { offset = ( 0, 0 )
         , size = size
         , blur = size * 2
-        , color = color
+        , color = clr
         }
 
 
 {-| -}
 innerGlow : Color -> Float -> Attr decorative msg
-innerGlow color size =
+innerGlow clr size =
     innerShadow
         { offset = ( 0, 0 )
         , size = size
         , blur = size * 2
-        , color = color
+        , color = clr
         }
 
 
@@ -166,13 +165,13 @@ box :
     , color : Color
     }
     -> Attr decorative msg
-box { offset, blur, color, size } =
+box shade =
     Internal.BoxShadow
         { inset = False
-        , offset = offset
-        , size = size
-        , blur = blur
-        , color = color
+        , offset = shade.offset
+        , size = shade.size
+        , blur = shade.blur
+        , color = shade.color
         }
 
 
@@ -184,13 +183,13 @@ innerShadow :
     , color : Color
     }
     -> Attr decorative msg
-innerShadow { offset, blur, color, size } =
+innerShadow shade =
     Internal.BoxShadow
         { inset = True
-        , offset = offset
-        , size = size
-        , blur = blur
-        , color = color
+        , offset = shade.offset
+        , size = shade.size
+        , blur = shade.blur
+        , color = shade.color
         }
 
 
@@ -202,11 +201,11 @@ shadow :
     , color : Color
     }
     -> Attr decorative msg
-shadow { size, offset, blur, color } =
+shadow shade =
     Internal.BoxShadow
         { inset = False
-        , offset = offset
-        , size = size
-        , blur = blur
-        , color = color
+        , offset = shade.offset
+        , size = shade.size
+        , blur = shade.blur
+        , color = shade.color
         }

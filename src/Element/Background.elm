@@ -22,8 +22,7 @@ module Element.Background
 
 -}
 
-import Color exposing (Color)
-import Element exposing (Attr, Attribute)
+import Element exposing (Attr, Attribute, Color)
 import Internal.Model as Internal
 
 
@@ -37,35 +36,35 @@ color clr =
 -}
 image : String -> Attribute msg
 image src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.className src) "background" ("url(\"" ++ src ++ "\") center / cover no-repeat"))
+    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / cover no-repeat"))
 
 
 {-| A centered background image that keeps it's natural propostions, but scales to fit the space.
 -}
 uncropped : String -> Attribute msg
 uncropped src =
-    Internal.StyleClass (Internal.Single ("bg-fitted-image-" ++ Internal.className src) "background" ("url(\"" ++ src ++ "\") center / contain no-repeat"))
+    Internal.StyleClass (Internal.Single ("bg-fitted-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / contain no-repeat"))
 
 
 {-| Tile an image in the x and y axes.
 -}
 tiled : String -> Attribute msg
 tiled src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.className src) "background" ("url(\"" ++ src ++ "\") repeat"))
+    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat"))
 
 
 {-| Tile an image in the x axis.
 -}
 tiledX : String -> Attribute msg
 tiledX src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.className src) "background" ("url(\"" ++ src ++ "\") repeat-x"))
+    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-x"))
 
 
 {-| Tile an image in the y axis.
 -}
 tiledY : String -> Attribute msg
 tiledY src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.className src) "background" ("url(\"" ++ src ++ "\") repeat-y"))
+    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-y"))
 
 
 type Direction
@@ -110,7 +109,7 @@ gradient angle colors =
     Internal.StyleClass <|
         Internal.Single ("bg-gradient-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass colors))
             "background"
-            ("linear-gradient(" ++ (String.join ", " <| (toString angle ++ "rad") :: List.map Internal.formatColor colors) ++ ")")
+            ("linear-gradient(" ++ (String.join ", " <| (String.fromFloat angle ++ "rad") :: List.map Internal.formatColor colors) ++ ")")
 
 
 
