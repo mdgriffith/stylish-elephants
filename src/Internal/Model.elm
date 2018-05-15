@@ -637,7 +637,7 @@ gatherAttributes attr gathered =
                             | attributes =
                                 case styleProp of
                                     PseudoSelector _ _ ->
-                                        VirtualDom.property "className" (Json.string "transition") :: classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
+                                        VirtualDom.property "className" (Json.string Internal.Style.classes.transition) :: classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
 
                                     _ ->
                                         classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
@@ -679,26 +679,26 @@ gatherAttributes attr gathered =
                         case w of
                             Px px ->
                                 { gath
-                                    | attributes = classNameAttr ("width-exact width-px-" ++ String.fromInt px) :: gath.attributes
+                                    | attributes = classNameAttr (Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px) :: gath.attributes
                                     , styles = Single (styleName <| "width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: gath.styles
                                 }
 
                             Content ->
                                 { gath
-                                    | attributes = classNameAttr (.widthContent Internal.Style.classes) :: gath.attributes
+                                    | attributes = classNameAttr Internal.Style.classes.widthContent :: gath.attributes
                                 }
 
                             Fill portion ->
                                 if portion == 1 then
                                     { gath
-                                        | attributes = classNameAttr (.widthFill Internal.Style.classes) :: gath.attributes
+                                        | attributes = classNameAttr Internal.Style.classes.widthFill :: gath.attributes
                                     }
                                 else
                                     { gath
                                         | width = Just width
-                                        , attributes = classNameAttr ("width-fill-portion width-fill-" ++ String.fromInt portion) :: gath.attributes
+                                        , attributes = classNameAttr (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) :: gath.attributes
                                         , styles =
-                                            Single (".se.row > " ++ (styleName <| "width-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
+                                            Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.row ++ " > " ++ (styleName <| "width-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
                                     }
 
                             Min minSize len ->
@@ -746,19 +746,19 @@ gatherAttributes attr gathered =
 
                             Content ->
                                 { gath
-                                    | attributes = classNameAttr (.heightContent Internal.Style.classes) :: gath.attributes
+                                    | attributes = classNameAttr Internal.Style.classes.heightContent :: gath.attributes
                                 }
 
                             Fill portion ->
                                 if portion == 1 then
                                     { gath
-                                        | attributes = classNameAttr (.heightFill Internal.Style.classes) :: gath.attributes
+                                        | attributes = classNameAttr Internal.Style.classes.heightFill :: gath.attributes
                                     }
                                 else
                                     { gath
-                                        | attributes = classNameAttr ("height-fill-portion height-fill-" ++ String.fromInt portion) :: gath.attributes
+                                        | attributes = classNameAttr (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) :: gath.attributes
                                         , styles =
-                                            Single (".se.column > " ++ (styleName <| "height-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
+                                            Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.column ++ " > " ++ (styleName <| "height-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
                                     }
 
                             Min minSize len ->
@@ -935,48 +935,6 @@ urlClassName x =
         |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[^a-zA-Z0-9_-]")) (\_ -> "")
         |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[A-Z0-9]+")) (\{ match } -> " " ++ String.toLower match)
         |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[\\s+]")) (\_ -> "")
-
-
-
--- {-| Paragraph's use a slightly different mode of spacing, which is that it's gives every child a margin of 1/2 of the spacing value for that axis.
--- This means paragraph's with spacing must have padding that is at least the same size
--- -}
--- adjustParagraphSpacing : List (Attribute aligned msg) -> List (Attribute aligned msg)
--- adjustParagraphSpacing attrs =
---     let
---         adjust ( x, y ) attribute =
---             case attribute of
---                 StyleClass (PaddingStyle top right bottom left) ->
---                     StyleClass
---                         (PaddingStyle
---                             (floorAtZero (top - (y // 2)))
---                             (floorAtZero (right - (x // 2)))
---                             (floorAtZero (bottom - (y // 2)))
---                             (floorAtZero (left - (x // 2)))
---                         )
---                 _ ->
---                     attribute
---         spacing =
---             attrs
---                 |> List.foldr
---                     (\x acc ->
---                         case acc of
---                             Just x ->
---                                 Just x
---                             Nothing ->
---                                 case x of
---                                     StyleClass (SpacingStyle x y) ->
---                                         Just ( x, y )
---                                     _ ->
---                                         Nothing
---                     )
---                     Nothing
---     in
---     case spacing of
---         Nothing ->
---             attrs
---         Just ( x, y ) ->
---             List.map (adjust ( x, y )) attrs
 
 
 initGathered : Maybe String -> Gathered msg
@@ -2400,7 +2358,7 @@ formatTextShadow shadow =
 
 
 textShadowName shadow =
-    String.join ""
+    String.concat
         [ "txt"
         , String.fromFloat (Tuple.first shadow.offset) ++ "px"
         , String.fromFloat (Tuple.second shadow.offset) ++ "px"
@@ -2425,7 +2383,7 @@ formatBoxShadow shadow =
 
 
 boxShadowName shadow =
-    String.join "" <|
+    String.concat <|
         [ if shadow.inset then
             "box-inset"
           else
@@ -2560,7 +2518,7 @@ styleKey s =
             "grid-position"
 
         PseudoSelector class style ->
-            psuedoClassName class ++ (String.join "" <| List.map styleKey style)
+            psuedoClassName class ++ (String.concat <| List.map styleKey style)
 
         Transform _ ->
             "transform"

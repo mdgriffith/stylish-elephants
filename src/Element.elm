@@ -1341,7 +1341,7 @@ mouseOver decs =
         Internal.PseudoSelector Internal.Hover
             (decs
                 |> Internal.unwrapDecorations
-                |> List.map (Internal.tag "hover")
+                |> List.map (Internal.tag Internal.Style.classes.hover)
             )
 
 
@@ -1352,7 +1352,7 @@ mouseDown decs =
         Internal.PseudoSelector Internal.Active
             (decs
                 |> Internal.unwrapDecorations
-                |> List.map (Internal.tag "active")
+                |> List.map (Internal.tag Internal.Style.classes.active)
             )
 
 
@@ -1363,5 +1363,5 @@ focused decs =
         Internal.PseudoSelector Internal.Focus
             (decs
                 |> Internal.unwrapDecorations
-                |> List.map (Internal.tag "focus")
+                |> List.map (Internal.tag Internal.Style.classes.focus)
             )

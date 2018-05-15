@@ -145,9 +145,11 @@ classes =
     , widthFill = "width-fill"
     , widthContent = "width-content"
     , widthExact = "width-exact"
+    , widthFillPortion = "width-fill-portion"
     , heightFill = "height-fill"
     , heightContent = "height-content"
-    , heightExact = "height-exact"
+    , heightFillPortion = "height-fill-portion"
+    , seButton = "se-button"
 
     -- nearby elements
     , above = "above"
@@ -193,6 +195,16 @@ classes =
     , opaque = "opaque"
     , overflowHidden = "overflow-hidden"
 
+    -- special state classes
+    , hover = "hover"
+
+    -- , hoverOpaque = "hover-opaque"
+    , focus = "focus"
+
+    -- , focusOpaque = "focus-opaque"
+    , active = "active"
+
+    -- , activeOpaque = "active-opaque"
     --scrollbars
     , scrollbars = "scrollbars"
     , scrollbarsX = "scrollbars-x"
@@ -228,6 +240,7 @@ classes =
     , textCenter = "text-center"
     , textRight = "text-right"
     , textLeft = "text-left"
+    , transition = "transition"
     }
 
 
@@ -445,55 +458,6 @@ describeAlignment values =
         List.concatMap createDescription alignments
 
 
-type Length
-    = Shrink
-    | Fill
-
-
-lengths =
-    [ Shrink
-    , Fill
-    ]
-
-
-type Dimension
-    = Width
-    | Height
-
-
-dimensionToString x =
-    case x of
-        Width ->
-            "width"
-
-        Height ->
-            "height"
-
-
-lenToString : Length -> String
-lenToString len =
-    case len of
-        Shrink ->
-            "content"
-
-        Fill ->
-            "fill"
-
-
-describeLength dimension lenValue =
-    let
-        name =
-            dimensionToString dimension
-
-        renderLengthRule len =
-            Child ("." ++ name ++ "-" ++ lenToString len)
-                [ lenValue len
-                ]
-    in
-    Batch
-        (List.map renderLengthRule lengths)
-
-
 gridAlignments values =
     let
         createDescription alignment =
@@ -634,8 +598,8 @@ renderCompact styleClasses =
     let
         renderValues values =
             values
-                |> List.map (\( x, y ) -> "" ++ x ++ ":" ++ y ++ ";")
-                |> String.join ""
+                |> List.map (\( x, y ) -> x ++ ":" ++ y ++ ";")
+                |> String.concat
 
         renderClass rule =
             case rule.props of
@@ -647,7 +611,7 @@ renderCompact styleClasses =
 
         renderIntermediate (Intermediate rule) =
             renderClass rule
-                ++ String.join "" (List.map renderIntermediate rule.others)
+                ++ String.concat (List.map renderIntermediate rule.others)
     in
     styleClasses
         |> List.foldr
@@ -656,7 +620,7 @@ renderCompact styleClasses =
             )
             []
         |> List.map renderIntermediate
-        |> String.join ""
+        |> String.concat
 
 
 viewportRules : String
@@ -728,14 +692,11 @@ rules =
                 [ Prop "width" "100%"
                 , Prop "height" "auto"
                 , Prop "min-height" "100%"
-                , Descriptor ".se.el.height-content"
+                , Descriptor (dot classes.any ++ dot classes.single ++ dot classes.heightContent)
                     [ Prop "height" "100%"
                     , Child (dot classes.heightFill)
                         [ Prop "height" "100%"
                         ]
-                    ]
-                , Descriptor (".wireframe ." ++ classes.any)
-                    [ Prop "outline" "2px dashed black"
                     ]
                 ]
             , Class (dot classes.any)
@@ -781,7 +742,7 @@ rules =
                     [ Prop "pointer-events" "none"
                     ]
                 , Descriptor (dot classes.capturePointerEvents)
-                    [ Prop "pointer-events" "nauto"
+                    [ Prop "pointer-events" "auto"
                     ]
                 , Descriptor (dot classes.transparent)
                     [ Prop "opacity" "0"
@@ -789,31 +750,25 @@ rules =
                 , Descriptor (dot classes.opaque)
                     [ Prop "opacity" "1"
                     ]
-                , Descriptor ".hover-transparent:hover"
+                , Descriptor (dot (classes.hover ++ classes.transparent) ++ ":hover")
                     [ Prop "opacity" "0"
                     ]
-                , Descriptor ".hover-opaque:hover"
+                , Descriptor (dot (classes.hover ++ classes.opaque) ++ ":hover")
                     [ Prop "opacity" "1"
                     ]
-                , Descriptor ".hover-transparent:hover"
+                , Descriptor (dot (classes.focus ++ classes.transparent) ++ ":focus")
                     [ Prop "opacity" "0"
                     ]
-                , Descriptor ".hover-opaque:hover"
+                , Descriptor (dot (classes.focus ++ classes.opaque) ++ ":focus")
                     [ Prop "opacity" "1"
                     ]
-                , Descriptor ".focus-transparent:focus"
+                , Descriptor (dot (classes.active ++ classes.transparent) ++ ":active")
                     [ Prop "opacity" "0"
                     ]
-                , Descriptor ".focus-opaque:focus"
+                , Descriptor (dot (classes.active ++ classes.opaque) ++ ":active")
                     [ Prop "opacity" "1"
                     ]
-                , Descriptor ".active-transparent:active"
-                    [ Prop "opacity" "0"
-                    ]
-                , Descriptor ".active-opaque:active"
-                    [ Prop "opacity" "1"
-                    ]
-                , Descriptor ".transition"
+                , Descriptor (dot classes.transition)
                     [ Prop "transition"
                         (String.join ", " <|
                             List.map (\x -> x ++ " 160ms")
@@ -878,7 +833,7 @@ rules =
                     [ Prop "display" "flex"
                     , Prop "flex-direction" "column"
                     , Prop "white-space" "pre"
-                    , Descriptor ".se-button"
+                    , Descriptor (dot classes.seButton)
                         -- Special default for text in a button.
                         -- This is overridden is they put the text inside an `el`
                         [ Child (dot classes.text)
@@ -962,17 +917,19 @@ rules =
                           -- alignTop, centerY, and alignBottom need to be disabled
                           Prop "align-self" "stretch !important"
                         ]
-                    , Child ".height-fill-portion"
+                    , Child (dot classes.heightFillPortion)
                         [ --Prop "height" "100%"
                           -- alignTop, centerY, and alignBottom need to be disabled
                           Prop "align-self" "stretch !important"
                         ]
-                    , Child ".height-fill-between"
-                        [ Prop "align-self" "stretch"
-                        , Descriptor ".aligned-vertically"
-                            [ Prop "height" "100%"
-                            ]
-                        ]
+
+                    -- TODO:: This may be necessary..should it move to classes.heightFIll?
+                    -- , Child (dot classes.heightFillBetween)
+                    --     [ Prop "align-self" "stretch"
+                    --     , Descriptor ".aligned-vertically"
+                    --         [ Prop "height" "100%"
+                    --         ]
+                    --     ]
                     , Child (dot classes.widthFill)
                         [ Prop "flex-grow" "100000"
                         ]
@@ -987,18 +944,18 @@ rules =
                     --     ]
                     -- alignRight -> <u>
                     --centerX -> <s>
-                    , Child "u:first-of-type.align-container-right"
+                    , Child ("u:first-of-type." ++ classes.alignContainerRight)
                         [ Prop "flex-grow" "1"
                         ]
 
                     -- first center y
-                    , Child "s:first-of-type.align-container-center-x"
+                    , Child ("s:first-of-type." ++ classes.alignContainerCenterX)
                         [ Prop "flex-grow" "1"
                         , Child (dot classes.alignCenterX)
                             [ Prop "margin-left" "auto !important"
                             ]
                         ]
-                    , Child "s:last-of-type.align-container-center-x"
+                    , Child ("s:last-of-type." ++ classes.alignContainerCenterX)
                         [ Prop "flex-grow" "1"
                         , Child (dot classes.alignCenterX)
                             [ Prop "margin-right" "auto !important"
@@ -1006,7 +963,7 @@ rules =
                         ]
 
                     -- lonley centerX
-                    , Child "s:only-of-type.align-container-center-x"
+                    , Child ("s:only-of-type." ++ classes.alignContainerCenterX)
                         [ Prop "flex-grow" "1"
                         , Child (dot classes.alignCenterY)
                             [ Prop "margin-top" "auto !important"
@@ -1015,12 +972,13 @@ rules =
                         ]
 
                     -- alignBottom's after a centerX should not grow
-                    , Child "s:last-of-type.align-container-center-x ~ u"
+                    , Child
+                        ("s:last-of-type." ++ classes.alignContainerCenterX ++ " ~ u")
                         [ Prop "flex-grow" "0"
                         ]
 
                     -- centerX's after an alignBottom should be ignored
-                    , Child "u:first-of-type.align-container-right ~ s.align-container-center-x"
+                    , Child ("u:first-of-type." ++ classes.alignContainerRight ++ " ~ s." ++ classes.alignContainerCenterX)
                         -- Bottom alignment always overrides center alignment
                         [ Prop "flex-grow" "0"
                         ]
@@ -1080,16 +1038,18 @@ rules =
                         [ -- alignLeft, alignRight, centerX need to be disabled
                           Prop "align-self" "stretch !important"
                         ]
-                    , Child ".width-fill-portion"
+                    , Child (dot classes.widthFillPortion)
                         [ -- alignLeft, alignRight, centerX need to be disabled
                           Prop "align-self" "stretch !important"
                         ]
-                    , Child ".width-fill-between"
-                        [ Prop "align-self" "stretch"
-                        , Descriptor ".aligned-horizontally"
-                            [ Prop "width" "100%"
-                            ]
-                        ]
+
+                    -- TODO:: THIs might be necessary, maybe it should move to widthFill?
+                    -- , Child (dot classes.widthFillBetween)
+                    --     [ Prop "align-self" "stretch"
+                    --     , Descriptor ".aligned-horizontally"
+                    --         [ Prop "width" "100%"
+                    --         ]
+                    --     ]
                     , Child (dot classes.widthContent)
                         [ Prop "align-self" "left"
                         ]
@@ -1097,21 +1057,21 @@ rules =
                     -- , Child "alignTop:last-of-type.align-container-top"
                     --     [ Prop "flex-grow" "1"
                     --     ]
-                    , Child "u:first-of-type.align-container-bottom"
+                    , Child ("u:first-of-type." ++ classes.alignContainerBottom)
                         [ Prop "flex-grow" "1"
                         ]
 
                     -- centerY -> <s>
                     -- alignBottom -> <u>
                     -- first center y
-                    , Child "s:first-of-type.align-container-center-y"
+                    , Child ("s:first-of-type." ++ classes.alignContainerCenterY)
                         [ Prop "flex-grow" "1"
                         , Child (dot classes.alignCenterY)
                             [ Prop "margin-top" "auto !important"
                             , Prop "margin-bottom" "0 !important"
                             ]
                         ]
-                    , Child "s:last-of-type.align-container-center-y"
+                    , Child ("s:last-of-type." ++ classes.alignContainerCenterY)
                         [ Prop "flex-grow" "1"
                         , Child (dot classes.alignCenterY)
                             [ Prop "margin-bottom" "auto !important"
@@ -1120,7 +1080,7 @@ rules =
                         ]
 
                     -- lonley centerY
-                    , Child "s:only-of-type.align-container-center-y"
+                    , Child ("s:only-of-type." ++ classes.alignContainerCenterY)
                         [ Prop "flex-grow" "1"
                         , Child (dot classes.alignCenterY)
                             [ Prop "margin-top" "auto !important"
@@ -1129,12 +1089,12 @@ rules =
                         ]
 
                     -- alignBottom's after a centerY should not grow
-                    , Child "s:last-of-type.align-container-center-y ~ u"
+                    , Child ("s:last-of-type." ++ classes.alignContainerCenterY ++ " ~ u")
                         [ Prop "flex-grow" "0"
                         ]
 
                     -- centerY's after an alignBottom should be ignored
-                    , Child "u:first-of-type.align-container-bottom ~ s.align-container-center-y"
+                    , Child ("u:first-of-type." ++ classes.alignContainerBottom ++ " ~ s." ++ classes.alignContainerCenterY)
                         -- Bottom alignment always overrides center alignment
                         [ Prop "flex-grow" "0"
                         ]
@@ -1214,10 +1174,10 @@ rules =
                         ]
 
                     -- clear spacing of any subsequent element if an element is float-left
-                    , Child (dot <| classes.any ++ selfName (Self Left) ++ ":first-child + .se")
+                    , Child (dot <| classes.any ++ selfName (Self Left) ++ ":first-child + ." ++ classes.any)
                         [ Prop "margin" "0 !important"
                         ]
-                    , Child (dot <| classes.any ++ selfName (Self Right) ++ ":first-child + .se")
+                    , Child (dot <| classes.any ++ selfName (Self Right) ++ ":first-child + ." ++ classes.any)
                         [ Prop "margin" "0 !important"
                         ]
                     , describeAlignment <|
@@ -1489,21 +1449,6 @@ rules =
                 , Descriptor (dot classes.textLeft)
                     [ Prop "text-align" "left"
                     ]
-
-                -- , Descriptor (dot classes.nearby)
-                --     --".nearby"
-                --     [ Prop "position" "absolute"
-                --     , Prop "top" "0"
-                --     , Prop "left" "0"
-                --     , Prop "width" "100%"
-                --     , Prop "height" "100%"
-                --     , Prop "pointer-events" "none"
-                --     , Prop "margin" "0 !important"
-                --     , Adjacent ".se"
-                --         [ Prop "margin-top" "0"
-                --         , Prop "margin-left" "0"
-                --         ]
-                --     ]
                 , Descriptor ".modal"
                     [ Prop "position" "fixed"
                     , Prop "left" "0"

@@ -209,7 +209,7 @@ button attrs { onPress, label } =
             :: Element.height Element.shrink
             :: Internal.htmlClass classes.contentCenterX
             :: Internal.htmlClass classes.contentCenterY
-            :: Internal.htmlClass "se-button"
+            :: Internal.htmlClass classes.seButton
             :: Element.pointer
             :: focusDefault attrs
             :: Internal.Describe Internal.Button
