@@ -2,8 +2,6 @@ module Internal.Model exposing (..)
 
 {-| -}
 
-import Html exposing (Html)
-import Html.Attributes
 import Internal.Flag as Flag exposing (Flag)
 import Internal.Style exposing (classes)
 import Json.Encode as Json
@@ -13,10 +11,10 @@ import VirtualDom
 
 
 type Element msg
-    = Unstyled (LayoutContext -> Html msg)
+    = Unstyled (LayoutContext -> VirtualDom.Node msg)
     | Styled
         { styles : List Style
-        , html : Maybe String -> LayoutContext -> Html msg
+        , html : Maybe String -> LayoutContext -> VirtualDom.Node msg
         }
     | Text String
     | Empty
@@ -101,7 +99,7 @@ type Transformation
 
 type Attribute aligned msg
     = NoAttribute
-    | Attr (Html.Attribute msg)
+    | Attr (VirtualDom.Attribute msg)
     | Describe Description
       -- invalidation key and literal class
     | Class Flag String
@@ -195,7 +193,7 @@ type NodeName
 
 type alias Gathered msg =
     { node : NodeName
-    , attributes : List (Html.Attribute msg)
+    , attributes : List (VirtualDom.Attribute msg)
     , styles : List Style
     , alignment : Aligned
     , width : Maybe Length
@@ -233,8 +231,12 @@ htmlClass cls =
     Attr <| VirtualDom.property "className" (Json.string cls)
 
 
+vDomClass cls =
+    VirtualDom.property "className" (Json.string cls)
+
+
 {-| -}
-unstyled : Html msg -> Element msg
+unstyled : VirtualDom.Node msg -> Element msg
 unstyled =
     Unstyled << always
 
@@ -254,7 +256,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
 
                             Just stylesheet ->
                                 ( "stylesheet"
-                                , VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ Html.text stylesheet ]
+                                , VirtualDom.node "style" [ vDomClass "stylesheet" ] [ VirtualDom.text stylesheet ]
                                 )
                                     :: keyed
                         )
@@ -267,7 +269,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                                 unkeyed
 
                             Just stylesheet ->
-                                VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ Html.text stylesheet ] :: unkeyed
+                                VirtualDom.node "style" [ vDomClass "stylesheet" ] [ VirtualDom.text stylesheet ] :: unkeyed
                         )
 
         html =
@@ -281,7 +283,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                 Embedded nodeName internal ->
                     VirtualDom.node nodeName
                         attributes
-                        [ createNode internal [ Html.Attributes.class (classes.any ++ " " ++ classes.single) ] styles
+                        [ createNode internal [ vDomClass (classes.any ++ " " ++ classes.single) ] styles
                         ]
     in
     case context of
@@ -296,7 +298,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                             VirtualDom.node
                                 "u"
                                 -- "alignRight"
-                                [ Html.Attributes.class
+                                [ vDomClass
                                     (String.join " "
                                         [ classes.any
                                         , classes.single
@@ -312,7 +314,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                             VirtualDom.node
                                 "s"
                                 -- "centerX"
-                                [ Html.Attributes.class
+                                [ vDomClass
                                     (String.join " "
                                         [ classes.any
                                         , classes.single
@@ -338,7 +340,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                             VirtualDom.node
                                 -- "centerY"
                                 "s"
-                                [ Html.Attributes.class
+                                [ vDomClass
                                     --"se el container align-container-center-y"
                                     (String.join " "
                                         [ classes.any
@@ -354,7 +356,7 @@ renderNode { alignment, attributes, node, width, height } children styles contex
                             VirtualDom.node
                                 "u"
                                 -- "alignBottom"
-                                [ Html.Attributes.class
+                                [ vDomClass
                                     -- "se el container align-container-bottom"
                                     (String.join " "
                                         [ classes.any
@@ -816,16 +818,16 @@ gatherAttributes attr gathered =
                         { gathered | node = addNodeName "h6" gathered.node }
 
                 Button ->
-                    { gathered | attributes = Html.Attributes.attribute "role" "button" :: gathered.attributes }
+                    { gathered | attributes = VirtualDom.attribute "role" "button" :: gathered.attributes }
 
                 Label label ->
-                    { gathered | attributes = Html.Attributes.attribute "aria-label" label :: gathered.attributes }
+                    { gathered | attributes = VirtualDom.attribute "aria-label" label :: gathered.attributes }
 
                 LivePolite ->
-                    { gathered | attributes = Html.Attributes.attribute "aria-live" "polite" :: gathered.attributes }
+                    { gathered | attributes = VirtualDom.attribute "aria-live" "polite" :: gathered.attributes }
 
                 LiveAssertive ->
-                    { gathered | attributes = Html.Attributes.attribute "aria-live" "assertive" :: gathered.attributes }
+                    { gathered | attributes = VirtualDom.attribute "aria-live" "assertive" :: gathered.attributes }
 
         Nearby location elem ->
             let
@@ -962,12 +964,12 @@ initGathered maybeNodeName =
 
 {-| Because of how it's constructed, we know that NearbyGroup is nonempty
 -}
-renderNearbyGroupAbsolute : List ( Location, Element msg ) -> List (Html msg)
+renderNearbyGroupAbsolute : List ( Location, Element msg ) -> List (VirtualDom.Node msg)
 renderNearbyGroupAbsolute nearbys =
     let
         create ( location, elem ) =
-            Html.div
-                [ Html.Attributes.class <|
+            VirtualDom.node "div"
+                [ vDomClass <|
                     case location of
                         Above ->
                             String.join " "
@@ -995,7 +997,7 @@ renderNearbyGroupAbsolute nearbys =
                 ]
                 [ case elem of
                     Empty ->
-                        Html.text ""
+                        VirtualDom.text ""
 
                     Text str ->
                         textElement str
@@ -1193,7 +1195,7 @@ finalize gathered =
     { gathered
         | styles = newStyles
         , attributes =
-            Html.Attributes.class (String.join " " newClasses) :: gathered.attributes
+            vDomClass (String.join " " newClasses) :: gathered.attributes
     }
 
 
@@ -1269,7 +1271,7 @@ asElement embedMode children context rendered =
                     -- Same if it's a column or row with one child and width-content, height-content
                     -- interferes with css grid
                     -- if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
-                    --     ( Html.text str
+                    --     ( VirtualDom.text str
                     --         :: htmls
                     --     , existingStyles
                     --     ) else
@@ -1304,7 +1306,7 @@ asElement embedMode children context rendered =
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
                     if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
-                        ( ( key, Html.text str )
+                        ( ( key, VirtualDom.text str )
                             :: htmls
                         , existingStyles
                         )
@@ -1356,13 +1358,13 @@ asElement embedMode children context rendered =
                             case htmlChildren of
                                 Keyed keyed ->
                                     Keyed <|
-                                        ( "static-stylesheet", Html.node "style" [] [ Html.text Internal.Style.rules ] )
+                                        ( "static-stylesheet", VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ] )
                                             :: ( "dynamic-stylesheet", toStyleSheet options styles )
                                             :: keyed
 
                                 Unkeyed unkeyed ->
                                     Unkeyed
-                                        (Html.node "style" [] [ Html.text Internal.Style.rules ]
+                                        (VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
                                             :: toStyleSheet options styles
                                             :: unkeyed
                                         )
@@ -1371,14 +1373,14 @@ asElement embedMode children context rendered =
                             case htmlChildren of
                                 Keyed keyed ->
                                     Keyed <|
-                                        ( "static-stylesheet", Html.node "style" [] [ Html.text Internal.Style.rules ] )
+                                        ( "static-stylesheet", VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ] )
                                             :: ( "dynamic-stylesheet", toStyleSheet options styles )
                                             :: keyed
                                             ++ List.map (\x -> ( "nearby-elements-pls", x )) nearby
 
                                 Unkeyed unkeyed ->
                                     Unkeyed
-                                        (Html.node "style" [] [ Html.text Internal.Style.rules ]
+                                        (VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
                                             :: toStyleSheet options styles
                                             :: unkeyed
                                             ++ nearby
@@ -1598,7 +1600,7 @@ type Children x
     | Keyed (List ( String, x ))
 
 
-toHtml : OptionRecord -> Element msg -> Html msg
+toHtml : OptionRecord -> Element msg -> VirtualDom.Node msg
 toHtml options el =
     case el of
         Unstyled html ->
@@ -1622,7 +1624,7 @@ toHtml options el =
 
 
 {-| -}
-renderRoot : List Option -> List (Attribute aligned msg) -> Element msg -> Html msg
+renderRoot : List Option -> List (Attribute aligned msg) -> Element msg -> VirtualDom.Node msg
 renderRoot optionList attributes child =
     let
         options =
@@ -1888,7 +1890,7 @@ reduceStyles style ( cache, existing ) =
 
 toStyleSheet : OptionRecord -> List Style -> VirtualDom.Node msg
 toStyleSheet options styleSheet =
-    VirtualDom.node "style" [] [ Html.text (toStyleSheetString options styleSheet) ]
+    VirtualDom.node "style" [] [ VirtualDom.text (toStyleSheetString options styleSheet) ]
 
 
 toStyleSheetString : OptionRecord -> List Style -> String
@@ -2634,11 +2636,11 @@ map fn el =
         Styled styled ->
             Styled
                 { styles = styled.styles
-                , html = \add context -> Html.map fn <| styled.html add context
+                , html = \add context -> VirtualDom.map fn <| styled.html add context
                 }
 
         Unstyled html ->
-            Unstyled (Html.map fn << html)
+            Unstyled (VirtualDom.map fn << html)
 
         Text str ->
             Text str
@@ -2678,7 +2680,7 @@ mapAttr fn attr =
             Nearby location (map fn elem)
 
         Attr htmlAttr ->
-            Attr (Html.Attributes.map fn htmlAttr)
+            Attr (VirtualDom.mapAttribute fn htmlAttr)
 
         TextShadow shadow ->
             TextShadow shadow
@@ -2722,7 +2724,7 @@ mapAttrFromStyle fn attr =
             Nearby location (map fn elem)
 
         Attr htmlAttr ->
-            Attr (Html.Attributes.map fn htmlAttr)
+            Attr (VirtualDom.mapAttribute fn htmlAttr)
 
         TextShadow shadow ->
             TextShadow shadow

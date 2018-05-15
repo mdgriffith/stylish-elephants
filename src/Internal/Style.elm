@@ -1,8 +1,6 @@
-module Internal.Style exposing (classes, dot, rules, rulesElement)
+module Internal.Style exposing (classes, dot, rules)
 
 {-| -}
-
-import Html
 
 
 type Class
@@ -629,16 +627,6 @@ viewportRules =
     height: 100%;
     width: 100%;
 } """ ++ rules
-
-
-rulesElement : Html.Html msg
-rulesElement =
-    Html.node "style" [] [ Html.text rules ]
-
-
-viewportRulesElement : Html.Html msg
-viewportRulesElement =
-    Html.node "style" [] [ Html.text viewportRules ]
 
 
 describeText : String -> List Rule -> Rule
