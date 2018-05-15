@@ -41,8 +41,8 @@ row attrs children =
         Internal.NoStyleSheet
         Internal.asRow
         Nothing
-        (Internal.Class "x-content-align" classes.contentLeft
-            :: Internal.Class "y-content-align" classes.contentCenterY
+        (Internal.htmlClass classes.contentLeft
+            :: Internal.htmlClass classes.contentCenterY
             :: width fill
             :: attrs
         )
@@ -55,8 +55,8 @@ column attrs children =
     Internal.element Internal.NoStyleSheet
         Internal.asColumn
         Nothing
-        (Internal.Class "y-content-align" classes.contentTop
-            :: Internal.Class "x-content-align" classes.contentLeft
+        (Internal.htmlClass classes.contentTop
+            :: Internal.htmlClass classes.contentLeft
             :: height fill
             :: width fill
             :: attrs

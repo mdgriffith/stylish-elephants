@@ -60,6 +60,7 @@ import Element.Region as Region
 import Html
 import Html.Attributes
 import Html.Events
+import Internal.Flag as Flag
 import Internal.Grid
 import Internal.Model as Internal
 import Internal.Style exposing (classes)
@@ -206,9 +207,9 @@ button attrs { onPress, label } =
         Nothing
         (Element.width Element.shrink
             :: Element.height Element.shrink
-            :: Internal.Class "x-content-align" classes.contentCenterX
-            :: Internal.Class "y-content-align" classes.contentCenterY
-            :: Internal.Class "button" "se-button"
+            :: Internal.htmlClass classes.contentCenterX
+            :: Internal.htmlClass classes.contentCenterY
+            :: Internal.htmlClass "se-button"
             :: Element.pointer
             :: focusDefault attrs
             :: Internal.Describe Internal.Button
@@ -235,7 +236,7 @@ focusDefault attrs =
 
 hasFocusStyle attr =
     case attr of
-        Internal.StyleClass (Internal.PseudoSelector Internal.Focus _) ->
+        Internal.StyleClass _ (Internal.PseudoSelector Internal.Focus _) ->
             True
 
         _ ->
@@ -628,7 +629,7 @@ textHelper textInput attrs textOptions =
                                                     Just i ->
                                                         found
 
-                                            Internal.StyleClass (Internal.PaddingStyle t r b l) ->
+                                            Internal.StyleClass _ (Internal.PaddingStyle t r b l) ->
                                                 case found.maybePadding of
                                                     Nothing ->
                                                         { found
@@ -639,7 +640,7 @@ textHelper textInput attrs textOptions =
                                                     _ ->
                                                         found
 
-                                            Internal.StyleClass (Internal.SpacingStyle x y) ->
+                                            Internal.StyleClass _ (Internal.SpacingStyle x y) ->
                                                 case found.maybeSpacing of
                                                     Nothing ->
                                                         { found
@@ -691,7 +692,7 @@ textHelper textInput attrs textOptions =
                                             Just (Padding t r b l) ->
                                                 "calc(" ++ String.fromInt count ++ "em + " ++ String.fromInt ((t + b) + (count * spacing)) ++ "px)"
                                 in
-                                Internal.StyleClass
+                                Internal.StyleClass Flag.height
                                     (Internal.Single ("textarea-height-" ++ String.fromInt newlineCount)
                                         "height"
                                         (heightValue newlineCount)
@@ -720,13 +721,13 @@ textHelper textInput attrs textOptions =
                         Internal.AlignY _ ->
                             True
 
-                        Internal.StyleClass (Internal.SpacingStyle _ _) ->
+                        Internal.StyleClass _ (Internal.SpacingStyle _ _) ->
                             True
 
-                        Internal.StyleClass (Internal.FontSize _) ->
+                        Internal.StyleClass _ (Internal.FontSize _) ->
                             True
 
-                        Internal.StyleClass (Internal.FontFamily _ _) ->
+                        Internal.StyleClass _ (Internal.FontFamily _ _) ->
                             True
 
                         _ ->
@@ -751,7 +752,7 @@ textHelper textInput attrs textOptions =
             Internal.get attributes <|
                 \attr ->
                     case attr of
-                        Internal.StyleClass (Internal.PaddingStyle _ _ _ _) ->
+                        Internal.StyleClass _ (Internal.PaddingStyle _ _ _ _) ->
                             True
 
                         _ ->
@@ -768,7 +769,7 @@ textHelper textInput attrs textOptions =
             , inputChildren
             )
     in
-    onGrid (Internal.Class "cursor" "cursor-text" :: parentAttributes)
+    onGrid (Internal.Class Flag.cursor "cursor-text" :: parentAttributes)
         (List.filterMap identity
             [ case textOptions.label of
                 Label pos labelAttrs child ->
@@ -792,7 +793,7 @@ textHelper textInput attrs textOptions =
                         Just
                             ( Internal.Grid.InFront
                             , Font.color charcoal
-                                :: Internal.Class "text-selection" classes.noTextSelection
+                                :: Internal.htmlClass classes.noTextSelection
                                 :: defaultTextPadding
                                 :: Element.height Element.fill
                                 :: Element.width Element.fill
@@ -1295,10 +1296,10 @@ radioHelper orientation attrs input =
                 Internal.get attrs <|
                     \attr ->
                         case attr of
-                            Internal.StyleClass (Internal.Transparency _ _) ->
+                            Internal.StyleClass _ (Internal.Transparency _ _) ->
                                 True
 
-                            Internal.Class "hidden" "hidden" ->
+                            Internal.Class _ "hidden" ->
                                 True
 
                             _ ->
@@ -1311,10 +1312,10 @@ radioHelper orientation attrs input =
                         Internal.get labelAttrs <|
                             \attr ->
                                 case attr of
-                                    Internal.StyleClass (Internal.Transparency _ _) ->
+                                    Internal.StyleClass _ (Internal.Transparency _ _) ->
                                         True
 
-                                    Internal.Class "hidden" "hidden" ->
+                                    Internal.Class _ "hidden" ->
                                         True
 
                                     _ ->
@@ -1327,7 +1328,7 @@ radioHelper orientation attrs input =
                         List.filterMap
                             (\attr ->
                                 case attr of
-                                    Internal.StyleClass style ->
+                                    Internal.StyleClass _ style ->
                                         case style of
                                             Internal.PseudoSelector pseudo styles ->
                                                 let
@@ -1341,13 +1342,24 @@ radioHelper orientation attrs input =
 
                                                             _ ->
                                                                 False
+
+                                                    flag =
+                                                        case pseudo of
+                                                            Internal.Hover ->
+                                                                Flag.hover
+
+                                                            Internal.Focus ->
+                                                                Flag.focus
+
+                                                            Internal.Active ->
+                                                                Flag.active
                                                 in
                                                 case transparent of
                                                     [] ->
                                                         Nothing
 
                                                     _ ->
-                                                        Just <| Internal.StyleClass <| Internal.PseudoSelector pseudo transparent
+                                                        Just <| Internal.StyleClass flag <| Internal.PseudoSelector pseudo transparent
 
                                             _ ->
                                                 Nothing
@@ -1357,7 +1369,7 @@ radioHelper orientation attrs input =
                             )
                             attrs
                 in
-                Internal.StyleClass (Internal.Transparency "transparent" 1.0) :: pseudos
+                Internal.StyleClass Flag.transparency (Internal.Transparency "transparent" 1.0) :: pseudos
             else
                 []
 

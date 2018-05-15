@@ -256,6 +256,7 @@ If these are present, the element will add a scrollbar if necessary.
 
 import Html exposing (Html)
 import Html.Attributes
+import Internal.Flag as Flag exposing (Flag)
 import Internal.Model as Internal
 import Internal.Style exposing (classes)
 
@@ -407,9 +408,15 @@ layout =
 layoutWith : { options : List Option } -> List (Attribute msg) -> Element msg -> Html msg
 layoutWith { options } attrs child =
     Internal.renderRoot options
-        (Internal.htmlClass (String.join " " [ classes.root, classes.any, classes.single ])
-            :: Internal.Class "x-content-align" classes.contentCenterX
-            :: Internal.Class "y-content-align" classes.contentCenterY
+        (Internal.htmlClass
+            (String.join " "
+                [ classes.root
+                , classes.any
+                , classes.single
+                , classes.contentCenterX
+                , classes.contentCenterY
+                ]
+            )
             :: (Internal.rootStyle ++ attrs)
         )
         child
@@ -540,8 +547,8 @@ row attrs children =
         Internal.noStyleSheet
         Internal.asRow
         Nothing
-        (Internal.Class "x-content-align" classes.contentLeft
-            :: Internal.Class "y-content-align" classes.contentCenterY
+        (Internal.htmlClass classes.contentLeft
+            :: Internal.htmlClass classes.contentCenterY
             :: width fill
             :: height shrink
             :: attrs
@@ -555,8 +562,8 @@ column attrs children =
     Internal.element Internal.noStyleSheet
         Internal.asColumn
         Nothing
-        (Internal.Class "y-content-align" classes.contentTop
-            :: Internal.Class "x-content-align" classes.contentLeft
+        (Internal.htmlClass classes.contentTop
+            :: Internal.htmlClass classes.contentLeft
             :: height fill
             :: width fill
             :: attrs
@@ -693,7 +700,7 @@ tableHelper attrs config =
                    )
 
         template =
-            Internal.StyleClass <|
+            Internal.StyleClass Flag.gridTemplate <|
                 Internal.GridTemplateStyle
                     { spacing = ( px sX, px sY )
                     , columns = List.repeat (List.length config.columns) (Internal.Fill 1)
@@ -705,7 +712,7 @@ tableHelper attrs config =
                 Internal.noStyleSheet
                 Internal.asEl
                 Nothing
-                [ Internal.StyleClass
+                [ Internal.StyleClass Flag.gridPosition
                     (Internal.GridPosition
                         { row = rowLevel
                         , col = columnLevel
@@ -975,8 +982,8 @@ link attrs { url, label } =
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" classes.contentCenterX
-            :: Internal.Class "y-content-align" classes.contentCenterY
+            :: Internal.htmlClass classes.contentCenterX
+            :: Internal.htmlClass classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -993,8 +1000,8 @@ newTabLink attrs { url, label } =
             :: Internal.Attr (Html.Attributes.target "_blank")
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" classes.contentCenterX
-            :: Internal.Class "y-content-align" classes.contentCenterY
+            :: Internal.htmlClass classes.contentCenterX
+            :: Internal.htmlClass classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -1011,8 +1018,8 @@ download attrs { url, label } =
             :: Internal.Attr (Html.Attributes.download "")
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" classes.contentCenterX
-            :: Internal.Class "y-content-align" classes.contentCenterY
+            :: Internal.htmlClass classes.contentCenterX
+            :: Internal.htmlClass classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -1029,8 +1036,8 @@ downloadAs attrs { url, filename, label } =
             :: Internal.Attr (Html.Attributes.download filename)
             :: width shrink
             :: height shrink
-            :: Internal.Class "x-content-align" classes.contentCenterX
-            :: Internal.Class "y-content-align" classes.contentCenterY
+            :: Internal.htmlClass classes.contentCenterX
+            :: Internal.htmlClass classes.contentCenterY
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -1087,56 +1094,56 @@ height =
 {-| -}
 scale : Float -> Attr decorative msg
 scale n =
-    Internal.StyleClass (Internal.Transform (Internal.Scale n n 1))
+    Internal.StyleClass Flag.scale (Internal.Transform (Internal.Scale n n 1))
 
 
 {-| -}
 rotate : Float -> Attr decorative msg
 rotate angle =
-    Internal.StyleClass (Internal.Transform (Internal.Rotate 0 0 1 angle))
+    Internal.StyleClass Flag.rotate (Internal.Transform (Internal.Rotate 0 0 1 angle))
 
 
 {-| -}
 moveUp : Float -> Attr decorative msg
 moveUp y =
-    Internal.StyleClass (Internal.Transform (Internal.Move Nothing (Just (negate y)) Nothing))
+    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.Move Nothing (Just (negate y)) Nothing))
 
 
 {-| -}
 moveDown : Float -> Attr decorative msg
 moveDown y =
-    Internal.StyleClass (Internal.Transform (Internal.Move Nothing (Just y) Nothing))
+    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.Move Nothing (Just y) Nothing))
 
 
 {-| -}
 moveRight : Float -> Attr decorative msg
 moveRight x =
-    Internal.StyleClass (Internal.Transform (Internal.Move (Just x) Nothing Nothing))
+    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.Move (Just x) Nothing Nothing))
 
 
 {-| -}
 moveLeft : Float -> Attr decorative msg
 moveLeft x =
-    Internal.StyleClass (Internal.Transform (Internal.Move (Just (negate x)) Nothing Nothing))
+    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.Move (Just (negate x)) Nothing Nothing))
 
 
 {-| -}
 padding : Int -> Attribute msg
 padding x =
-    Internal.StyleClass (Internal.PaddingStyle x x x x)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle x x x x)
 
 
 {-| Set horizontal and vertical padding.
 -}
 paddingXY : Int -> Int -> Attribute msg
 paddingXY x y =
-    Internal.StyleClass (Internal.PaddingStyle y x y x)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle y x y x)
 
 
 {-| -}
 paddingEach : { bottom : Int, left : Int, right : Int, top : Int } -> Attribute msg
 paddingEach { top, right, bottom, left } =
-    Internal.StyleClass (Internal.PaddingStyle top right bottom left)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle top right bottom left)
 
 
 {-| -}
@@ -1178,13 +1185,13 @@ alignRight =
 {-| -}
 spaceEvenly : Attribute msg
 spaceEvenly =
-    Internal.Class "x-align" (.spaceEvenly Internal.Style.classes)
+    Internal.Class Flag.xAlign (.spaceEvenly Internal.Style.classes)
 
 
 {-| -}
 spacing : Int -> Attribute msg
 spacing x =
-    Internal.StyleClass (Internal.SpacingStyle x x)
+    Internal.StyleClass Flag.spacing (Internal.SpacingStyle x x)
 
 
 {-| In the majority of cases you'll just need to use `spacing`, which will work as intended.
@@ -1194,7 +1201,7 @@ However for some layouts, like `textColumn`, you may want to set a different spa
 -}
 spacingXY : Int -> Int -> Attribute msg
 spacingXY x y =
-    Internal.StyleClass (Internal.SpacingStyle x y)
+    Internal.StyleClass Flag.spacing (Internal.SpacingStyle x y)
 
 
 {-| Make an element transparent and have it ignore any mouse or touch events, though it will stil take up space.
@@ -1202,9 +1209,9 @@ spacingXY x y =
 transparent : Bool -> Attr decorative msg
 transparent on =
     if on then
-        Internal.StyleClass (Internal.Transparency "transparent" 1.0)
+        Internal.StyleClass Flag.transparency (Internal.Transparency "transparent" 1.0)
     else
-        Internal.StyleClass (Internal.Transparency "visible" 0.0)
+        Internal.StyleClass Flag.transparency (Internal.Transparency "visible" 0.0)
 
 
 {-| A capped value between 0.0 and 1.0, where 0.0 is transparent and 1.0 is fully opaque.
@@ -1221,7 +1228,7 @@ alpha o =
                 |> min 1.0
                 |> (\x -> 1 - x)
     in
-    Internal.StyleClass <| Internal.Transparency ("transparency-" ++ Internal.floatClass transparency) transparency
+    Internal.StyleClass Flag.transparency <| Internal.Transparency ("transparency-" ++ Internal.floatClass transparency) transparency
 
 
 
@@ -1237,44 +1244,44 @@ alpha o =
 {-| -}
 scrollbars : Attribute msg
 scrollbars =
-    Internal.Class "overflow" classes.scrollbars
+    Internal.Class Flag.overflow classes.scrollbars
 
 
 {-| -}
 scrollbarY : Attribute msg
 scrollbarY =
-    Internal.Class "overflow" classes.scrollbarsY
+    Internal.Class Flag.overflow classes.scrollbarsY
 
 
 {-| -}
 scrollbarX : Attribute msg
 scrollbarX =
-    Internal.Class "overflow" classes.scrollbarsX
+    Internal.Class Flag.overflow classes.scrollbarsX
 
 
 {-| -}
 clip : Attribute msg
 clip =
-    Internal.Class "overflow" classes.clip
+    Internal.Class Flag.overflow classes.clip
 
 
 {-| -}
 clipY : Attribute msg
 clipY =
-    Internal.Class "overflow" classes.clipY
+    Internal.Class Flag.overflow classes.clipY
 
 
 {-| -}
 clipX : Attribute msg
 clipX =
-    Internal.Class "overflow" classes.clipX
+    Internal.Class Flag.overflow classes.clipX
 
 
 {-| Set the cursor to the pointer hand.
 -}
 pointer : Attribute msg
 pointer =
-    Internal.Class "cursor" classes.cursorPointer
+    Internal.Class Flag.cursor classes.cursorPointer
 
 
 {-| -}
@@ -1330,7 +1337,7 @@ modular normal ratio rescale =
 {-| -}
 mouseOver : List Decoration -> Attribute msg
 mouseOver decs =
-    Internal.StyleClass <|
+    Internal.StyleClass Flag.hover <|
         Internal.PseudoSelector Internal.Hover
             (decs
                 |> Internal.unwrapDecorations
@@ -1341,7 +1348,7 @@ mouseOver decs =
 {-| -}
 mouseDown : List Decoration -> Attribute msg
 mouseDown decs =
-    Internal.StyleClass <|
+    Internal.StyleClass Flag.active <|
         Internal.PseudoSelector Internal.Active
             (decs
                 |> Internal.unwrapDecorations
@@ -1352,7 +1359,7 @@ mouseDown decs =
 {-| -}
 focused : List Decoration -> Attribute msg
 focused decs =
-    Internal.StyleClass <|
+    Internal.StyleClass Flag.focus <|
         Internal.PseudoSelector Internal.Focus
             (decs
                 |> Internal.unwrapDecorations

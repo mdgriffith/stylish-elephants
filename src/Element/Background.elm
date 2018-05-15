@@ -23,48 +23,49 @@ module Element.Background
 -}
 
 import Element exposing (Attr, Attribute, Color)
+import Internal.Flag as Flag
 import Internal.Model as Internal
 
 
 {-| -}
 color : Color -> Attr decorative msg
 color clr =
-    Internal.StyleClass (Internal.Colored ("bg-" ++ Internal.formatColorClass clr) "background-color" clr)
+    Internal.StyleClass Flag.bgColor (Internal.Colored ("bg-" ++ Internal.formatColorClass clr) "background-color" clr)
 
 
 {-| Resize the image to fit the containing element while maintaining proportions and cropping the overflow.
 -}
 image : String -> Attribute msg
 image src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / cover no-repeat"))
+    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / cover no-repeat"))
 
 
 {-| A centered background image that keeps it's natural propostions, but scales to fit the space.
 -}
 uncropped : String -> Attribute msg
 uncropped src =
-    Internal.StyleClass (Internal.Single ("bg-fitted-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / contain no-repeat"))
+    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-fitted-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / contain no-repeat"))
 
 
 {-| Tile an image in the x and y axes.
 -}
 tiled : String -> Attribute msg
 tiled src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat"))
+    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat"))
 
 
 {-| Tile an image in the x axis.
 -}
 tiledX : String -> Attribute msg
 tiledX src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-x"))
+    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-x"))
 
 
 {-| Tile an image in the y axis.
 -}
 tiledY : String -> Attribute msg
 tiledY src =
-    Internal.StyleClass (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-y"))
+    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-y"))
 
 
 type Direction
@@ -106,7 +107,7 @@ The colors will be evenly spaced.
 -}
 gradient : Float -> List Color -> Attribute msg
 gradient angle colors =
-    Internal.StyleClass <|
+    Internal.StyleClass Flag.bgGradient <|
         Internal.Single ("bg-gradient-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass colors))
             "background"
             ("linear-gradient(" ++ (String.join ", " <| (String.fromFloat angle ++ "rad") :: List.map Internal.formatColor colors) ++ ")")

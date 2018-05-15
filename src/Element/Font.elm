@@ -103,6 +103,7 @@ module Element.Font
 -}
 
 import Element exposing (Attr, Attribute, Color)
+import Internal.Flag as Flag
 import Internal.Model as Internal
 import Internal.Style exposing (classes)
 
@@ -115,7 +116,7 @@ type alias Font =
 {-| -}
 color : Color -> Attr decorative msg
 color fontColor =
-    Internal.StyleClass (Internal.Colored ("font-color-" ++ Internal.formatColorClass fontColor) "color" fontColor)
+    Internal.StyleClass Flag.fontColor (Internal.Colored ("font-color-" ++ Internal.formatColorClass fontColor) "color" fontColor)
 
 
 {-|
@@ -135,7 +136,7 @@ color fontColor =
 -}
 family : List Font -> Attribute msg
 family families =
-    Internal.StyleClass <| Internal.FontFamily (List.foldl Internal.renderFontClassName "font-" families) families
+    Internal.StyleClass Flag.fontFamily <| Internal.FontFamily (List.foldl Internal.renderFontClassName "font-" families) families
 
 
 {-| -}
@@ -172,14 +173,14 @@ external { url, name } =
 -}
 size : Int -> Attr decorative msg
 size i =
-    Internal.StyleClass (Internal.FontSize i)
+    Internal.StyleClass Flag.fontSize (Internal.FontSize i)
 
 
 {-| In `px`.
 -}
 letterSpacing : Float -> Attribute msg
 letterSpacing offset =
-    Internal.StyleClass <|
+    Internal.StyleClass Flag.letterSpacing <|
         Internal.Single
             ("letter-spacing-" ++ Internal.floatClass offset)
             "letter-spacing"
@@ -190,7 +191,7 @@ letterSpacing offset =
 -}
 wordSpacing : Float -> Attribute msg
 wordSpacing offset =
-    Internal.StyleClass <|
+    Internal.StyleClass Flag.wordSpacing <|
         Internal.Single ("word-spacing-" ++ Internal.floatClass offset) "word-spacing" (String.fromFloat offset ++ "px")
 
 
@@ -198,27 +199,27 @@ wordSpacing offset =
 -}
 alignLeft : Attribute msg
 alignLeft =
-    Internal.Class classes.textLeft classes.textLeft
+    Internal.Class Flag.fontAlignment classes.textLeft
 
 
 {-| Align the font to the right.
 -}
 alignRight : Attribute msg
 alignRight =
-    Internal.Class classes.textRight classes.textRight
+    Internal.Class Flag.fontAlignment classes.textRight
 
 
 {-| Center align the font.
 -}
 center : Attribute msg
 center =
-    Internal.Class classes.textCenter classes.textCenter
+    Internal.Class Flag.fontAlignment classes.textCenter
 
 
 {-| -}
 justify : Attribute msg
 justify =
-    Internal.Class classes.textJustify classes.textJustify
+    Internal.Class Flag.fontAlignment classes.textJustify
 
 
 
@@ -231,80 +232,80 @@ justify =
 {-| -}
 underline : Attribute msg
 underline =
-    Internal.Class classes.underline classes.underline
+    Internal.htmlClass classes.underline
 
 
 {-| -}
 strike : Attribute msg
 strike =
-    Internal.Class classes.strike classes.strike
+    Internal.htmlClass classes.strike
 
 
 {-| -}
 italic : Attribute msg
 italic =
-    Internal.Class classes.italic classes.italic
+    Internal.htmlClass classes.italic
 
 
 {-| -}
 bold : Attribute msg
 bold =
-    Internal.Class classes.bold classes.bold
+    Internal.Class Flag.fontWeight classes.bold
 
 
 {-| -}
 light : Attribute msg
 light =
-    Internal.Class classes.textLight classes.textLight
+    Internal.Class Flag.fontWeight classes.textLight
 
 
 {-| -}
 hairline : Attribute msg
 hairline =
-    Internal.Class classes.textThin classes.textThin
+    Internal.Class Flag.fontWeight classes.textThin
 
 
 {-| -}
 extraLight : Attribute msg
 extraLight =
-    Internal.Class classes.textExtraLight classes.textExtraLight
+    Internal.Class Flag.fontWeight classes.textExtraLight
 
 
 {-| -}
 regular : Attribute msg
 regular =
-    Internal.Class classes.textNormalWeight classes.textNormalWeight
+    Internal.Class Flag.fontWeight classes.textNormalWeight
 
 
 {-| -}
 semiBold : Attribute msg
 semiBold =
-    Internal.Class classes.textSemiBold classes.textSemiBold
+    Internal.Class Flag.fontWeight classes.textSemiBold
 
 
 {-| -}
 medium : Attribute msg
 medium =
-    Internal.Class classes.textMedium classes.textMedium
+    Internal.Class Flag.fontWeight classes.textMedium
 
 
 {-| -}
 extraBold : Attribute msg
 extraBold =
-    Internal.Class classes.textExtraBold classes.textExtraBold
+    Internal.Class Flag.fontWeight classes.textExtraBold
 
 
 {-| -}
 heavy : Attribute msg
 heavy =
-    Internal.Class classes.textHeavy classes.textHeavy
+    Internal.Class Flag.fontWeight classes.textHeavy
 
 
 {-| This will reset bold and italic.
 -}
 unitalicized : Attribute msg
 unitalicized =
-    Internal.Class classes.textUnitalicized classes.textUnitalicized
+    Internal.htmlClass classes.textUnitalicized
 
 
 {-| -}

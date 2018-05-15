@@ -42,6 +42,7 @@ module Element.Border
 -}
 
 import Element exposing (Attr, Attribute, Color)
+import Internal.Flag as Flag
 import Internal.Model as Internal
 import Internal.Style as Style exposing (classes)
 
@@ -49,26 +50,26 @@ import Internal.Style as Style exposing (classes)
 {-| -}
 color : Color -> Attr decorative msg
 color clr =
-    Internal.StyleClass (Internal.Colored ("border-color-" ++ Internal.formatColorClass clr) "border-color" clr)
+    Internal.StyleClass Flag.borderColor (Internal.Colored ("border-color-" ++ Internal.formatColorClass clr) "border-color" clr)
 
 
 {-| -}
 width : Int -> Attribute msg
 width v =
-    Internal.StyleClass (Internal.Single ("border-" ++ String.fromInt v) "border-width" (String.fromInt v ++ "px"))
+    Internal.StyleClass Flag.borderWidth (Internal.Single ("border-" ++ String.fromInt v) "border-width" (String.fromInt v ++ "px"))
 
 
 {-| Set horizontal and vertical borders.
 -}
 widthXY : Int -> Int -> Attribute msg
 widthXY x y =
-    Internal.StyleClass (Internal.Single ("border-" ++ String.fromInt x ++ "-" ++ String.fromInt y) "border-width" (String.fromInt y ++ "px " ++ String.fromInt x ++ "px"))
+    Internal.StyleClass Flag.borderWidth (Internal.Single ("border-" ++ String.fromInt x ++ "-" ++ String.fromInt y) "border-width" (String.fromInt y ++ "px " ++ String.fromInt x ++ "px"))
 
 
 {-| -}
 widthEach : { bottom : Int, left : Int, right : Int, top : Int } -> Attribute msg
 widthEach { bottom, top, left, right } =
-    Internal.StyleClass
+    Internal.StyleClass Flag.borderWidth
         (Internal.Single ("border-" ++ String.fromInt top ++ "-" ++ String.fromInt right ++ String.fromInt bottom ++ "-" ++ String.fromInt left)
             "border-width"
             (String.fromInt top
@@ -94,32 +95,32 @@ widthEach { bottom, top, left, right } =
 {-| -}
 solid : Attribute msg
 solid =
-    Internal.Class "border" classes.borderSolid
+    Internal.Class Flag.borderStyle classes.borderSolid
 
 
 {-| -}
 dashed : Attribute msg
 dashed =
-    Internal.Class "border" classes.borderDashed
+    Internal.Class Flag.borderStyle classes.borderDashed
 
 
 {-| -}
 dotted : Attribute msg
 dotted =
-    Internal.Class "border" classes.borderDotted
+    Internal.Class Flag.borderStyle classes.borderDotted
 
 
 {-| Round all corners.
 -}
 rounded : Int -> Attribute msg
 rounded radius =
-    Internal.StyleClass (Internal.Single ("border-radius-" ++ String.fromInt radius) "border-radius" (String.fromInt radius ++ "px"))
+    Internal.StyleClass Flag.borderRound (Internal.Single ("border-radius-" ++ String.fromInt radius) "border-radius" (String.fromInt radius ++ "px"))
 
 
 {-| -}
 roundEach : { topLeft : Int, topRight : Int, bottomLeft : Int, bottomRight : Int } -> Attribute msg
 roundEach { topLeft, topRight, bottomLeft, bottomRight } =
-    Internal.StyleClass
+    Internal.StyleClass Flag.borderRound
         (Internal.Single ("border-radius-" ++ String.fromInt topLeft ++ "-" ++ String.fromInt topRight ++ String.fromInt bottomLeft ++ "-" ++ String.fromInt bottomRight)
             "border-radius"
             (String.fromInt topLeft

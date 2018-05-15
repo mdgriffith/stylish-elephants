@@ -7,6 +7,7 @@ A relatively positioned grid, means a 3x3 grid with the primary element in the c
 -}
 
 import Element
+import Internal.Flag as Flag
 import Internal.Model as Internal
 
 
@@ -161,7 +162,7 @@ createGrid ( spacingX, spacingY ) nearby =
         place pos el =
             build (rowCoord pos) (colCoord pos) spacingX spacingY el
     in
-    ( [ Internal.StyleClass
+    ( [ Internal.StyleClass Flag.gridTemplate
             (Internal.GridTemplateStyle
                 { spacing = ( Internal.Px spacingX, Internal.Px spacingY )
                 , columns =
@@ -186,7 +187,7 @@ createGrid ( spacingX, spacingY ) nearby =
                     Internal.element Internal.noStyleSheet
                         Internal.asEl
                         primaryNode
-                        (Internal.StyleClass
+                        (Internal.StyleClass Flag.gridPosition
                             (Internal.GridPosition
                                 { row = rows.primary
                                 , col = columns.primary
@@ -210,7 +211,7 @@ build : Int -> Int -> Int -> Int -> { a | attrs : List (Internal.Attribute align
 build rowCoord colCoord spacingX spacingY positioned =
     let
         attributes =
-            Internal.StyleClass
+            Internal.StyleClass Flag.gridPosition
                 (Internal.GridPosition
                     { row = rowCoord
                     , col = colCoord
@@ -218,7 +219,7 @@ build rowCoord colCoord spacingX spacingY positioned =
                     , height = positioned.height
                     }
                 )
-                :: Internal.StyleClass (Internal.SpacingStyle spacingX spacingY)
+                :: Internal.StyleClass Flag.spacing (Internal.SpacingStyle spacingX spacingY)
                 :: positioned.attrs
     in
     case positioned.layout of

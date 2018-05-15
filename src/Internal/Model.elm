@@ -4,6 +4,7 @@ module Internal.Model exposing (..)
 
 import Html exposing (Html)
 import Html.Attributes
+import Internal.Flag as Flag exposing (Flag)
 import Internal.Style exposing (classes)
 import Json.Encode as Json
 import Regex
@@ -26,7 +27,6 @@ type LayoutContext
     | AsColumn
     | AsEl
     | AsGrid
-      -- | AsGridEl
     | AsParagraph
     | AsTextColumn
 
@@ -104,9 +104,9 @@ type Attribute aligned msg
     | Attr (Html.Attribute msg)
     | Describe Description
       -- invalidation key and literal class
-    | Class String String
+    | Class Flag String
       -- invalidation key "border-color" as opposed to "border-color-10-10-10" that will be the key for the class
-    | StyleClass Style
+    | StyleClass Flag Style
     | AlignY VAlign
     | AlignX HAlign
     | Width Length
@@ -205,7 +205,7 @@ type alias Gathered msg =
     , boxShadows : Maybe ( String, String )
     , textShadows : Maybe ( String, String )
     , transform : Maybe (Decorated TransformationGroup)
-    , has : Set String
+    , has : Flag
     }
 
 
@@ -226,6 +226,11 @@ type alias TransformationGroup =
 
 type Rotation
     = Rotation Float Float Float Float
+
+
+htmlClass : String -> Attribute aligned msg
+htmlClass cls =
+    Attr <| VirtualDom.property "className" (Json.string cls)
 
 
 {-| -}
@@ -610,26 +615,22 @@ gatherAttributes attr gathered =
         NoAttribute ->
             gathered
 
-        Class key exactClassName ->
-            if Set.member key gathered.has then
+        Class flag exactClassName ->
+            if Flag.present flag gathered.has then
                 gathered
             else
                 { gathered
                     | attributes = classNameAttr exactClassName :: gathered.attributes
-                    , has = Set.insert key gathered.has
+                    , has = Flag.add flag gathered.has
                 }
 
         Attr attribute ->
             { gathered | attributes = attribute :: gathered.attributes }
 
-        StyleClass style ->
+        StyleClass flag style ->
             let
                 addNormalStyle styleProp gatheredProps =
-                    let
-                        key =
-                            styleKey styleProp
-                    in
-                    if Set.member key gatheredProps.has then
+                    if Flag.present flag gatheredProps.has then
                         gatheredProps
                     else
                         { gatheredProps
@@ -641,7 +642,7 @@ gatherAttributes attr gathered =
                                     _ ->
                                         classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
                             , styles = formatStyleClass styleProp :: gatheredProps.styles
-                            , has = Set.insert key gatheredProps.has
+                            , has = Flag.add flag gatheredProps.has
                         }
             in
             case style of
@@ -997,7 +998,7 @@ initGathered maybeNodeName =
     , filters = Nothing
     , boxShadows = Nothing
     , textShadows = Nothing
-    , has = Set.empty
+    , has = Flag.none
     }
 
 
@@ -1495,7 +1496,7 @@ filter attrs =
                     Attr attr ->
                         ( x :: found, has )
 
-                    StyleClass style ->
+                    StyleClass _ style ->
                         ( x :: found, has )
 
                     Width width ->
@@ -1569,7 +1570,7 @@ getSpacing attrs default =
 
                     Nothing ->
                         case attr of
-                            StyleClass (SpacingStyle x y) ->
+                            StyleClass _ (SpacingStyle x y) ->
                                 Just ( x, y )
 
                             _ ->
@@ -1590,7 +1591,7 @@ getSpacingAttribute attrs default =
 
                     Nothing ->
                         case attr of
-                            StyleClass (SpacingStyle x y) ->
+                            StyleClass _ (SpacingStyle x y) ->
                                 Just ( x, y )
 
                             _ ->
@@ -1598,7 +1599,7 @@ getSpacingAttribute attrs default =
             )
             Nothing
         |> Maybe.withDefault default
-        |> (\( x, y ) -> StyleClass (SpacingStyle x y))
+        |> (\( x, y ) -> StyleClass Flag.spacing (SpacingStyle x y))
 
 
 textElement : String -> VirtualDom.Node msg
@@ -1732,10 +1733,10 @@ rootStyle =
             , SansSerif
             ]
     in
-    [ StyleClass (Colored ("bg-color-" ++ formatColorClass (Rgba 1 1 1 0)) "background-color" (Rgba 1 1 1 0))
-    , StyleClass (Colored ("font-color-" ++ formatColorClass (Rgba 0 0 0 0)) "color" (Rgba 0 0 0 0))
-    , StyleClass (Single "font-size-20" "font-size" "20px")
-    , StyleClass <|
+    [ StyleClass Flag.bgColor (Colored ("bg-color-" ++ formatColorClass (Rgba 1 1 1 1)) "background-color" (Rgba 1 1 1 1))
+    , StyleClass Flag.fontColor (Colored ("font-color-" ++ formatColorClass (Rgba 0 0 0 1)) "color" (Rgba 0 0 0 1))
+    , StyleClass Flag.fontSize (Single "font-size-20" "font-size" "20px")
+    , StyleClass Flag.fontFamily <|
         FontFamily (List.foldl renderFontClassName "font-" families)
             families
     ]
@@ -1886,11 +1887,6 @@ optionsToRecord options =
             , mode = Nothing
             }
             options
-
-
-htmlClass : String -> Attribute aligned msg
-htmlClass cls =
-    Attr <| VirtualDom.property "className" (Json.string cls)
 
 
 renderFont : List Font -> String
@@ -2714,12 +2710,11 @@ mapAttr fn attr =
         Height x ->
             Height x
 
-        -- invalidation key "border-color" as opposed to "border-color-10-10-10" that will be the key for the class
         Class x y ->
             Class x y
 
-        StyleClass style ->
-            StyleClass style
+        StyleClass flag style ->
+            StyleClass flag style
 
         Nearby location elem ->
             Nearby location (map fn elem)
@@ -2762,8 +2757,8 @@ mapAttrFromStyle fn attr =
         Class x y ->
             Class x y
 
-        StyleClass style ->
-            StyleClass style
+        StyleClass flag style ->
+            StyleClass flag style
 
         Nearby location elem ->
             Nearby location (map fn elem)
@@ -2838,7 +2833,7 @@ tag label style =
 onlyStyles : Attribute aligned msg -> Maybe Style
 onlyStyles attr =
     case attr of
-        StyleClass style ->
+        StyleClass _ style ->
             Just style
 
         TextShadow shadow ->
