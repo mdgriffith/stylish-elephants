@@ -128,54 +128,6 @@ labelBelow =
     Label Internal.Grid.Below
 
 
-{-| -}
-warningRight : List (Attribute msg) -> Element msg -> Notice msg
-warningRight =
-    Notice Internal.Grid.OnRight
-
-
-{-| -}
-warningLeft : List (Attribute msg) -> Element msg -> Notice msg
-warningLeft =
-    Notice Internal.Grid.OnLeft
-
-
-{-| -}
-warningAbove : List (Attribute msg) -> Element msg -> Notice msg
-warningAbove =
-    Notice Internal.Grid.Above
-
-
-{-| -}
-warningBelow : List (Attribute msg) -> Element msg -> Notice msg
-warningBelow =
-    Notice Internal.Grid.Below
-
-
-{-| -}
-errorRight : List (Attribute msg) -> Element msg -> Notice msg
-errorRight =
-    Notice Internal.Grid.OnRight
-
-
-{-| -}
-errorLeft : List (Attribute msg) -> Element msg -> Notice msg
-errorLeft =
-    Notice Internal.Grid.OnLeft
-
-
-{-| -}
-errorAbove : List (Attribute msg) -> Element msg -> Notice msg
-errorAbove =
-    Notice Internal.Grid.Above
-
-
-{-| -}
-errorBelow : List (Attribute msg) -> Element msg -> Notice msg
-errorBelow =
-    Notice Internal.Grid.Below
-
-
 {-| A standard button.
 
 The `onPress` handler will be fired either `onClick` or when the element is focused and the enter key has been pressed.
@@ -340,27 +292,6 @@ checkbox attrs { label, icon, checked, onChange } =
                                 }
                                 group
                )
-         -- |> (\group ->
-         --         -- case notice of
-         --             -- Nothing ->
-         --                 group
-         --             -- Just (Notice position labelAttrs child) ->
-         --             --     place position
-         --             --         { layout = Internal.Grid.GridElement
-         --             --         , child = [ child ]
-         --             --         , attrs = Element.alignLeft :: labelAttrs
-         --             --         , width =
-         --             --             case position of
-         --             --                 Internal.Grid.Above ->
-         --             --                     2
-         --             --                 Internal.Grid.Below ->
-         --             --                     2
-         --             --                 _ ->
-         --             --                     1
-         --             --         , height = 1
-         --             --         }
-         --             --         group
-         --    )
         )
 
 
@@ -634,7 +565,7 @@ textHelper textInput attrs textOptions =
                                                     Nothing ->
                                                         { found
                                                             | maybePadding = Just (Padding t r b l)
-                                                            , adjustedAttributes = attr :: found.adjustedAttributes
+                                                            , adjustedAttributes = found.adjustedAttributes
                                                         }
 
                                                     _ ->
@@ -668,6 +599,17 @@ textHelper textInput attrs textOptions =
                     , [ spellcheck textInput.spellchecked
                       , Maybe.map autofill textInput.autofill
                             |> Maybe.withDefault Internal.NoAttribute
+                      , case maybePadding of
+                            Nothing ->
+                                Internal.NoAttribute
+
+                            Just (Padding t r b l) ->
+                                Element.paddingEach
+                                    { top = max 0 (t - (spacing // 2))
+                                    , bottom = max 0 (b - (spacing // 2))
+                                    , left = l
+                                    , right = r
+                                    }
                       , case heightContent of
                             Nothing ->
                                 Internal.NoAttribute
@@ -687,10 +629,10 @@ textHelper textInput attrs textOptions =
                                     heightValue count =
                                         case maybePadding of
                                             Nothing ->
-                                                "calc(" ++ String.fromInt count ++ "em + " ++ String.fromInt (count * spacing) ++ "px)"
+                                                "calc(" ++ String.fromInt count ++ "em + " ++ String.fromInt ((count - 1) * spacing) ++ "px) !important"
 
                                             Just (Padding t r b l) ->
-                                                "calc(" ++ String.fromInt count ++ "em + " ++ String.fromInt ((t + b) + (count * spacing)) ++ "px)"
+                                                "calc(" ++ String.fromInt count ++ "em + " ++ String.fromInt ((t + b) + ((count - 1) * spacing)) ++ "px) !important"
                                 in
                                 Internal.StyleClass Flag.height
                                     (Internal.Single ("textarea-height-" ++ String.fromInt newlineCount)
@@ -743,11 +685,6 @@ textHelper textInput attrs textOptions =
                         _ ->
                             False
 
-        parentAttributes =
-            Element.spacing 5
-                :: Region.announce
-                :: attributesFromChild
-
         inputPadding =
             Internal.get attributes <|
                 \attr ->
@@ -759,54 +696,61 @@ textHelper textInput attrs textOptions =
                             False
 
         inputElement =
-            ( Just inputNode
-            , List.concat
-                [ [ focusDefault attrs
-                  ]
-                , inputAttrs
-                , behavior
-                ]
-            , inputChildren
-            )
+            Internal.element Internal.noStyleSheet
+                Internal.asEl
+                Nothing
+                (Element.width Element.fill
+                    :: List.concat
+                        [ nearbys
+                        , case textOptions.placeholder of
+                            Nothing ->
+                                []
+
+                            Just (Placeholder placeholderAttrs placeholderEl) ->
+                                if String.trim textOptions.text /= "" then
+                                    []
+                                else
+                                    [ Element.clip
+                                    , Element.inFront
+                                        (Element.el
+                                            (defaultTextPadding
+                                                :: noNearbys
+                                                ++ [ Font.color charcoal
+                                                   , Internal.htmlClass classes.noTextSelection
+                                                   , Border.color (Element.rgba 0 0 0 0)
+                                                   , Background.color (Element.rgba 0 0 0 0)
+                                                   , Element.height Element.fill
+                                                   , Element.width Element.fill
+                                                   ]
+                                                ++ placeholderAttrs
+                                            )
+                                            placeholderEl
+                                        )
+                                    ]
+                        ]
+                )
+                (Internal.Unkeyed
+                    [ Internal.element Internal.noStyleSheet
+                        Internal.asEl
+                        (Just inputNode)
+                        (List.concat
+                            [ [ focusDefault attrs
+                              ]
+                            , inputAttrs
+                            , behavior
+                            ]
+                        )
+                        (Internal.Unkeyed inputChildren)
+                    ]
+                )
     in
-    onGrid (Internal.Class Flag.cursor "cursor-text" :: parentAttributes)
-        (List.filterMap identity
-            [ case textOptions.label of
-                Label pos labelAttrs child ->
-                    Just ( pos, labelAttrs, child )
-            , case textOptions.placeholder of
-                Nothing ->
-                    case nearbys of
-                        [] ->
-                            Nothing
-
-                        actualNearbys ->
-                            Just
-                                ( Internal.Grid.InFront
-                                , actualNearbys
-                                , Internal.Empty
-                                )
-
-                -- nearbys
-                Just (Placeholder placeholderAttrs placeholderEl) ->
-                    if String.trim textOptions.text == "" then
-                        Just
-                            ( Internal.Grid.InFront
-                            , Font.color charcoal
-                                :: Internal.htmlClass classes.noTextSelection
-                                :: defaultTextPadding
-                                :: Element.height Element.fill
-                                :: Element.width Element.fill
-                                :: (inputPadding
-                                        ++ nearbys
-                                        ++ placeholderAttrs
-                                   )
-                            , placeholderEl
-                            )
-                    else
-                        Nothing
-            ]
+    applyLabel
+        (Internal.Class Flag.cursor classes.cursorText
+            :: Element.spacing 5
+            :: Region.announce
+            :: attributesFromChild
         )
+        textOptions.label
         inputElement
 
 
@@ -1708,7 +1652,7 @@ defaultTextBoxStyle =
 
 defaultTextPadding : Attribute msg
 defaultTextPadding =
-    Element.paddingXY 12 7
+    Element.paddingXY 12 12
 
 
 defaultCheckbox : Bool -> Element msg
