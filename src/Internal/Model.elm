@@ -5,7 +5,6 @@ module Internal.Model exposing (..)
 import Internal.Flag as Flag exposing (Flag)
 import Internal.Style exposing (classes)
 import Json.Encode as Json
-import Regex
 import Set exposing (Set)
 import VirtualDom
 
@@ -927,16 +926,6 @@ floorAtZero x =
         x
     else
         0
-
-
-{-| -}
-urlClassName : String -> String
-urlClassName x =
-    x
-        |> uncapitalize
-        |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[^a-zA-Z0-9_-]")) (\_ -> "")
-        |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[A-Z0-9]+")) (\{ match } -> " " ++ String.toLower match)
-        |> Regex.replace (Maybe.withDefault Regex.never (Regex.fromString "[\\s+]")) (\_ -> "")
 
 
 initGathered : Maybe String -> Gathered msg
