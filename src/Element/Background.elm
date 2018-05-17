@@ -25,6 +25,7 @@ module Element.Background
 import Element exposing (Attr, Attribute, Color)
 import Internal.Flag as Flag
 import Internal.Model as Internal
+import VirtualDom
 
 
 {-| -}
@@ -37,35 +38,35 @@ color clr =
 -}
 image : String -> Attribute msg
 image src =
-    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / cover no-repeat"))
+    Internal.Attr (VirtualDom.style "background" ("url(\"" ++ src ++ "\") center / cover no-repeat"))
 
 
 {-| A centered background image that keeps it's natural propostions, but scales to fit the space.
 -}
 uncropped : String -> Attribute msg
 uncropped src =
-    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-fitted-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") center / contain no-repeat"))
+    Internal.Attr (VirtualDom.style "background" ("url(\"" ++ src ++ "\") center / contain no-repeat"))
 
 
 {-| Tile an image in the x and y axes.
 -}
 tiled : String -> Attribute msg
 tiled src =
-    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat"))
+    Internal.Attr (VirtualDom.style "background" ("url(\"" ++ src ++ "\") repeat"))
 
 
 {-| Tile an image in the x axis.
 -}
 tiledX : String -> Attribute msg
 tiledX src =
-    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-x"))
+    Internal.Attr (VirtualDom.style "background" ("url(\"" ++ src ++ "\") repeat-x"))
 
 
 {-| Tile an image in the y axis.
 -}
 tiledY : String -> Attribute msg
 tiledY src =
-    Internal.StyleClass Flag.bgImage (Internal.Single ("bg-image-" ++ Internal.urlClassName src) "background" ("url(\"" ++ src ++ "\") repeat-y"))
+    Internal.Attr (VirtualDom.style "background" ("url(\"" ++ src ++ "\") repeat-y"))
 
 
 type Direction
