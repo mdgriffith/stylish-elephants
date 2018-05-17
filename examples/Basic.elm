@@ -1,15 +1,19 @@
 module Main exposing (..)
 
-import Color exposing (..)
+{-| -}
+
 import Element exposing (..)
 import Element.Background as Background
 import Element.Font as Font
 
 
+-- import Element.Lazy
+
+
 main =
     Element.layout
-        [ Background.color blue
-        , Font.color white
+        [ Background.color (rgba 0 0 0 1)
+        , Font.color (rgba 1 1 1 1)
         , Font.italic
         , Font.size 32
         , Font.family
@@ -21,4 +25,6 @@ main =
             ]
         ]
     <|
-        el [] (text "Hello stylish friend!")
+        el
+            [ centerX, centerY ]
+            (text "Hello stylish friend!")
