@@ -121,7 +121,6 @@ type Attribute aligned msg
         , blur : Float
         , color : Color
         }
-    | Filter FilterType
 
 
 type Description
@@ -135,25 +134,6 @@ type Description
     | LivePolite
     | LiveAssertive
     | Button
-
-
-type FilterType
-    = FilterUrl String
-    | Blur Float
-    | Brightness Float
-    | Contrast Float
-    | Grayscale Float
-    | HueRotate Float
-    | Invert Float
-    | OpacityFilter Float
-    | Saturate Float
-    | Sepia Float
-    | DropShadow
-        { offset : ( Float, Float )
-        , size : Float
-        , blur : Float
-        , color : Color
-        }
 
 
 type Length
@@ -895,14 +875,6 @@ gatherAttributes attr gathered =
                         , alignment = Aligned x (Just y)
                     }
 
-        Filter cssFilters ->
-            case gathered.filters of
-                Nothing ->
-                    { gathered | filters = Just (filterName cssFilters) }
-
-                Just existing ->
-                    { gathered | filters = Just (filterName cssFilters ++ " " ++ existing) }
-
         BoxShadow shadow ->
             case gathered.boxShadows of
                 Nothing ->
@@ -918,14 +890,6 @@ gatherAttributes attr gathered =
 
                 Just ( existingClass, existing ) ->
                     { gathered | textShadows = Just ( textShadowName shadow ++ "-" ++ existingClass, formatTextShadow shadow ++ ", " ++ existing ) }
-
-
-floorAtZero : Int -> Int
-floorAtZero x =
-    if x > 0 then
-        x
-    else
-        0
 
 
 initGathered : Maybe String -> Gathered msg
@@ -1139,19 +1103,6 @@ finalize gathered =
                         |> add (Maybe.andThen (renderTransformationGroup (Just Hover)) transform.hover)
                         |> add (Maybe.andThen (renderTransformationGroup (Just Active)) transform.active)
 
-        -- addFilters ( classes, styles ) =
-        --     case gathered.filters of
-        --         Nothing ->
-        --             ( classes, styles )
-        --         Just filt ->
-        --             let
-        --                 name =
-        --                     "filter-" ++ className filt
-        --             in
-        --             ( name :: classes
-        --             , Single ("." ++ name) "filter" filt
-        --                 :: styles
-        --             )
         addBoxShadows ( classes, styles ) =
             case gathered.boxShadows of
                 Nothing ->
@@ -1176,7 +1127,6 @@ finalize gathered =
 
         ( newClasses, newStyles ) =
             ( [], gathered.styles )
-                -- |> addFilters
                 |> addBoxShadows
                 |> addTextShadows
                 |> addTransform
@@ -1480,9 +1430,6 @@ filter attrs =
                             ( found, has )
                         else
                             ( x :: found, Set.insert "align-y" has )
-
-                    Filter _ ->
-                        ( x :: found, has )
 
                     BoxShadow shadow ->
                         ( x :: found, has )
@@ -2387,51 +2334,6 @@ boxShadowName shadow =
         ]
 
 
-filterName : FilterType -> String
-filterName filtr =
-    case filtr of
-        FilterUrl url ->
-            "url(" ++ url ++ ")"
-
-        Blur x ->
-            "blur(" ++ String.fromFloat x ++ "px)"
-
-        Brightness x ->
-            "brightness(" ++ String.fromFloat x ++ "%)"
-
-        Contrast x ->
-            "contrast(" ++ String.fromFloat x ++ "%)"
-
-        Grayscale x ->
-            "grayscale(" ++ String.fromFloat x ++ "%)"
-
-        HueRotate x ->
-            "hueRotate(" ++ String.fromFloat x ++ "deg)"
-
-        Invert x ->
-            "invert(" ++ String.fromFloat x ++ "%)"
-
-        OpacityFilter x ->
-            "opacity(" ++ String.fromFloat x ++ "%)"
-
-        Saturate x ->
-            "saturate(" ++ String.fromFloat x ++ "%)"
-
-        Sepia x ->
-            "sepia(" ++ String.fromFloat x ++ "%)"
-
-        DropShadow shadow ->
-            let
-                shadowModel =
-                    { offset = shadow.offset
-                    , size = shadow.size
-                    , blur = shadow.blur
-                    , color = shadow.color
-                    }
-            in
-            "drop-shadow(" ++ formatDropShadow shadowModel ++ ")"
-
-
 floatClass : Float -> String
 floatClass x =
     String.fromInt (round (x * 100))
@@ -2677,9 +2579,6 @@ mapAttr fn attr =
         BoxShadow shadow ->
             BoxShadow shadow
 
-        Filter filt ->
-            Filter filt
-
 
 mapAttrFromStyle : (msg -> msg1) -> Attribute Never msg -> Attribute () msg1
 mapAttrFromStyle fn attr =
@@ -2720,9 +2619,6 @@ mapAttrFromStyle fn attr =
 
         BoxShadow shadow ->
             BoxShadow shadow
-
-        Filter filt ->
-            Filter filt
 
 
 unwrapDecorations : List (Attribute Never Never) -> List Style
