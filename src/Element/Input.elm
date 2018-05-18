@@ -61,7 +61,6 @@ import Html
 import Html.Attributes
 import Html.Events
 import Internal.Flag as Flag
-import Internal.Grid
 import Internal.Model as Internal
 import Internal.Style exposing (classes)
 import Json.Decode as Json
@@ -96,36 +95,31 @@ placeholder =
 {-| Every input has a required `label`.
 -}
 type Label msg
-    = Label Internal.Grid.RelativePosition (List (Attribute msg)) (Element msg)
-
-
-{-| -}
-type Notice msg
-    = Notice Internal.Grid.RelativePosition (List (Attribute msg)) (Element msg)
+    = Label Internal.Location (List (Attribute msg)) (Element msg)
 
 
 {-| -}
 labelRight : List (Attribute msg) -> Element msg -> Label msg
 labelRight =
-    Label Internal.Grid.OnRight
+    Label Internal.OnRight
 
 
 {-| -}
 labelLeft : List (Attribute msg) -> Element msg -> Label msg
 labelLeft =
-    Label Internal.Grid.OnLeft
+    Label Internal.OnLeft
 
 
 {-| -}
 labelAbove : List (Attribute msg) -> Element msg -> Label msg
 labelAbove =
-    Label Internal.Grid.Above
+    Label Internal.Above
 
 
 {-| -}
 labelBelow : List (Attribute msg) -> Element msg -> Label msg
 labelBelow =
-    Label Internal.Grid.Below
+    Label Internal.Below
 
 
 {-| A standard button.
@@ -216,162 +210,56 @@ checkbox :
     -> Element msg
 checkbox attrs { label, icon, checked, onChange } =
     let
-        input =
-            ( Just "div"
-            , [ Internal.Attr <|
-                    Html.Attributes.attribute "role" "checkbox"
-              , Internal.Attr <|
-                    Html.Attributes.attribute "aria-checked" <|
-                        if checked then
-                            "true"
-                        else
-                            "false"
-              , Element.centerY
-              , Element.height Element.fill
-              , Element.width Element.shrink
-              ]
-            , [ case icon of
+        attributes =
+            Element.spacing 6
+                :: (case onChange of
+                        Nothing ->
+                            [ Internal.Attr (Html.Attributes.disabled True)
+                            , Region.announce
+                            ]
+
+                        Just checkMsg ->
+                            [ Internal.Attr (Html.Events.onClick (checkMsg (not checked)))
+                            , Region.announce
+                            , onKeyLookup <|
+                                \code ->
+                                    if code == enter then
+                                        Just <| checkMsg (not checked)
+                                    else if code == space then
+                                        Just <| checkMsg (not checked)
+                                    else
+                                        Nothing
+                            ]
+                   )
+                ++ (tabindex 0 :: Element.pointer :: Element.alignLeft :: Element.width Element.fill :: attrs)
+    in
+    applyLabel attributes
+        label
+        (Internal.element Internal.noStyleSheet
+            Internal.asEl
+            Nothing
+            [ Internal.Attr <|
+                Html.Attributes.attribute "role" "checkbox"
+            , Internal.Attr <|
+                Html.Attributes.attribute "aria-checked" <|
+                    if checked then
+                        "true"
+                    else
+                        "false"
+            , Element.centerY
+            , Element.height Element.fill
+            , Element.width Element.shrink
+            ]
+            (Internal.Unkeyed
+                [ case icon of
                     Nothing ->
                         defaultCheckbox checked
 
                     Just actualIcon ->
                         actualIcon
-              ]
+                ]
             )
-
-        attributes =
-            (case onChange of
-                Nothing ->
-                    [ Internal.Attr (Html.Attributes.disabled True)
-                    , Region.announce
-                    ]
-
-                Just checkMsg ->
-                    [ Internal.Attr (Html.Events.onClick (checkMsg (not checked)))
-                    , Region.announce
-                    , onKeyLookup <|
-                        \code ->
-                            if code == enter then
-                                Just <| checkMsg (not checked)
-                            else if code == space then
-                                Just <| checkMsg (not checked)
-                            else
-                                Nothing
-                    ]
-            )
-                ++ (tabindex 0 :: Element.pointer :: Element.alignLeft :: Element.width Element.fill :: attrs)
-    in
-    Internal.Grid.relative (Just "label")
-        attributes
-        ({ right = Nothing
-         , left = Nothing
-         , primary = input
-         , defaultWidth = Internal.Fill 1
-         , below = Nothing
-         , above = Nothing
-         , inFront = Nothing
-         }
-            |> (\group ->
-                    case label of
-                        Label position labelAttrs child ->
-                            place position
-                                { layout = Internal.Grid.GridElement
-                                , child = [ child ]
-                                , attrs = Element.alignLeft :: labelAttrs
-                                , width =
-                                    case position of
-                                        Internal.Grid.Above ->
-                                            2
-
-                                        Internal.Grid.Below ->
-                                            2
-
-                                        _ ->
-                                            1
-                                , height = 1
-                                }
-                                group
-               )
         )
-
-
-place : Internal.Grid.RelativePosition -> Internal.Grid.PositionedElement aligned msg -> Internal.Grid.Around aligned msg -> Internal.Grid.Around aligned msg
-place position el group =
-    case position of
-        Internal.Grid.Above ->
-            case group.above of
-                Nothing ->
-                    { group | above = Just el }
-
-                Just existing ->
-                    { group
-                        | above =
-                            Just
-                                { el
-                                    | child = el.child ++ existing.child
-                                    , layout = Internal.Grid.Row
-                                }
-                    }
-
-        Internal.Grid.Below ->
-            case group.below of
-                Nothing ->
-                    { group | below = Just el }
-
-                Just existing ->
-                    { group
-                        | below =
-                            Just
-                                { el
-                                    | child = el.child ++ existing.child
-                                    , layout = Internal.Grid.Row
-                                }
-                    }
-
-        Internal.Grid.OnRight ->
-            case group.right of
-                Nothing ->
-                    { group | right = Just el }
-
-                Just existing ->
-                    { group
-                        | right =
-                            Just
-                                { el
-                                    | child = el.child ++ existing.child
-                                    , layout = Internal.Grid.Column
-                                }
-                    }
-
-        Internal.Grid.OnLeft ->
-            case group.left of
-                Nothing ->
-                    { group | left = Just el }
-
-                Just existing ->
-                    { group
-                        | left =
-                            Just
-                                { el
-                                    | child = el.child ++ existing.child
-                                    , layout = Internal.Grid.Column
-                                }
-                    }
-
-        Internal.Grid.InFront ->
-            case group.inFront of
-                Nothing ->
-                    { group | inFront = Just el }
-
-                Just existing ->
-                    { group
-                        | inFront =
-                            Just
-                                { el
-                                    | child = el.child ++ existing.child
-                                    , layout = Internal.Grid.GridElement
-                                }
-                    }
 
 
 
@@ -949,67 +837,47 @@ applyLabel attrs label input =
                         (Internal.Unkeyed [ labelChild ])
             in
             case position of
-                Internal.Grid.Above ->
+                Internal.Above ->
                     Internal.element Internal.noStyleSheet
                         Internal.asColumn
                         (Just "label")
                         attrs
                         (Internal.Unkeyed [ labelElement, input ])
 
-                Internal.Grid.Below ->
+                Internal.Below ->
                     Internal.element Internal.noStyleSheet
                         Internal.asColumn
                         (Just "label")
                         attrs
                         (Internal.Unkeyed [ input, labelElement ])
 
-                Internal.Grid.OnRight ->
+                Internal.OnRight ->
                     Internal.element Internal.noStyleSheet
                         Internal.asRow
                         (Just "label")
                         attrs
                         (Internal.Unkeyed [ input, labelElement ])
 
-                Internal.Grid.OnLeft ->
+                Internal.OnLeft ->
                     Internal.element Internal.noStyleSheet
                         Internal.asRow
                         (Just "label")
                         attrs
                         (Internal.Unkeyed [ labelElement, input ])
 
-                Internal.Grid.InFront ->
+                Internal.InFront ->
                     Internal.element Internal.noStyleSheet
                         Internal.asRow
                         (Just "label")
                         attrs
                         (Internal.Unkeyed [ labelElement, input ])
 
-
-onGrid attributes elementsOnGrid input =
-    let
-        nonePositioned =
-            { right = Nothing
-            , left = Nothing
-            , primary = input
-            , defaultWidth = Internal.Content
-            , below = Nothing
-            , above = Nothing
-            , inFront = Nothing
-            }
-
-        gatherPositioned ( pos, attrs, child ) group =
-            place pos
-                { layout = Internal.Grid.GridElement
-                , child = [ child ]
-                , attrs = Element.alignLeft :: attrs
-                , width = 1
-                , height = 1
-                }
-                group
-    in
-    Internal.Grid.relative (Just "label")
-        attributes
-        (List.foldl gatherPositioned nonePositioned elementsOnGrid)
+                Internal.Behind ->
+                    Internal.element Internal.noStyleSheet
+                        Internal.asRow
+                        (Just "label")
+                        attrs
+                        (Internal.Unkeyed [ labelElement, input ])
 
 
 {-| -}
@@ -1662,6 +1530,7 @@ defaultCheckbox checked =
         , Element.width (Element.px 14)
         , Element.height (Element.px 14)
         , Font.color white
+        , Element.centerY
         , Font.size 9
         , Font.center
         , Border.rounded 3
