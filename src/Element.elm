@@ -832,11 +832,7 @@ paragraph attrs children =
     Internal.element Internal.noStyleSheet
         Internal.asParagraph
         (Just "p")
-        (width
-            (fill
-                |> minimum 500
-                |> maximum 750
-            )
+        (width fill
             :: spacing 5
             :: attrs
         )
