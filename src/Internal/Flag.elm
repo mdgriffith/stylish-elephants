@@ -33,6 +33,10 @@ col i =
     Flag (2 ^ i)
 
 
+
+{- Used for Style invalidation -}
+
+
 transparency =
     col 1
 
@@ -158,8 +162,44 @@ hover =
 
 
 gridTemplate =
-    col 36
+    col 34
 
 
 gridPosition =
+    col 35
+
+
+
+{- Notes -}
+
+
+heightContent =
+    col 36
+
+
+heightFill =
     col 37
+
+
+widthContent =
+    col 38
+
+
+widthFill =
+    col 39
+
+
+alignRight =
+    col 40
+
+
+alignBottom =
+    col 41
+
+
+centerX =
+    col 42
+
+
+centerY =
+    col 43

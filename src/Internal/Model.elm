@@ -174,11 +174,7 @@ type alias Gathered msg =
     { node : NodeName
     , attributes : List (VirtualDom.Attribute msg)
     , styles : List Style
-    , alignment : Aligned
-    , width : Maybe Length
-    , height : Maybe Length
-    , nearbys : Maybe (List ( Location, Element msg ))
-    , filters : Maybe String
+    , nearbys : List (VirtualDom.Node msg)
     , boxShadows : Maybe ( String, String )
     , textShadows : Maybe ( String, String )
     , transform : Maybe (Decorated TransformationGroup)
@@ -222,7 +218,7 @@ unstyled =
 
 {-| -}
 renderNode : Gathered msg -> Children (VirtualDom.Node msg) -> Maybe String -> LayoutContext -> VirtualDom.Node msg
-renderNode { alignment, attributes, node, width, height } children styles context =
+renderNode { attributes, node, has } children styles context =
     let
         createNode nodeName attrs withStyles =
             case children of
@@ -267,88 +263,76 @@ renderNode { alignment, attributes, node, width, height } children styles contex
     in
     case context of
         AsRow ->
-            case width of
-                Just (Fill _) ->
-                    html
-
-                _ ->
-                    case alignment of
-                        Aligned (Just Right) _ ->
-                            VirtualDom.node
-                                "u"
-                                -- "alignRight"
-                                [ vDomClass
-                                    (String.join " "
-                                        [ classes.any
-                                        , classes.single
-                                        , classes.container
-                                        , classes.contentCenterY
-                                        , classes.alignContainerRight
-                                        ]
-                                    )
-                                ]
-                                [ html ]
-
-                        Aligned (Just CenterX) _ ->
-                            VirtualDom.node
-                                "s"
-                                -- "centerX"
-                                [ vDomClass
-                                    (String.join " "
-                                        [ classes.any
-                                        , classes.single
-                                        , classes.container
-                                        , classes.contentCenterY
-                                        , classes.alignContainerCenterX
-                                        ]
-                                    )
-                                ]
-                                [ html ]
-
-                        _ ->
-                            html
+            if Flag.present Flag.widthFill has then
+                html
+            else if Flag.present Flag.alignRight has then
+                VirtualDom.node
+                    "u"
+                    -- "alignRight"
+                    [ vDomClass
+                        (String.join " "
+                            [ classes.any
+                            , classes.single
+                            , classes.container
+                            , classes.contentCenterY
+                            , classes.alignContainerRight
+                            ]
+                        )
+                    ]
+                    [ html ]
+            else if Flag.present Flag.centerX has then
+                VirtualDom.node
+                    "s"
+                    -- "centerX"
+                    [ vDomClass
+                        (String.join " "
+                            [ classes.any
+                            , classes.single
+                            , classes.container
+                            , classes.contentCenterY
+                            , classes.alignContainerCenterX
+                            ]
+                        )
+                    ]
+                    [ html ]
+            else
+                html
 
         AsColumn ->
-            case height of
-                Just (Fill _) ->
-                    html
-
-                _ ->
-                    case alignment of
-                        Aligned _ (Just CenterY) ->
-                            VirtualDom.node
-                                -- "centerY"
-                                "s"
-                                [ vDomClass
-                                    --"se el container align-container-center-y"
-                                    (String.join " "
-                                        [ classes.any
-                                        , classes.single
-                                        , classes.container
-                                        , classes.alignContainerCenterY
-                                        ]
-                                    )
-                                ]
-                                [ html ]
-
-                        Aligned _ (Just Bottom) ->
-                            VirtualDom.node
-                                "u"
-                                -- "alignBottom"
-                                [ vDomClass
-                                    -- "se el container align-container-bottom"
-                                    (String.join " "
-                                        [ classes.any
-                                        , classes.single
-                                        , classes.container
-                                        , classes.alignContainerBottom
-                                        ]
-                                    )
-                                ]
-                                [ html ]
-
-                        _ ->
-                            html
+            if Flag.present Flag.heightFill has then
+                html
+            else if Flag.present Flag.centerY has then
+                VirtualDom.node
+                    -- "centerY"
+                    "s"
+                    [ vDomClass
+                        --"se el container align-container-center-y"
+                        (String.join " "
+                            [ classes.any
+                            , classes.single
+                            , classes.container
+                            , classes.alignContainerCenterY
+                            ]
+                        )
+                    ]
+                    [ html ]
+            else if Flag.present Flag.alignBottom has then
+                VirtualDom.node
+                    "u"
+                    -- "alignBottom"
+                    [ vDomClass
+                        -- "se el container align-container-bottom"
+                        (String.join " "
+                            [ classes.any
+                            , classes.single
+                            , classes.container
+                            , classes.alignContainerBottom
+                            ]
+                        )
+                    ]
+                    [ html ]
+            else
+                html
 
         _ ->
             html
@@ -654,7 +638,7 @@ gatherAttributes attr gathered =
                     addNormalStyle style gathered
 
         Width width ->
-            if gathered.width == Nothing then
+            if not (Flag.present Flag.width gathered.has) then
                 let
                     widthHelper w gath =
                         case w of
@@ -667,16 +651,18 @@ gatherAttributes attr gathered =
                             Content ->
                                 { gath
                                     | attributes = classNameAttr Internal.Style.classes.widthContent :: gath.attributes
+                                    , has = Flag.add Flag.widthContent gathered.has
                                 }
 
                             Fill portion ->
                                 if portion == 1 then
                                     { gath
                                         | attributes = classNameAttr Internal.Style.classes.widthFill :: gath.attributes
+                                        , has = Flag.add Flag.widthFill gathered.has
                                     }
                                 else
                                     { gath
-                                        | width = Just width
+                                        | has = Flag.add Flag.widthFill gathered.has
                                         , attributes = classNameAttr (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) :: gath.attributes
                                         , styles =
                                             Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.row ++ " > " ++ (styleName <| "width-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
@@ -710,12 +696,12 @@ gatherAttributes attr gathered =
                                 in
                                 widthHelper len newGathered
                 in
-                widthHelper width { gathered | width = Just width }
+                widthHelper width { gathered | has = Flag.add Flag.width gathered.has }
             else
                 gathered
 
         Height height ->
-            if gathered.height == Nothing then
+            if not (Flag.present Flag.height gathered.has) then
                 let
                     heightHelper h gath =
                         case h of
@@ -728,16 +714,19 @@ gatherAttributes attr gathered =
                             Content ->
                                 { gath
                                     | attributes = classNameAttr Internal.Style.classes.heightContent :: gath.attributes
+                                    , has = Flag.add Flag.heightContent gathered.has
                                 }
 
                             Fill portion ->
                                 if portion == 1 then
                                     { gath
                                         | attributes = classNameAttr Internal.Style.classes.heightFill :: gath.attributes
+                                        , has = Flag.add Flag.heightFill gathered.has
                                     }
                                 else
                                     { gath
                                         | attributes = classNameAttr (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) :: gath.attributes
+                                        , has = Flag.add Flag.heightFill gathered.has
                                         , styles =
                                             Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.column ++ " > " ++ (styleName <| "height-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
                                     }
@@ -770,7 +759,7 @@ gatherAttributes attr gathered =
                                 in
                                 heightHelper len newGathered
                 in
-                heightHelper height { gathered | height = Just height }
+                heightHelper height { gathered | has = Flag.add Flag.height gathered.has }
             else
                 gathered
 
@@ -823,6 +812,48 @@ gatherAttributes attr gathered =
 
                         Styled styled ->
                             Just <| gathered.styles ++ styled.styles
+
+                nearbyElement =
+                    VirtualDom.node "div"
+                        [ vDomClass <|
+                            case location of
+                                Above ->
+                                    String.join " "
+                                        [ classes.any, classes.single, classes.above ]
+
+                                Below ->
+                                    String.join " "
+                                        [ classes.any, classes.single, classes.below ]
+
+                                OnRight ->
+                                    String.join " "
+                                        [ classes.any, classes.single, classes.onRight ]
+
+                                OnLeft ->
+                                    String.join " "
+                                        [ classes.any, classes.single, classes.onLeft ]
+
+                                InFront ->
+                                    String.join " "
+                                        [ classes.any, classes.single, classes.inFront ]
+
+                                Behind ->
+                                    String.join " "
+                                        [ classes.any, classes.single, classes.behind ]
+                        ]
+                        [ case elem of
+                            Empty ->
+                                VirtualDom.text ""
+
+                            Text str ->
+                                textElement str
+
+                            Unstyled html ->
+                                html asEl
+
+                            Styled styled ->
+                                styled.html Nothing asEl
+                        ]
             in
             { gathered
                 | styles =
@@ -832,48 +863,52 @@ gatherAttributes attr gathered =
 
                         Just newStyles ->
                             newStyles
-                , nearbys =
-                    case gathered.nearbys of
-                        Nothing ->
-                            Just [ ( location, elem ) ]
-
-                        Just nearby ->
-                            Just (( location, elem ) :: nearby)
+                , nearbys = nearbyElement :: gathered.nearbys
             }
 
         AlignX x ->
-            case gathered.alignment of
-                Unaligned ->
-                    { gathered
-                        | attributes = classNameAttr (alignXName x) :: gathered.attributes
-                        , alignment = Aligned (Just x) Nothing
-                    }
+            if not (Flag.present Flag.xAlign gathered.has) then
+                { gathered
+                    | attributes = classNameAttr (alignXName x) :: gathered.attributes
+                    , has =
+                        gathered.has
+                            |> Flag.add Flag.xAlign
+                            |> (\flags ->
+                                    case x of
+                                        CenterX ->
+                                            Flag.add Flag.centerX flags
 
-                Aligned (Just _) _ ->
-                    gathered
+                                        Right ->
+                                            Flag.add Flag.alignRight flags
 
-                Aligned _ y ->
-                    { gathered
-                        | attributes = classNameAttr (alignXName x) :: gathered.attributes
-                        , alignment = Aligned (Just x) y
-                    }
+                                        _ ->
+                                            flags
+                               )
+                }
+            else
+                gathered
 
         AlignY y ->
-            case gathered.alignment of
-                Unaligned ->
-                    { gathered
-                        | attributes = classNameAttr (alignYName y) :: gathered.attributes
-                        , alignment = Aligned Nothing (Just y)
-                    }
+            if not (Flag.present Flag.yAlign gathered.has) then
+                { gathered
+                    | attributes = classNameAttr (alignYName y) :: gathered.attributes
+                    , has =
+                        gathered.has
+                            |> Flag.add Flag.yAlign
+                            |> (\flags ->
+                                    case y of
+                                        CenterY ->
+                                            Flag.add Flag.centerY flags
 
-                Aligned _ (Just _) ->
-                    gathered
+                                        Bottom ->
+                                            Flag.add Flag.alignBottom flags
 
-                Aligned x _ ->
-                    { gathered
-                        | attributes = classNameAttr (alignYName y) :: gathered.attributes
-                        , alignment = Aligned x (Just y)
-                    }
+                                        _ ->
+                                            flags
+                               )
+                }
+            else
+                gathered
 
         BoxShadow shadow ->
             case gathered.boxShadows of
@@ -896,9 +931,6 @@ initGathered : Maybe String -> Gathered msg
 initGathered maybeNodeName =
     { attributes = []
     , styles = []
-    , width = Nothing
-    , height = Nothing
-    , alignment = Unaligned
     , node =
         case maybeNodeName of
             Nothing ->
@@ -906,77 +938,12 @@ initGathered maybeNodeName =
 
             Just name ->
                 NodeName name
-    , nearbys = Nothing
+    , nearbys = []
     , transform = Nothing
-    , filters = Nothing
     , boxShadows = Nothing
     , textShadows = Nothing
     , has = Flag.none
     }
-
-
-{-| Because of how it's constructed, we know that NearbyGroup is nonempty
--}
-renderNearbyGroupAbsolute : List ( Location, Element msg ) -> List (VirtualDom.Node msg)
-renderNearbyGroupAbsolute nearbys =
-    let
-        create ( location, elem ) =
-            VirtualDom.node "div"
-                [ vDomClass <|
-                    case location of
-                        Above ->
-                            String.join " "
-                                [ classes.any, classes.single, classes.above ]
-
-                        Below ->
-                            String.join " "
-                                [ classes.any, classes.single, classes.below ]
-
-                        OnRight ->
-                            String.join " "
-                                [ classes.any, classes.single, classes.onRight ]
-
-                        OnLeft ->
-                            String.join " "
-                                [ classes.any, classes.single, classes.onLeft ]
-
-                        InFront ->
-                            String.join " "
-                                [ classes.any, classes.single, classes.inFront ]
-
-                        Behind ->
-                            String.join " "
-                                [ classes.any, classes.single, classes.behind ]
-                ]
-                [ case elem of
-                    Empty ->
-                        VirtualDom.text ""
-
-                    Text str ->
-                        textElement str
-
-                    Unstyled html ->
-                        html asEl
-
-                    Styled styled ->
-                        styled.html Nothing asEl
-                ]
-    in
-    List.map create nearbys
-
-
-{-| -}
-uncapitalize : String -> String
-uncapitalize str =
-    let
-        head =
-            String.left 1 str
-                |> String.toLower
-
-        tail =
-            String.dropLeft 1 str
-    in
-    head ++ tail
 
 
 {-| -}
@@ -1244,7 +1211,7 @@ asElement embedMode children context rendered =
                     -- TEXT OPTIMIZATION
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
-                    if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
+                    if Flag.present Flag.widthContent rendered.has && Flag.present Flag.heightContent rendered.has && context == asEl then
                         ( ( key, VirtualDom.text str )
                             :: htmls
                         , existingStyles
@@ -1262,17 +1229,12 @@ asElement embedMode children context rendered =
         NoStyleSheet ->
             let
                 renderedChildren =
-                    case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
-                        Nothing ->
-                            htmlChildren
+                    case htmlChildren of
+                        Keyed keyed ->
+                            Keyed <| keyed ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.nearbys
 
-                        Just nearby ->
-                            case htmlChildren of
-                                Keyed keyed ->
-                                    Keyed <| keyed ++ List.map (\x -> ( "nearby-elements-pls", x )) nearby
-
-                                Unkeyed unkeyed ->
-                                    Unkeyed (unkeyed ++ nearby)
+                        Unkeyed unkeyed ->
+                            Unkeyed (unkeyed ++ rendered.nearbys)
             in
             case styleChildren of
                 [] ->
@@ -1292,38 +1254,21 @@ asElement embedMode children context rendered =
                         |> Tuple.second
 
                 renderedChildren =
-                    case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
-                        Nothing ->
-                            case htmlChildren of
-                                Keyed keyed ->
-                                    Keyed <|
-                                        ( "static-stylesheet", VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ] )
-                                            :: ( "dynamic-stylesheet", toStyleSheet options styles )
-                                            :: keyed
+                    case htmlChildren of
+                        Keyed keyed ->
+                            Keyed <|
+                                ( "static-stylesheet", VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ] )
+                                    :: ( "dynamic-stylesheet", toStyleSheet options styles )
+                                    :: keyed
+                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.nearbys
 
-                                Unkeyed unkeyed ->
-                                    Unkeyed
-                                        (VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
-                                            :: toStyleSheet options styles
-                                            :: unkeyed
-                                        )
-
-                        Just nearby ->
-                            case htmlChildren of
-                                Keyed keyed ->
-                                    Keyed <|
-                                        ( "static-stylesheet", VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ] )
-                                            :: ( "dynamic-stylesheet", toStyleSheet options styles )
-                                            :: keyed
-                                            ++ List.map (\x -> ( "nearby-elements-pls", x )) nearby
-
-                                Unkeyed unkeyed ->
-                                    Unkeyed
-                                        (VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
-                                            :: toStyleSheet options styles
-                                            :: unkeyed
-                                            ++ nearby
-                                        )
+                        Unkeyed unkeyed ->
+                            Unkeyed
+                                (VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
+                                    :: toStyleSheet options styles
+                                    :: unkeyed
+                                    ++ rendered.nearbys
+                                )
             in
             Unstyled
                 (renderNode rendered
@@ -1339,34 +1284,19 @@ asElement embedMode children context rendered =
                         |> Tuple.second
 
                 renderedChildren =
-                    case Maybe.map renderNearbyGroupAbsolute rendered.nearbys of
-                        Nothing ->
-                            case htmlChildren of
-                                Keyed keyed ->
-                                    Keyed <|
-                                        ( "dynamic-stylesheet", toStyleSheet options styles )
-                                            :: keyed
+                    case htmlChildren of
+                        Keyed keyed ->
+                            Keyed <|
+                                ( "dynamic-stylesheet", toStyleSheet options styles )
+                                    :: keyed
+                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.nearbys
 
-                                Unkeyed unkeyed ->
-                                    Unkeyed
-                                        (toStyleSheet options styles
-                                            :: unkeyed
-                                        )
-
-                        Just nearby ->
-                            case htmlChildren of
-                                Keyed keyed ->
-                                    Keyed <|
-                                        ( "dynamic-stylesheet", toStyleSheet options styles )
-                                            :: keyed
-                                            ++ List.map (\x -> ( "nearby-elements-pls", x )) nearby
-
-                                Unkeyed unkeyed ->
-                                    Unkeyed
-                                        (toStyleSheet options styles
-                                            :: unkeyed
-                                            ++ nearby
-                                        )
+                        Unkeyed unkeyed ->
+                            Unkeyed
+                                (toStyleSheet options styles
+                                    :: unkeyed
+                                    ++ rendered.nearbys
+                                )
             in
             Unstyled
                 (renderNode rendered
