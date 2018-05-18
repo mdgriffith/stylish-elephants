@@ -174,7 +174,7 @@ type alias Gathered msg =
     { node : NodeName
     , attributes : List (VirtualDom.Attribute msg)
     , styles : List Style
-    , nearbys : List (VirtualDom.Node msg)
+    , children : List (VirtualDom.Node msg)
     , boxShadows : Maybe ( String, String )
     , textShadows : Maybe ( String, String )
     , transform : Maybe (Decorated TransformationGroup)
@@ -375,20 +375,6 @@ alignYName align =
 
         CenterY ->
             "aligned-vertically " ++ classes.alignCenterY
-
-
-noAreas : List (Attribute aligned msg) -> List (Attribute aligned msg)
-noAreas attrs =
-    let
-        notAnArea a =
-            case a of
-                Describe _ ->
-                    False
-
-                _ ->
-                    True
-    in
-    List.filter notAnArea attrs
 
 
 {-| replace a
@@ -863,7 +849,7 @@ gatherAttributes attr gathered =
 
                         Just newStyles ->
                             newStyles
-                , nearbys = nearbyElement :: gathered.nearbys
+                , children = nearbyElement :: gathered.children
             }
 
         AlignX x ->
@@ -938,7 +924,7 @@ initGathered maybeNodeName =
 
             Just name ->
                 NodeName name
-    , nearbys = []
+    , children = []
     , transform = Nothing
     , boxShadows = Nothing
     , textShadows = Nothing
@@ -1231,10 +1217,10 @@ asElement embedMode children context rendered =
                 renderedChildren =
                     case htmlChildren of
                         Keyed keyed ->
-                            Keyed <| keyed ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.nearbys
+                            Keyed <| keyed ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children
 
                         Unkeyed unkeyed ->
-                            Unkeyed (unkeyed ++ rendered.nearbys)
+                            Unkeyed (unkeyed ++ rendered.children)
             in
             case styleChildren of
                 [] ->
@@ -1250,7 +1236,7 @@ asElement embedMode children context rendered =
             let
                 styles =
                     styleChildren
-                        |> List.foldr reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
+                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
                         |> Tuple.second
 
                 renderedChildren =
@@ -1260,14 +1246,14 @@ asElement embedMode children context rendered =
                                 ( "static-stylesheet", VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ] )
                                     :: ( "dynamic-stylesheet", toStyleSheet options styles )
                                     :: keyed
-                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.nearbys
+                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children
 
                         Unkeyed unkeyed ->
                             Unkeyed
                                 (VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
                                     :: toStyleSheet options styles
                                     :: unkeyed
-                                    ++ rendered.nearbys
+                                    ++ rendered.children
                                 )
             in
             Unstyled
@@ -1280,7 +1266,7 @@ asElement embedMode children context rendered =
             let
                 styles =
                     styleChildren
-                        |> List.foldr reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
+                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
                         |> Tuple.second
 
                 renderedChildren =
@@ -1289,13 +1275,13 @@ asElement embedMode children context rendered =
                             Keyed <|
                                 ( "dynamic-stylesheet", toStyleSheet options styles )
                                     :: keyed
-                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.nearbys
+                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children
 
                         Unkeyed unkeyed ->
                             Unkeyed
                                 (toStyleSheet options styles
                                     :: unkeyed
-                                    ++ rendered.nearbys
+                                    ++ rendered.children
                                 )
             in
             Unstyled
@@ -1476,7 +1462,7 @@ toHtml options el =
             let
                 styleSheet =
                     styles
-                        |> List.foldr reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
+                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
                         |> Tuple.second
                         |> toStyleSheetString options
             in
@@ -1593,20 +1579,6 @@ renderFontClassName font current =
                         |> String.words
                         |> String.join "-"
            )
-
-
-
--- renderStyles : Element msg -> ( Set String, List Style ) -> ( Set String, List Style )
--- renderStyles el ( cache, existing ) =
---     case el of
---         Unstyled html ->
---             ( cache, existing )
---         Styled styled ->
---             let
---                 reduced =
---                     List.foldr reduceStyles ( cache, existing ) styled.styles
---             in
---             List.foldr renderStyles reduced styled.children
 
 
 renderFocusStyle :
@@ -2289,8 +2261,8 @@ formatColorClass (Rgba red green blue alpha) =
         ++ floatClass alpha
 
 
-psuedoClassName : PseudoClass -> String
-psuedoClassName class =
+pseudoClassName : PseudoClass -> String
+pseudoClassName class =
     case class of
         Focus ->
             "focus"
@@ -2341,7 +2313,7 @@ styleKey s =
             "grid-position"
 
         PseudoSelector class style ->
-            psuedoClassName class ++ (String.concat <| List.map styleKey style)
+            pseudoClassName class ++ (String.concat <| List.map styleKey style)
 
         Transform _ ->
             "transform"
@@ -2405,7 +2377,7 @@ getStyleName style =
                 ++ String.fromInt pos.height
 
         PseudoSelector selector subStyle ->
-            psuedoClassName selector
+            pseudoClassName selector
                 :: List.map getStyleName subStyle
                 |> String.join " "
 
