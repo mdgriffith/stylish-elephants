@@ -109,7 +109,7 @@ The colors will be evenly spaced.
 gradient : Float -> List Color -> Attribute msg
 gradient angle colors =
     Internal.StyleClass Flag.bgGradient <|
-        Internal.Single ("bg-gradient-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass colors))
+        Internal.Single ("bg-grad-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass colors))
             "background"
             ("linear-gradient(" ++ (String.join ", " <| (String.fromFloat angle ++ "rad") :: List.map Internal.formatColor colors) ++ ")")
 

@@ -116,7 +116,7 @@ type alias Font =
 {-| -}
 color : Color -> Attr decorative msg
 color fontColor =
-    Internal.StyleClass Flag.fontColor (Internal.Colored ("font-color-" ++ Internal.formatColorClass fontColor) "color" fontColor)
+    Internal.StyleClass Flag.fontColor (Internal.Colored ("fc-" ++ Internal.formatColorClass fontColor) "color" fontColor)
 
 
 {-|
@@ -136,7 +136,7 @@ color fontColor =
 -}
 family : List Font -> Attribute msg
 family families =
-    Internal.StyleClass Flag.fontFamily <| Internal.FontFamily (List.foldl Internal.renderFontClassName "font-" families) families
+    Internal.StyleClass Flag.fontFamily <| Internal.FontFamily (List.foldl Internal.renderFontClassName "ff-" families) families
 
 
 {-| -}
@@ -182,7 +182,7 @@ letterSpacing : Float -> Attribute msg
 letterSpacing offset =
     Internal.StyleClass Flag.letterSpacing <|
         Internal.Single
-            ("letter-spacing-" ++ Internal.floatClass offset)
+            ("ls-" ++ Internal.floatClass offset)
             "letter-spacing"
             (String.fromFloat offset ++ "px")
 
@@ -192,7 +192,7 @@ letterSpacing offset =
 wordSpacing : Float -> Attribute msg
 wordSpacing offset =
     Internal.StyleClass Flag.wordSpacing <|
-        Internal.Single ("word-spacing-" ++ Internal.floatClass offset) "word-spacing" (String.fromFloat offset ++ "px")
+        Internal.Single ("ws-" ++ Internal.floatClass offset) "word-spacing" (String.fromFloat offset ++ "px")
 
 
 {-| Align the font to the left.
