@@ -19,12 +19,12 @@ This module is meant to make accessibility easy! They're sign posts that accessi
 
 All you have to do is add them to elements in your app where you see fit.
 
-Here's an example of annotating your navigation area:
+Here's an example of annotating your navigation region:
 
-    import Element.Area as Area
+    import Element.Region as Region
 
     myNavigation =
-        Element.row [ Area.navigation ]
+        Element.row [ Region.navigation ]
             [-- ..your navigation links
             ]
 

@@ -193,7 +193,7 @@ Where there are two elements on the left, one in the center, and on on the right
 
 Let's say we want a dropdown menu. Essentially we want to say: _put this element below this other element, but don't affect the layout when you do_.
 
-    Elemenet.row []
+    Element.row []
         [ Element.el
             [ Element.below (Element.text "I'm below!")
             ]
