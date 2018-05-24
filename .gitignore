@@ -9,3 +9,5 @@ index.html
 
 tests/html-generation/rendered/
 
+env
+elm.js
