@@ -9,6 +9,7 @@ import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Html exposing (Html)
+import Process
 import Random
 import Task
 import Test.Runner
@@ -26,27 +27,6 @@ type alias TestableProgram =
     Program () (Model Msg) Msg
 
 
-port report :
-    List
-        { label : String
-        , results :
-            List
-                ( String
-                , Maybe
-                    { given : Maybe String
-                    , description : String
-                    }
-                )
-        }
-    -> Cmd msg
-
-
-port analyze : List String -> Cmd msg
-
-
-port styles : (List { id : String, bbox : Testable.BoundingBox, style : List ( String, String ) } -> msg) -> Sub msg
-
-
 program : List ( String, Testable.Element Msg ) -> TestableProgram
 program tests =
     Browser.embed
@@ -57,12 +37,23 @@ program tests =
                   , finished = []
                   , stage = BeginRendering
                   }
-                , Cmd.none
+                  -- , Task.perform (always Step) Time.now
+                , Task.perform (always Step)
+                    (Process.sleep 500
+                        |> Task.andThen (always Time.now)
+                    )
                 )
         , view = view
         , update = update
         , subscriptions = subscriptions
         }
+
+
+subscriptions : { a | stage : Stage } -> Sub Msg
+subscriptions model =
+    Sub.batch
+        [ styles RefreshBoundingBox
+        ]
 
 
 type alias Model msg =
@@ -134,7 +125,7 @@ type Stage
 
 type Msg
     = NoOp
-    | Tick Time.Posix
+    | Step
     | RefreshBoundingBox
         (List
             { id : String
@@ -169,6 +160,10 @@ update msg model =
             ( model, Cmd.none )
 
         RefreshBoundingBox boxes ->
+            let
+                _ =
+                    Debug.log "refreshed" model.stage
+            in
             case model.current of
                 Nothing ->
                     ( { model | stage = Finished }
@@ -206,8 +201,8 @@ update msg model =
                             , Cmd.none
                             )
 
-        Tick _ ->
-            case model.stage of
+        Step ->
+            case Debug.log "step" model.stage of
                 BeginRendering ->
                     ( case model.upcoming of
                         [] ->
@@ -219,7 +214,7 @@ update msg model =
                                 , upcoming = remaining
                                 , current = Just current
                             }
-                    , Task.perform Tick Time.now
+                    , Task.perform (always Step) Time.now
                     )
 
                 Rendered ->
@@ -231,20 +226,17 @@ update msg model =
 
                         Just ( label, current ) ->
                             ( { model | stage = GatherData }
-                            , analyze (Testable.getIds current)
+                            , let
+                                _ =
+                                    Debug.log "sending cmd analyze" (Testable.getIds current)
+                              in
+                              analyze (Testable.getIds current)
                             )
 
                 _ ->
                     ( { model | stage = Rendered }
                     , Cmd.none
                     )
-
-
-subscriptions : { a | stage : Stage } -> Sub Msg
-subscriptions model =
-    Sub.batch
-        [ styles RefreshBoundingBox
-        ]
 
 
 view : Model Msg -> Html Msg
@@ -379,3 +371,27 @@ viewReason { description, reason } =
 formatKeyValue : String -> String -> String
 formatKeyValue key val =
     key ++ ": " ++ val
+
+
+port report :
+    List
+        { label : String
+        , results :
+            List
+                ( String
+                , Maybe
+                    { given : Maybe String
+                    , description : String
+                    }
+                )
+        }
+    -> Cmd msg
+
+
+port test : String -> Cmd msg
+
+
+port analyze : List String -> Cmd msg
+
+
+port styles : (List { id : String, bbox : Testable.BoundingBox, style : List ( String, String ) } -> msg) -> Sub msg

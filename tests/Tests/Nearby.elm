@@ -3,13 +3,13 @@ module Tests.Nearby exposing (view)
 {-| Testing nearby elements such as those defined with `above`, `below`, etc.
 -}
 
-import Tests.Palette as Palette exposing (..)
 import Html
 import Testable
 import Testable.Element exposing (..)
 import Testable.Element.Background as Background
 import Testable.Element.Font as Font
 import Testable.Runner
+import Tests.Palette as Palette exposing (..)
 
 
 box attrs =
@@ -55,31 +55,30 @@ view =
                 )
                 (text "hi")
 
-        single location name box =
-            row [ height (px 100), width fill, spacing 50 ]
-                [ box
-                    [ location
-                        (el
-                            [ width (px 20)
-                            , height (px 20)
-                            , Background.color darkCharcoal
-                            ]
-                            none
-                        )
-                    ]
-                , box
-                    [ location
-                        (el
-                            [ width (px 20)
-                            , height (px 20)
-                            , alignLeft
-                            , Background.color darkCharcoal
-                            ]
-                            none
-                        )
-                    ]
-                ]
-
+        -- single location name box =
+        --     row [ height (px 100), width fill, spacing 50 ]
+        --         [ box
+        --             [ location
+        --                 (el
+        --                     [ width (px 20)
+        --                     , height (px 20)
+        --                     , Background.color darkCharcoal
+        --                     ]
+        --                     none
+        --                 )
+        --             ]
+        --         , box
+        --             [ location
+        --                 (el
+        --                     [ width (px 20)
+        --                     , height (px 20)
+        --                     , alignLeft
+        --                     , Background.color darkCharcoal
+        --                     ]
+        --                     none
+        --                 )
+        --             ]
+        --         ]
         little name attrs =
             el
                 ([ label name
@@ -91,11 +90,11 @@ view =
                 )
                 none
 
-        nearby location name box =
+        nearby location name render =
             column [ spacing 32, label "column" ]
                 [ el [ padding 20, Background.color green, Font.color white ] (text name)
                 , row [ height (px 100), width fill, spacing 50 ]
-                    [ box
+                    [ render
                         [ location
                             (el
                                 [ label name
@@ -106,7 +105,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -118,7 +117,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -130,7 +129,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -142,7 +141,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -154,7 +153,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -166,7 +165,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -181,7 +180,7 @@ view =
                     ]
                 , text "widths/heights"
                 , row [ height (px 100), width fill, spacing 50, label "Row" ]
-                    [ box
+                    [ render
                         [ location
                             (el
                                 [ label name
@@ -192,7 +191,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -203,8 +202,8 @@ view =
                                 none
                             )
                         ]
-                    , box
-                        [ label "box"
+                    , render
+                        [ label "render"
                         , location
                             (el
                                 [ label name
@@ -215,7 +214,7 @@ view =
                                 none
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name
@@ -227,7 +226,7 @@ view =
                                 (text "h-shrink")
                             )
                         ]
-                    , box
+                    , render
                         [ location
                             (el
                                 [ label name

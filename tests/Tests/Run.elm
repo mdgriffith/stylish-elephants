@@ -13,22 +13,16 @@ import Tests.RowSpacing
 import Tests.Transparency
 
 
--- import Tests.Table
-
-
-pair =
-    (,)
-
-
 main : Testable.Runner.TestableProgram
 main =
     Testable.Runner.program
-        [ pair "Basic Element" Tests.Basic.view
-        , pair "Nearby" Tests.Nearby.view
-        , pair "Element Alignment" Tests.ElementAlignment.view
-        , pair "Transparency" Tests.Transparency.view
-        , pair "Column Alignment" Tests.ColumnAlignment.view
-        , pair "Row Alignment" Tests.RowAlignment.view
-        , pair "Column Spacing" Tests.ColumnSpacing.view
-        , pair "Row Spacing" Tests.RowSpacing.view
+        [ Tuple.pair "Basic Element" Tests.Basic.view
+
+        -- , Tuple.pair "Nearby" Tests.Nearby.view
+        -- , Tuple.pair "Element Alignment" Tests.ElementAlignment.view
+        -- , Tuple.pair "Transparency" Tests.Transparency.view
+        -- , Tuple.pair "Column Alignment" Tests.ColumnAlignment.view
+        -- , Tuple.pair "Row Alignment" Tests.RowAlignment.view
+        -- , Tuple.pair "Column Spacing" Tests.ColumnSpacing.view
+        -- , Tuple.pair "Row Spacing" Tests.RowSpacing.view
         ]
