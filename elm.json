@@ -3,7 +3,7 @@
     "name": "mdgriffith/stylish-elephants",
     "summary": "Encode and decode JSON values",
     "license": "BSD-3-Clause",
-    "version": "7.0.0",
+    "version": "6.1.0",
     "exposed-modules": [
         "Element",
         "Element.Input",
