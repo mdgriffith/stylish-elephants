@@ -1467,11 +1467,6 @@ value =
     Internal.Attr << Html.Attributes.value
 
 
-textValue : String -> Attribute msg
-textValue =
-    Internal.Attr << Html.Attributes.defaultValue
-
-
 tabindex : Int -> Attribute msg
 tabindex =
     Internal.Attr << Html.Attributes.tabindex
