@@ -30,7 +30,6 @@ module Element
         , clipX
         , clipY
         , column
-        , decorativeImage
         , download
         , downloadAs
         , el
@@ -119,28 +118,9 @@ Text needs it's own layout primitives.
 @docs IndexedTable, IndexedColumn, indexedTable
 
 
-# Rendering
-
-@docs layout, layoutWith, Option, noStaticStyleSheet, forceHover, noHover, focusStyle, FocusStyle
-
-
-# Links and Images
-
-@docs Link, link, newTabLink, download, downloadAs
-
-@docs image, decorativeImage
-
-
-# Attributes
-
-@docs transparent, alpha, pointer
+# Size
 
 @docs width, height, Length, px, shrink, fill, fillPortion, minimum, maximum
-
-
-# Color
-
-@docs Color, rgba, rgb
 
 
 ## Padding and Spacing
@@ -190,6 +170,44 @@ Where there are two elements on the left, one in the center, and on on the right
 @docs centerX, centerY, alignLeft, alignRight, alignTop, alignBottom
 
 
+# Transparency
+
+@docs transparent, alpha, pointer
+
+
+# Adjustment
+
+@docs moveUp, moveDown, moveRight, moveLeft, rotate, scale
+
+
+# Clipping and Scrollbars
+
+Clip the content if it overflows.
+
+@docs clip, clipX, clipY
+
+If these are present, the element will add a scrollbar if necessary.
+
+@docs scrollbars, scrollbarX, scrollbarY
+
+
+# Rendering
+
+@docs layout, layoutWith, Option, noStaticStyleSheet, forceHover, noHover, focusStyle, FocusStyle
+
+
+# Links and Images
+
+@docs Link, link, newTabLink, download, downloadAs
+
+@docs image
+
+
+# Color
+
+@docs Color, rgba, rgb
+
+
 # Nearby Elements
 
 Let's say we want a dropdown menu. Essentially we want to say: _put this element below this other element, but don't affect the layout when you do_.
@@ -216,22 +234,6 @@ This is very useful for things like dropdown menus or tooltips.
 # Temporary Styling
 
 @docs Attr, Decoration, mouseOver, mouseDown, focused
-
-
-# Adjustment
-
-@docs moveUp, moveDown, moveRight, moveLeft, rotate, scale
-
-
-# Clipping and Scrollbars
-
-Clip the content if it overflows.
-
-@docs clip, clipX, clipY
-
-If these are present, the element will add a scrollbar if necessary.
-
-@docs scrollbars, scrollbarX, scrollbarY
 
 
 # Responsiveness
@@ -368,22 +370,6 @@ minimum i l =
 maximum : Int -> Length -> Length
 maximum i l =
     Internal.Max i l
-
-
-
--- {-| Fill the available space as long as it's between the pixel bounds.
--- -}
--- fillBetween : { min : Maybe Int, max : Maybe Int } -> Length
--- fillBetween { min, max } =
---     Internal.FillBetween
---         { portion = 1
---         , min = min
---         , max = max
---         }
--- {-| -}
--- fillPortionBetween : { portion : Int, min : Maybe Int, max : Maybe Int } -> Length
--- fillPortionBetween =
---     Internal.FillBetween
 
 
 {-| Sometimes you may not want to split available space evenly. In this case you can use `fillPortion` to define which elements should have what portion of the available space.
@@ -875,7 +861,14 @@ textColumn attrs children =
         (Internal.Unkeyed children)
 
 
-{-| Both a source and a description are required for images. The description is used to describe the image to screen readers.
+{-| Both a source and a description are required for images.
+
+The description is used to describe the image to people using screen readers.
+
+Leaving leaving the description blank will cause the image to be ignored by assistive technology. This can make sense for images that are purely decorative and add no additional information.
+
+So, take a moment to describe your image as you would to someone who has a harder time seeing.
+
 -}
 image : List (Attribute msg) -> { src : String, description : String } -> Element msg
 image attrs { src, description } =
@@ -915,46 +908,6 @@ image attrs { src, description } =
         )
 
 
-{-| If an image is purely decorative, you can skip the caption.
--}
-decorativeImage : List (Attribute msg) -> { src : String } -> Element msg
-decorativeImage attrs { src } =
-    let
-        imageAttributes =
-            attrs
-                |> List.filter
-                    (\a ->
-                        case a of
-                            Internal.Width _ ->
-                                True
-
-                            Internal.Height _ ->
-                                True
-
-                            _ ->
-                                False
-                    )
-    in
-    Internal.element Internal.noStyleSheet
-        Internal.asEl
-        Nothing
-        (clip
-            :: attrs
-        )
-        (Internal.Unkeyed
-            [ Internal.element Internal.noStyleSheet
-                Internal.asEl
-                (Just "img")
-                (imageAttributes
-                    ++ [ Internal.Attr <| Html.Attributes.src src
-                       , Internal.Attr <| Html.Attributes.alt ""
-                       ]
-                )
-                (Internal.Unkeyed [])
-            ]
-        )
-
-
 {-| -}
 type alias Link msg =
     { url : String
@@ -965,7 +918,7 @@ type alias Link msg =
 {-|
 
     link []
-        { url = "google.com"
+        { url = "http://google.com"
         , label = text "My Link to Google"
         }
 
