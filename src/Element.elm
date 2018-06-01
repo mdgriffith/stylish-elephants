@@ -568,6 +568,7 @@ type alias Table records msg =
 {-| -}
 type alias Column record msg =
     { header : Element msg
+    , width : Length
     , view : record -> Element msg
     }
 
@@ -599,12 +600,14 @@ We could render it using
         { data = persons
         , columns =
             [ { header = Element.text "First Name"
+              , width = fill
               , view =
                     (\person ->
                         Element.text person.firstName
                     )
               }
             , { header = Element.text "Last Name"
+              , width = fill
               , view =
                      (\person ->
                         Element.text person.lastName
@@ -635,6 +638,7 @@ type alias IndexedTable records msg =
 {-| -}
 type alias IndexedColumn record msg =
     { header : Element msg
+    , width : Length
     , view : Int -> record -> Element msg
     }
 
@@ -677,6 +681,14 @@ tableHelper attrs config =
                 InternalColumn colConfig ->
                     colConfig.header
 
+        columnWidth col =
+            case col of
+                InternalIndexedColumn colConfig ->
+                    colConfig.width
+
+                InternalColumn colConfig ->
+                    colConfig.width
+
         maybeHeaders =
             List.map columnHeader config.columns
                 |> (\headers ->
@@ -690,7 +702,7 @@ tableHelper attrs config =
             Internal.StyleClass Flag.gridTemplate <|
                 Internal.GridTemplateStyle
                     { spacing = ( px sX, px sY )
-                    , columns = List.repeat (List.length config.columns) (Internal.Fill 1)
+                    , columns = List.map columnWidth config.columns
                     , rows = List.repeat (List.length config.data) Internal.Content
                     }
 
