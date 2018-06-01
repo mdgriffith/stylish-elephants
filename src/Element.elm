@@ -6,6 +6,7 @@ module Element
         , Column
         , Decoration
         , Device
+        , DeviceClass(..)
         , Element
         , FocusStyle
         , IndexedColumn
@@ -219,7 +220,7 @@ This is very useful for things like dropdown menus or tooltips.
 
 # Adjustment
 
-@docs moveRight, moveUp, moveLeft, moveDown, rotate, scale
+@docs moveUp, moveDown, moveRight, moveLeft, rotate, scale
 
 
 # Clipping and Scrollbars
@@ -235,7 +236,7 @@ If these are present, the element will add a scrollbar if necessary.
 
 # Responsiveness
 
-@docs Device, classifyDevice
+@docs Device, DeviceClass, classifyDevice
 
 
 # Scaling
@@ -1282,22 +1283,32 @@ pointer =
 
 {-| -}
 type alias Device =
-    { phone : Bool
-    , tablet : Bool
-    , desktop : Bool
-    , bigDesktop : Bool
+    { class : DeviceClass
     , portrait : Bool
     }
+
+
+{-| -}
+type DeviceClass
+    = Phone
+    | Tablet
+    | Desktop
+    | BigDesktop
 
 
 {-| Takes in a Window.Size and returns a device profile which can be used for responsiveness.
 -}
 classifyDevice : { window | height : Int, width : Int } -> Device
 classifyDevice window =
-    { phone = window.width <= 600
-    , tablet = window.width > 600 && window.width <= 1200
-    , desktop = window.width > 1200 && window.width <= 1800
-    , bigDesktop = window.width > 1800
+    { device =
+        if window.width <= 600 then
+            Phone
+        else if window.width > 600 && window.width <= 1200 then
+            Tablet
+        else if window.width > 1200 && window.width <= 1800 then
+            Desktop
+        else
+            BigDesktop
     , portrait = window.width < window.height
     }
 
