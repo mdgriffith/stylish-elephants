@@ -355,26 +355,26 @@ alignXName : HAlign -> String
 alignXName align =
     case align of
         Left ->
-            "aligned-horizontally " ++ classes.alignLeft
+            classes.alignedHorizontally ++ " " ++ classes.alignLeft
 
         Right ->
-            "aligned-horizontally " ++ classes.alignRight
+            classes.alignedHorizontally ++ " " ++ classes.alignRight
 
         CenterX ->
-            "aligned-horizontally " ++ classes.alignCenterX
+            classes.alignedHorizontally ++ " " ++ classes.alignCenterX
 
 
 alignYName : VAlign -> String
 alignYName align =
     case align of
         Top ->
-            "aligned-vertically " ++ classes.alignTop
+            classes.alignedVertically ++ " " ++ classes.alignTop
 
         Bottom ->
-            "aligned-vertically " ++ classes.alignBottom
+            classes.alignedVertically ++ " " ++ classes.alignBottom
 
         CenterY ->
-            "aligned-vertically " ++ classes.alignCenterY
+            classes.alignedVertically ++ " " ++ classes.alignCenterY
 
 
 {-| replace a
@@ -512,12 +512,13 @@ stackTransforms transform group =
             }
 
 
+classNameAttr name =
+    VirtualDom.property "className" (Json.string name)
+
+
 gatherAttributes : Attribute aligned msg -> Gathered msg -> Gathered msg
 gatherAttributes attr gathered =
     let
-        classNameAttr name =
-            VirtualDom.property "className" (Json.string name)
-
         styleName name =
             "." ++ name
 
@@ -625,127 +626,13 @@ gatherAttributes attr gathered =
 
         Width width ->
             if not (Flag.present Flag.width gathered.has) then
-                let
-                    widthHelper w gath =
-                        case w of
-                            Px px ->
-                                { gath
-                                    | attributes = classNameAttr (Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px) :: gath.attributes
-                                    , styles = Single (styleName <| "width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: gath.styles
-                                }
-
-                            Content ->
-                                { gath
-                                    | attributes = classNameAttr Internal.Style.classes.widthContent :: gath.attributes
-                                    , has = Flag.add Flag.widthContent gathered.has
-                                }
-
-                            Fill portion ->
-                                if portion == 1 then
-                                    { gath
-                                        | attributes = classNameAttr Internal.Style.classes.widthFill :: gath.attributes
-                                        , has = Flag.add Flag.widthFill gathered.has
-                                    }
-                                else
-                                    { gath
-                                        | has = Flag.add Flag.widthFill gathered.has
-                                        , attributes = classNameAttr (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) :: gath.attributes
-                                        , styles =
-                                            Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.row ++ " > " ++ (styleName <| "width-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
-                                    }
-
-                            Min minSize len ->
-                                let
-                                    ( cls, style ) =
-                                        ( "min-width-" ++ String.fromInt minSize, Single (".min-width-" ++ String.fromInt minSize) "min-width" (String.fromInt minSize ++ "px") )
-
-                                    newGathered =
-                                        { gath
-                                            | attributes = classNameAttr cls :: gath.attributes
-                                            , styles =
-                                                style :: gath.styles
-                                        }
-                                in
-                                widthHelper len newGathered
-
-                            Max maxSize len ->
-                                let
-                                    ( cls, style ) =
-                                        ( "max-width-" ++ String.fromInt maxSize, Single (".max-width-" ++ String.fromInt maxSize) "max-width" (String.fromInt maxSize ++ "px") )
-
-                                    newGathered =
-                                        { gath
-                                            | attributes = classNameAttr cls :: gath.attributes
-                                            , styles =
-                                                style :: gath.styles
-                                        }
-                                in
-                                widthHelper len newGathered
-                in
-                widthHelper width { gathered | has = Flag.add Flag.width gathered.has }
+                gatherWidth width { gathered | has = Flag.add Flag.width gathered.has }
             else
                 gathered
 
         Height height ->
             if not (Flag.present Flag.height gathered.has) then
-                let
-                    heightHelper h gath =
-                        case h of
-                            Px px ->
-                                { gath
-                                    | attributes = classNameAttr ("height-px-" ++ String.fromInt px) :: gath.attributes
-                                    , styles = Single (styleName <| "height-px-" ++ String.fromInt px) "height" (String.fromInt px ++ "px") :: gath.styles
-                                }
-
-                            Content ->
-                                { gath
-                                    | attributes = classNameAttr Internal.Style.classes.heightContent :: gath.attributes
-                                    , has = Flag.add Flag.heightContent gathered.has
-                                }
-
-                            Fill portion ->
-                                if portion == 1 then
-                                    { gath
-                                        | attributes = classNameAttr Internal.Style.classes.heightFill :: gath.attributes
-                                        , has = Flag.add Flag.heightFill gathered.has
-                                    }
-                                else
-                                    { gath
-                                        | attributes = classNameAttr (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) :: gath.attributes
-                                        , has = Flag.add Flag.heightFill gathered.has
-                                        , styles =
-                                            Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.column ++ " > " ++ (styleName <| "height-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gath.styles
-                                    }
-
-                            Min minSize len ->
-                                let
-                                    ( cls, style ) =
-                                        ( "min-height-" ++ String.fromInt minSize, Single (".min-height-" ++ String.fromInt minSize) "min-height" (String.fromInt minSize ++ "px") )
-
-                                    newGathered =
-                                        { gath
-                                            | attributes = classNameAttr cls :: gath.attributes
-                                            , styles =
-                                                style :: gath.styles
-                                        }
-                                in
-                                heightHelper len newGathered
-
-                            Max maxSize len ->
-                                let
-                                    ( cls, style ) =
-                                        ( "max-height-" ++ String.fromInt maxSize, Single (".max-height-" ++ String.fromInt maxSize) "max-height" (String.fromInt maxSize ++ "px") )
-
-                                    newGathered =
-                                        { gath
-                                            | attributes = classNameAttr cls :: gath.attributes
-                                            , styles =
-                                                style :: gath.styles
-                                        }
-                                in
-                                heightHelper len newGathered
-                in
-                heightHelper height { gathered | has = Flag.add Flag.height gathered.has }
+                gatherHeight height { gathered | has = Flag.add Flag.height gathered.has }
             else
                 gathered
 
@@ -911,6 +798,120 @@ gatherAttributes attr gathered =
 
                 Just ( existingClass, existing ) ->
                     { gathered | textShadows = Just ( textShadowName shadow ++ "-" ++ existingClass, formatTextShadow shadow ++ ", " ++ existing ) }
+
+
+gatherWidth w gathered =
+    case w of
+        Px px ->
+            { gathered
+                | attributes = classNameAttr (Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px) :: gathered.attributes
+                , styles = Single (Internal.Style.dot <| "width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: gathered.styles
+            }
+
+        Content ->
+            { gathered
+                | attributes = classNameAttr Internal.Style.classes.widthContent :: gathered.attributes
+                , has = Flag.add Flag.widthContent gathered.has
+            }
+
+        Fill portion ->
+            if portion == 1 then
+                { gathered
+                    | attributes = classNameAttr Internal.Style.classes.widthFill :: gathered.attributes
+                    , has = Flag.add Flag.widthFill gathered.has
+                }
+            else
+                { gathered
+                    | has = Flag.add Flag.widthFill gathered.has
+                    , attributes = classNameAttr (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) :: gathered.attributes
+                    , styles =
+                        Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.row ++ " > " ++ (Internal.Style.dot <| "width-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gathered.styles
+                }
+
+        Min minSize len ->
+            let
+                ( cls, style ) =
+                    ( "min-width-" ++ String.fromInt minSize, Single (".min-width-" ++ String.fromInt minSize) "min-width" (String.fromInt minSize ++ "px") )
+
+                newGathered =
+                    { gathered
+                        | attributes = classNameAttr cls :: gathered.attributes
+                        , styles =
+                            style :: gathered.styles
+                    }
+            in
+            gatherWidth len newGathered
+
+        Max maxSize len ->
+            let
+                ( cls, style ) =
+                    ( "max-width-" ++ String.fromInt maxSize, Single (".max-width-" ++ String.fromInt maxSize) "max-width" (String.fromInt maxSize ++ "px") )
+
+                newGathered =
+                    { gathered
+                        | attributes = classNameAttr cls :: gathered.attributes
+                        , styles =
+                            style :: gathered.styles
+                    }
+            in
+            gatherWidth len newGathered
+
+
+gatherHeight h gathered =
+    case h of
+        Px px ->
+            { gathered
+                | attributes = classNameAttr ("height-px-" ++ String.fromInt px) :: gathered.attributes
+                , styles = Single (Internal.Style.dot <| "height-px-" ++ String.fromInt px) "height" (String.fromInt px ++ "px") :: gathered.styles
+            }
+
+        Content ->
+            { gathered
+                | attributes = classNameAttr Internal.Style.classes.heightContent :: gathered.attributes
+                , has = Flag.add Flag.heightContent gathered.has
+            }
+
+        Fill portion ->
+            if portion == 1 then
+                { gathered
+                    | attributes = classNameAttr Internal.Style.classes.heightFill :: gathered.attributes
+                    , has = Flag.add Flag.heightFill gathered.has
+                }
+            else
+                { gathered
+                    | attributes = classNameAttr (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) :: gathered.attributes
+                    , has = Flag.add Flag.heightFill gathered.has
+                    , styles =
+                        Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.column ++ " > " ++ (Internal.Style.dot <| "height-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gathered.styles
+                }
+
+        Min minSize len ->
+            let
+                ( cls, style ) =
+                    ( "min-height-" ++ String.fromInt minSize, Single (".min-height-" ++ String.fromInt minSize) "min-height" (String.fromInt minSize ++ "px") )
+
+                newGathered =
+                    { gathered
+                        | attributes = classNameAttr cls :: gathered.attributes
+                        , styles =
+                            style :: gathered.styles
+                    }
+            in
+            gatherHeight len newGathered
+
+        Max maxSize len ->
+            let
+                ( cls, style ) =
+                    ( "max-height-" ++ String.fromInt maxSize, Single (".max-height-" ++ String.fromInt maxSize) "max-height" (String.fromInt maxSize ++ "px") )
+
+                newGathered =
+                    { gathered
+                        | attributes = classNameAttr cls :: gathered.attributes
+                        , styles =
+                            style :: gathered.styles
+                    }
+            in
+            gatherHeight len newGathered
 
 
 initGathered : Maybe String -> Gathered msg
@@ -2238,7 +2239,7 @@ boxShadowName shadow =
 
 floatClass : Float -> String
 floatClass x =
-    String.fromInt (round (x * 100))
+    String.fromInt (round (x * 255))
 
 
 formatColor : Color -> String
