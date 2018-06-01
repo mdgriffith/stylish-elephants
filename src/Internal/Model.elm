@@ -178,7 +178,7 @@ type alias Gathered msg =
     , boxShadows : Maybe ( String, String )
     , textShadows : Maybe ( String, String )
     , transform : Maybe (Decorated TransformationGroup)
-    , has : Flag
+    , has : Flag.Field
     }
 
 

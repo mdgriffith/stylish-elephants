@@ -5,32 +5,59 @@ module Internal.Flag exposing (..)
 import Bitwise
 
 
+type Field
+    = Field Int Int
+
+
 type Flag
     = Flag Int
+    | Second Int
 
 
-none : Flag
+none : Field
 none =
-    Flag 0
+    Field 0 0
+
+
+value myFlag =
+    case myFlag of
+        Flag first ->
+            round (logBase 2 (toFloat first))
+
+        Second second ->
+            round (logBase 2 (toFloat second)) + 31
 
 
 {-| If the query is in the truth, return True
 -}
-present : Flag -> Flag -> Bool
-present (Flag query) (Flag truth) =
-    Bitwise.and query truth == query
+present : Flag -> Field -> Bool
+present myFlag (Field fieldOne fieldTwo) =
+    case myFlag of
+        Flag first ->
+            Bitwise.and first fieldOne == fieldOne
+
+        Second second ->
+            Bitwise.and second fieldTwo == fieldTwo
 
 
-{-| Flip all bits that are 1 in the first flag, in the second flag.
+{-| Add a flag to a field.
 -}
-add : Flag -> Flag -> Flag
-add (Flag flipTo) (Flag truth) =
-    Flag (Bitwise.or flipTo truth)
+add : Flag -> Field -> Field
+add myFlag (Field one two) =
+    case myFlag of
+        Flag first ->
+            Field (Bitwise.or first one) two
+
+        Second second ->
+            Field one (Bitwise.or second two)
 
 
-col : Int -> Flag
-col i =
-    Flag (2 ^ i)
+flag : Int -> Flag
+flag i =
+    if i > 31 then
+        Second (2 ^ (i - 31))
+    else
+        Flag (2 ^ i)
 
 
 
@@ -38,135 +65,135 @@ col i =
 
 
 transparency =
-    col 1
+    flag 1
 
 
 padding =
-    col 2
+    flag 2
 
 
 spacing =
-    col 3
+    flag 3
 
 
 fontSize =
-    col 4
+    flag 4
 
 
 fontFamily =
-    col 5
+    flag 5
 
 
 width =
-    col 6
+    flag 6
 
 
 height =
-    col 7
+    flag 7
 
 
 bgColor =
-    col 8
+    flag 8
 
 
 bgImage =
-    col 9
+    flag 9
 
 
 bgGradient =
-    col 10
+    flag 10
 
 
 borderStyle =
-    col 11
+    flag 11
 
 
 fontAlignment =
-    col 12
+    flag 12
 
 
 fontWeight =
-    col 13
+    flag 13
 
 
 fontColor =
-    col 14
+    flag 14
 
 
 wordSpacing =
-    col 15
+    flag 15
 
 
 letterSpacing =
-    col 16
+    flag 16
 
 
 borderRound =
-    col 17
+    flag 17
 
 
 shadows =
-    col 19
+    flag 19
 
 
 overflow =
-    col 20
+    flag 20
 
 
 cursor =
-    col 21
+    flag 21
 
 
 scale =
-    col 23
+    flag 23
 
 
 rotate =
-    col 24
+    flag 24
 
 
 moveX =
-    col 25
+    flag 25
 
 
 moveY =
-    col 26
+    flag 26
 
 
 borderWidth =
-    col 27
+    flag 27
 
 
 borderColor =
-    col 28
+    flag 28
 
 
 yAlign =
-    col 29
+    flag 29
 
 
 xAlign =
-    col 30
+    flag 30
 
 
 focus =
-    col 31
+    flag 31
 
 
 active =
-    col 32
+    flag 32
 
 
 hover =
-    col 33
+    flag 33
 
 
 gridTemplate =
-    col 34
+    flag 34
 
 
 gridPosition =
-    col 35
+    flag 35
 
 
 
@@ -174,32 +201,32 @@ gridPosition =
 
 
 heightContent =
-    col 36
+    flag 36
 
 
 heightFill =
-    col 37
+    flag 37
 
 
 widthContent =
-    col 38
+    flag 38
 
 
 widthFill =
-    col 39
+    flag 39
 
 
 alignRight =
-    col 40
+    flag 40
 
 
 alignBottom =
-    col 41
+    flag 41
 
 
 centerX =
-    col 42
+    flag 42
 
 
 centerY =
-    col 43
+    flag 43
