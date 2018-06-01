@@ -1253,7 +1253,7 @@ type DeviceClass
 -}
 classifyDevice : { window | height : Int, width : Int } -> Device
 classifyDevice window =
-    { device =
+    { class =
         if window.width <= 600 then
             Phone
         else if window.width > 600 && window.width <= 1200 then
