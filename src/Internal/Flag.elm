@@ -25,7 +25,7 @@ value myFlag =
             round (logBase 2 (toFloat first))
 
         Second second ->
-            round (logBase 2 (toFloat second)) + 31
+            round (logBase 2 (toFloat second)) + 32
 
 
 {-| If the query is in the truth, return True
@@ -34,10 +34,10 @@ present : Flag -> Field -> Bool
 present myFlag (Field fieldOne fieldTwo) =
     case myFlag of
         Flag first ->
-            Bitwise.and first fieldOne == fieldOne
+            Bitwise.and first fieldOne == first
 
         Second second ->
-            Bitwise.and second fieldTwo == fieldTwo
+            Bitwise.and second fieldTwo == second
 
 
 {-| Add a flag to a field.
@@ -55,9 +55,11 @@ add myFlag (Field one two) =
 flag : Int -> Flag
 flag i =
     if i > 31 then
-        Second (2 ^ (i - 31))
+        Second
+            (Bitwise.shiftLeftBy (i - 32) 1)
     else
-        Flag (2 ^ i)
+        Flag
+            (Bitwise.shiftLeftBy i 1)
 
 
 
@@ -65,7 +67,7 @@ flag i =
 
 
 transparency =
-    flag 1
+    flag 0
 
 
 padding =

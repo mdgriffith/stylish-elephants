@@ -9,6 +9,9 @@ main =
         [ Html.text "Verify All Flags invalidate themselves"
         , Html.div []
             (List.indexedMap invalidateSelf allFlags)
+        , Html.text "Verify All Flags don't interfere with other flags"
+        , Html.div []
+            (List.indexedMap doesntInvalidateOthers allFlags)
         ]
 
 
@@ -17,6 +20,28 @@ invalidateSelf i flag =
         Html.text ""
     else
         Html.div [] [ Html.text (toString (Flag.value flag) ++ " at index " ++ toString i ++ " does not invalidate itself") ]
+
+
+doesntInvalidateOthers i flag =
+    let
+        withFlag =
+            Flag.none
+                |> Flag.add flag
+
+        passing =
+            List.all identity <|
+                List.indexedMap
+                    (\j otherFlag ->
+                        Flag.present otherFlag (Flag.add otherFlag withFlag)
+                    )
+                    allFlags
+    in
+    if passing then
+        Html.text ""
+    else
+        Html.div []
+            [ Html.text (toString (Flag.value flag) ++ " at index " ++ toString i ++ " invalidates other flags!")
+            ]
 
 
 allFlags =
