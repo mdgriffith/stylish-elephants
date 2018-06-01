@@ -120,7 +120,7 @@ Text needs it's own layout primitives.
 
 # Size
 
-@docs width, height, Length, px, shrink, fill, fillPortion, minimum, maximum
+@docs width, height, Length, px, shrink, fill, fillPortion, maximum, minimum
 
 
 ## Padding and Spacing
@@ -360,13 +360,36 @@ fill =
     Internal.Fill 1
 
 
-{-| -}
+{-| Similarly you can set a minimum boundary.
+
+     el
+        [ height
+            (fill
+                |> maximum 300
+                |> minimum 30
+            )
+
+        ]
+        (text "I will stop at 300px")
+
+-}
 minimum : Int -> Length -> Length
 minimum i l =
     Internal.Min i l
 
 
-{-| -}
+{-| You can add a maximum to a length.
+
+    el
+        [ height
+            (fill
+                |> maximum 300
+            )
+
+        ]
+        (text "I will stop at 300px")
+
+-}
 maximum : Int -> Length -> Length
 maximum i l =
     Internal.Max i l
