@@ -29,18 +29,27 @@ type alias TestableProgram =
 
 program : List ( String, Testable.Element Msg ) -> TestableProgram
 program tests =
+    let
+        ( current, upcoming ) =
+            case tests of
+                [] ->
+                    ( Nothing, [] )
+
+                cur :: remaining ->
+                    ( Just cur, remaining )
+    in
     Browser.embed
         { init =
             always
-                ( { current = Nothing
-                  , upcoming = tests
+                ( { current = current
+                  , upcoming = upcoming
                   , finished = []
                   , stage = BeginRendering
                   }
-                  -- , Task.perform (always Step) Time.now
-                , Task.perform (always Step)
-                    (Process.sleep 500
-                        |> Task.andThen (always Time.now)
+                , Task.perform (always Analyze)
+                    (Process.sleep 32
+                        |> Task.andThen
+                            (always Time.now)
                     )
                 )
         , view = view
@@ -119,13 +128,11 @@ prepareResults withResults =
 type Stage
     = Rendered
     | BeginRendering
-    | GatherData
-    | Finished
 
 
 type Msg
     = NoOp
-    | Step
+    | Analyze
     | RefreshBoundingBox
         (List
             { id : String
@@ -166,7 +173,7 @@ update msg model =
             in
             case model.current of
                 Nothing ->
-                    ( { model | stage = Finished }
+                    ( model
                     , Cmd.none
                     )
 
@@ -186,8 +193,7 @@ update msg model =
                     case model.upcoming of
                         [] ->
                             ( { model
-                                | stage = Finished
-                                , current = Nothing
+                                | current = Nothing
                                 , finished = model.finished ++ [ currentResults ]
                               }
                             , report (prepareResults (currentResults :: model.finished))
@@ -196,46 +202,31 @@ update msg model =
                         newCurrent :: remaining ->
                             ( { model
                                 | finished = model.finished ++ [ currentResults ]
+                                , current = Just newCurrent
+                                , upcoming = remaining
                                 , stage = BeginRendering
                               }
-                            , Cmd.none
+                            , Task.perform (always Analyze)
+                                (Process.sleep 32
+                                    |> Task.andThen
+                                        (always Time.now)
+                                )
                             )
 
-        Step ->
-            case Debug.log "step" model.stage of
-                BeginRendering ->
-                    ( case model.upcoming of
-                        [] ->
-                            { model | stage = Rendered }
-
-                        current :: remaining ->
-                            { model
-                                | stage = Rendered
-                                , upcoming = remaining
-                                , current = Just current
-                            }
-                    , Task.perform (always Step) Time.now
+        Analyze ->
+            case model.current of
+                Nothing ->
+                    ( model
+                    , Cmd.none
                     )
 
-                Rendered ->
-                    case model.current of
-                        Nothing ->
-                            ( { model | stage = Finished }
-                            , Cmd.none
-                            )
-
-                        Just ( label, current ) ->
-                            ( { model | stage = GatherData }
-                            , let
-                                _ =
-                                    Debug.log "sending cmd analyze" (Testable.getIds current)
-                              in
-                              analyze (Testable.getIds current)
-                            )
-
-                _ ->
-                    ( { model | stage = Rendered }
-                    , Cmd.none
+                Just ( label, current ) ->
+                    ( model
+                    , let
+                        ids =
+                            Debug.log "sending cmd analyze" (Testable.getIds current)
+                      in
+                      analyze ids
                     )
 
 
@@ -243,7 +234,7 @@ view : Model Msg -> Html Msg
 view model =
     case model.current of
         Nothing ->
-            if model.stage == Finished then
+            if List.isEmpty model.upcoming then
                 Element.layout [] <|
                     Element.column
                         [ Element.spacing 20
