@@ -676,12 +676,12 @@ formatColorWithAlpha (Internal.Rgba red green blue alpha) =
 formatColor : Color -> String
 formatColor (Internal.Rgba red green blue alpha) =
     if alpha == 1 then
-        ("rgba(" ++ String.fromInt (round (red * 255)))
+        ("rgb(" ++ String.fromInt (round (red * 255)))
             ++ (", " ++ String.fromInt (round (green * 255)))
             ++ (", " ++ String.fromInt (round (blue * 255)))
             ++ ")"
     else
-        ("rgba(" ++ String.fromInt (round (red * 255)))
+        ("rgb(" ++ String.fromInt (round (red * 255)))
             ++ (", " ++ String.fromInt (round (green * 255)))
             ++ (", " ++ String.fromInt (round (blue * 255)))
             ++ ")"
