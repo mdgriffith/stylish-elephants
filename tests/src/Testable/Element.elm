@@ -57,6 +57,16 @@ type Length
     = Px Int
     | Fill Int
     | Shrink
+    | Minimum Int Length
+    | Maximum Int Length
+
+
+minimum =
+    Minimum
+
+
+maximum =
+    Maximum
 
 
 px : Int -> Length
@@ -169,49 +179,134 @@ paddingXY x y =
         }
 
 
-width : Length -> Testable.Attr msg
-width len =
+widthHelper maybeMin maybeMax len =
+    let
+        addMin l =
+            case maybeMin of
+                Nothing ->
+                    l
+
+                Just minPx ->
+                    l |> Element.minimum minPx
+
+        addMax l =
+            case maybeMax of
+                Nothing ->
+                    l
+
+                Just maxPx ->
+                    l |> Element.maximum maxPx
+
+        minLabel =
+            case maybeMin of
+                Nothing ->
+                    ""
+
+                Just i ->
+                    " min:" ++ String.fromInt i
+
+        maxLabel =
+            case maybeMax of
+                Nothing ->
+                    ""
+
+                Just i ->
+                    " max:" ++ String.fromInt i
+
+        minMaxTest actualWidth =
+            case ( maybeMin, maybeMax ) of
+                ( Nothing, Nothing ) ->
+                    True
+
+                ( Just lower, Nothing ) ->
+                    lower <= actualWidth
+
+                ( Just lower, Just higher ) ->
+                    lower <= actualWidth && actualWidth <= higher
+
+                ( Nothing, Just higher ) ->
+                    actualWidth <= higher
+    in
     case len of
+        Minimum m newLen ->
+            widthHelper (Just m) maybeMax newLen
+
+        Maximum m newLen ->
+            widthHelper maybeMin (Just m) newLen
+
         Px val ->
+            -- Pixel values should ignore min and max?
             Testable.LabeledTest
-                { label = "width " ++ String.fromInt val ++ "px"
-                , attr = Element.width (Element.px val)
+                { label = "width " ++ String.fromInt val ++ "px" ++ minLabel ++ maxLabel
+                , attr =
+                    Element.width
+                        (Element.px val
+                            |> addMin
+                            |> addMax
+                        )
                 , test =
                     \found _ ->
-                        Expect.equal (round found.self.bbox.width) val
+                        Expect.true "exact width is exact"
+                            ((round found.self.bbox.width == val)
+                                && minMaxTest (round found.self.bbox.width)
+                            )
                 }
 
         Fill portion ->
             Testable.LabeledTest
-                { label = "width fill-" ++ String.fromInt portion
-                , attr = Element.width (Element.fillPortion portion)
+                { label = "width fill-" ++ String.fromInt portion ++ minLabel ++ maxLabel
+                , attr =
+                    Element.width
+                        (Element.fillPortion portion
+                            |> addMin
+                            |> addMax
+                        )
                 , test =
                     \context _ ->
                         if List.member context.location [ Testable.IsNearby Testable.OnRight, Testable.IsNearby Testable.OnLeft ] then
-                            Expect.true "height fill doesn't apply to above/below elements" True
+                            Expect.true "width fill doesn't apply to onright/onleft elements" True
                         else
+                            let
+                                parentAvailableWidth =
+                                    context.parent.bbox.width - (context.self.bbox.padding.left + context.self.bbox.padding.right)
+                            in
                             case context.location of
                                 Testable.IsNearby _ ->
-                                    expectRoundedEquality context.parent.bbox.width context.self.bbox.width
+                                    Expect.true "Nearby Element has fill width"
+                                        ((round context.parent.bbox.width == round context.self.bbox.width)
+                                            && minMaxTest (round context.self.bbox.width)
+                                        )
 
                                 Testable.InColumn ->
-                                    expectRoundedEquality context.parent.bbox.width context.self.bbox.width
+                                    Expect.true "Element within column has fill width"
+                                        ((round parentAvailableWidth == round context.self.bbox.width)
+                                            && minMaxTest (round context.self.bbox.width)
+                                        )
 
                                 Testable.InEl ->
-                                    expectRoundedEquality context.parent.bbox.width context.self.bbox.width
+                                    Expect.true "Element within element has fill width" <|
+                                        (round parentAvailableWidth == round context.self.bbox.width)
+                                            && minMaxTest (round context.self.bbox.width)
 
                                 _ ->
                                     let
                                         spacePerPortion =
-                                            context.parent.bbox.width / toFloat (List.length context.siblings + 1)
+                                            parentAvailableWidth / toFloat (List.length context.siblings + 1)
                                     in
-                                    expectRoundedEquality spacePerPortion context.self.bbox.width
+                                    Expect.true "element has fill width" <|
+                                        (round spacePerPortion == round context.self.bbox.width)
+                                            && minMaxTest (round context.self.bbox.width)
                 }
 
         Shrink ->
             Testable.LabeledTest
-                { label = "width shrink"
-                , attr = Element.width Element.shrink
+                { label = "width shrink" ++ minLabel ++ maxLabel
+                , attr =
+                    Element.width
+                        (Element.shrink
+                            |> addMin
+                            |> addMax
+                        )
                 , test =
                     \context _ ->
                         let
@@ -241,79 +336,171 @@ width len =
                 }
 
 
-height : Length -> Testable.Attr msg
-height len =
+heightHelper maybeMin maybeMax len =
+    let
+        addMin l =
+            case maybeMin of
+                Nothing ->
+                    l
+
+                Just minPx ->
+                    l |> Element.minimum minPx
+
+        addMax l =
+            case maybeMax of
+                Nothing ->
+                    l
+
+                Just maxPx ->
+                    l |> Element.maximum maxPx
+
+        minLabel =
+            case maybeMin of
+                Nothing ->
+                    ""
+
+                Just i ->
+                    " min:" ++ String.fromInt i
+
+        maxLabel =
+            case maybeMax of
+                Nothing ->
+                    ""
+
+                Just i ->
+                    " max:" ++ String.fromInt i
+
+        minMaxTest actualheight =
+            case ( maybeMin, maybeMax ) of
+                ( Nothing, Nothing ) ->
+                    True
+
+                ( Just lower, Nothing ) ->
+                    lower <= actualheight
+
+                ( Just lower, Just higher ) ->
+                    lower <= actualheight && actualheight <= higher
+
+                ( Nothing, Just higher ) ->
+                    actualheight <= higher
+    in
     case len of
+        Minimum m newLen ->
+            heightHelper (Just m) maybeMax newLen
+
+        Maximum m newLen ->
+            heightHelper maybeMin (Just m) newLen
+
         Px val ->
+            -- Pixel values should ignore min and max?
             Testable.LabeledTest
-                { label = "height " ++ String.fromInt val ++ "px"
-                , attr = Element.height (Element.px val)
+                { label = "height " ++ String.fromInt val ++ "px" ++ minLabel ++ maxLabel
+                , attr =
+                    Element.height
+                        (Element.px val
+                            |> addMin
+                            |> addMax
+                        )
                 , test =
                     \found _ ->
-                        Expect.equal (round found.self.bbox.height) val
+                        Expect.true "exact height is exact"
+                            ((round found.self.bbox.height == val)
+                                && minMaxTest (round found.self.bbox.height)
+                            )
                 }
 
         Fill portion ->
             Testable.LabeledTest
-                { label = "height fill:" ++ String.fromInt portion
-                , attr = Element.height (Element.fillPortion portion)
+                { label = "height fill-" ++ String.fromInt portion ++ minLabel ++ maxLabel
+                , attr =
+                    Element.height
+                        (Element.fillPortion portion
+                            |> addMin
+                            |> addMax
+                        )
                 , test =
                     \context _ ->
                         if List.member context.location [ Testable.IsNearby Testable.Above, Testable.IsNearby Testable.Below ] then
                             Expect.true "height fill doesn't apply to above/below elements" True
                         else
+                            let
+                                parentAvailableHeight =
+                                    context.parent.bbox.height - (context.self.bbox.padding.top + context.self.bbox.padding.bottom)
+                            in
                             case context.location of
                                 Testable.IsNearby _ ->
-                                    expectRoundedEquality context.parent.bbox.height context.self.bbox.height
+                                    Expect.true "Nearby Element has fill height"
+                                        ((round context.parent.bbox.height == round context.self.bbox.height)
+                                            && minMaxTest (round context.self.bbox.height)
+                                        )
 
-                                Testable.InRow ->
-                                    expectRoundedEquality context.parent.bbox.height context.self.bbox.height
+                                Testable.InColumn ->
+                                    Expect.true "Element within column has fill height"
+                                        ((round parentAvailableHeight == round context.self.bbox.height)
+                                            && minMaxTest (round context.self.bbox.height)
+                                        )
 
                                 Testable.InEl ->
-                                    expectRoundedEquality context.parent.bbox.height context.self.bbox.height
+                                    Expect.true "Element within el has fill height" <|
+                                        (round parentAvailableHeight == round context.self.bbox.height)
+                                            && minMaxTest (round context.self.bbox.height)
 
                                 _ ->
                                     let
                                         spacePerPortion =
-                                            context.parent.bbox.height / toFloat (List.length context.siblings + 1)
-
-                                        -- space per portion only makes sense if all the other elements are fill
-                                        -- we can detect if they are not fill by comparing them to the expected fill size.
-                                        -- This approach may not account for lots of weird height values.
-                                        findFillable sib fillable =
-                                            fillable - sib.bbox.height
-
-                                        fillableSpace =
-                                            List.foldl findFillable context.parent.bbox.height context.siblings
+                                            parentAvailableHeight / toFloat (List.length context.siblings + 1)
                                     in
-                                    expectRoundedEquality fillableSpace context.self.bbox.height
+                                    Expect.true "el has fill height" <|
+                                        (round spacePerPortion == round context.self.bbox.height)
+                                            && minMaxTest (round context.self.bbox.height)
                 }
 
         Shrink ->
             Testable.LabeledTest
-                { label = "height shrink"
-                , attr = Element.height Element.shrink
+                { label = "height shrink" ++ minLabel ++ maxLabel
+                , attr =
+                    Element.height
+                        (Element.shrink
+                            |> addMin
+                            |> addMax
+                        )
                 , test =
                     \context _ ->
                         let
-                            childHeight child =
+                            childWidth child =
                                 -- TODO: add margin values to heights
                                 child.bbox.height
 
                             totalChildren =
                                 context.children
-                                    |> List.map childHeight
+                                    |> List.map childWidth
                                     |> List.sum
 
-                            horizontalPadding =
-                                context.self.bbox.padding.left + context.self.bbox.padding.right
+                            verticalPadding =
+                                context.self.bbox.padding.top + context.self.bbox.padding.bottom
+
+                            spacingValue =
+                                toFloat context.parentSpacing * (toFloat (List.length context.children) - 1)
                         in
                         if totalChildren == 0 then
-                            -- TODO, see issue with Width/shrink and text elements.
+                            -- TODO: The issue is that we have a hard time measuring `text` elements
+                            -- So if a element has a text child, then it's height isn't going to show up in the system.
                             expectRoundedEquality context.self.bbox.height context.self.bbox.height
                         else
-                            expectRoundedEquality (totalChildren + horizontalPadding) context.self.bbox.height
+                            -- This fails if this element is actually a column
+                            -- So we need to capture what this element is in order to do this calculation.
+                            expectRoundedEquality (totalChildren + verticalPadding + spacingValue) context.self.bbox.height
                 }
+
+
+width : Length -> Testable.Attr msg
+width len =
+    widthHelper Nothing Nothing len
+
+
+height : Length -> Testable.Attr msg
+height len =
+    heightHelper Nothing Nothing len
 
 
 spacing : Int -> Testable.Attr msg
