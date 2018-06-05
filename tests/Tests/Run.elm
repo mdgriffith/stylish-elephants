@@ -16,13 +16,13 @@ import Tests.Transparency
 main : Testable.Runner.TestableProgram
 main =
     Testable.Runner.program
-        [ Tuple.pair "Basic Element" Tests.Basic.view
+        [ --Tuple.pair "Basic Element" Tests.Basic.view
+          Tuple.pair "Nearby" Tests.Nearby.view
+        , Tuple.pair "Element Alignment" Tests.ElementAlignment.view
+        , Tuple.pair "Transparency" Tests.Transparency.view
+        , Tuple.pair "Column Alignment" Tests.ColumnAlignment.view
 
-        -- , Tuple.pair "Nearby" Tests.Nearby.view
-        -- , Tuple.pair "Element Alignment" Tests.ElementAlignment.view
-        -- , Tuple.pair "Transparency" Tests.Transparency.view
-        -- , Tuple.pair "Column Alignment" Tests.ColumnAlignment.view
         -- , Tuple.pair "Row Alignment" Tests.RowAlignment.view
-        -- , Tuple.pair "Column Spacing" Tests.ColumnSpacing.view
-        -- , Tuple.pair "Row Spacing" Tests.RowSpacing.view
+        , Tuple.pair "Column Spacing" Tests.ColumnSpacing.view
+        , Tuple.pair "Row Spacing" Tests.RowSpacing.view
         ]
