@@ -3,14 +3,17 @@ port module Testable.Runner exposing (TestableProgram, program, show)
 {-| -}
 
 import Browser
+import Char
 import Dict exposing (Dict)
 import Element
 import Element.Background as Background
 import Element.Border as Border
 import Element.Font as Font
 import Html exposing (Html)
+import Parser exposing ((|.), (|=))
 import Process
 import Random
+import Set
 import Task
 import Test.Runner
 import Test.Runner.Failure as Failure
@@ -25,6 +28,14 @@ show =
 
 type alias TestableProgram =
     Program () (Model Msg) Msg
+
+
+palette =
+    { white = Element.rgb 1 1 1
+    , red = Element.rgb 1 0 0
+    , green = Element.rgb 0 1 0
+    , lightGrey = Element.rgb 0.7 0.7 0.7
+    }
 
 
 program : List ( String, Testable.Element Msg ) -> TestableProgram
@@ -44,7 +55,6 @@ program tests =
                 ( { current = current
                   , upcoming = upcoming
                   , finished = []
-                  , stage = BeginRendering
                   }
                 , Task.perform (always Analyze)
                     (Process.sleep 32
@@ -58,7 +68,7 @@ program tests =
         }
 
 
-subscriptions : { a | stage : Stage } -> Sub Msg
+subscriptions : Model Msg -> Sub Msg
 subscriptions model =
     Sub.batch
         [ styles RefreshBoundingBox
@@ -69,7 +79,6 @@ type alias Model msg =
     { current : Maybe ( String, Testable.Element msg )
     , upcoming : List ( String, Testable.Element msg )
     , finished : List (WithResults (Testable.Element msg))
-    , stage : Stage
     }
 
 
@@ -125,11 +134,6 @@ prepareResults withResults =
     List.map prepare withResults
 
 
-type Stage
-    = Rendered
-    | BeginRendering
-
-
 type Msg
     = NoOp
     | Analyze
@@ -167,10 +171,6 @@ update msg model =
             ( model, Cmd.none )
 
         RefreshBoundingBox boxes ->
-            let
-                _ =
-                    Debug.log "refreshed" model.stage
-            in
             case model.current of
                 Nothing ->
                     ( model
@@ -204,7 +204,6 @@ update msg model =
                                 | finished = model.finished ++ [ currentResults ]
                                 , current = Just newCurrent
                                 , upcoming = remaining
-                                , stage = BeginRendering
                               }
                             , Task.perform (always Analyze)
                                 (Process.sleep 32
@@ -222,11 +221,7 @@ update msg model =
 
                 Just ( label, current ) ->
                     ( model
-                    , let
-                        ids =
-                            Debug.log "sending cmd analyze" (Testable.getIds current)
-                      in
-                      analyze ids
+                    , analyze (Testable.getIds current)
                     )
 
 
@@ -235,15 +230,30 @@ view model =
     case model.current of
         Nothing ->
             if List.isEmpty model.upcoming then
-                Element.layout [] <|
-                    Element.column
-                        [ Element.spacing 20
-                        , Element.padding 20
-                        , Element.width (Element.px 800)
+                -- (List.map viewResult model.finished)
+                case model.finished of
+                    [] ->
+                        Element.layout [] <|
+                            Element.column
+                                [ Element.spacing 20
+                                , Element.padding 20
+                                , Element.width (Element.px 800)
 
-                        -- , Background.color Color.grey
-                        ]
-                        (List.map viewResult model.finished)
+                                -- , Background.color Color.grey
+                                ]
+                                [ Element.none ]
+
+                    finished :: remaining ->
+                        if False then
+                            viewResultsInline finished
+                        else
+                            Element.layout [] <|
+                                Element.column
+                                    [ Element.spacing 20
+                                    , Element.padding 20
+                                    , Element.width (Element.px 800)
+                                    ]
+                                    (List.map viewResult (finished :: remaining))
             else
                 Html.text "running?"
 
@@ -251,12 +261,58 @@ view model =
             Testable.render current
 
 
-palette =
-    { white = Element.rgb 1 1 1
-    , red = Element.rgb 1 0 0
-    , green = Element.rgb 0 1 0
-    , lightGrey = Element.rgb 0.7 0.7 0.7
-    }
+viewResultsInline : WithResults (Testable.Element Msg) -> Html Msg
+viewResultsInline testable =
+    Html.div
+        []
+        [ viewResultsAnnotationStylesheet testable.results
+        , Testable.render testable.element
+        ]
+
+
+{-| Our ID is part of our label. This could be fixed farther down the chain, but I think it'd be pretty involved.
+
+So, now we can just parse the id out of the label.
+
+-}
+parseId str =
+    str
+        |> Parser.run
+            (Parser.succeed identity
+                |. Parser.chompWhile (\c -> c /= '#')
+                |= Parser.variable
+                    { start = \c -> c == '#'
+                    , inner = \c -> Char.isAlphaNum c || c == '-'
+                    , reserved = Set.empty
+                    }
+            )
+        |> Result.toMaybe
+
+
+viewResultsAnnotationStylesheet results =
+    let
+        toStyleClass ( label, maybeFailure ) =
+            case maybeFailure of
+                Nothing ->
+                    ""
+
+                Just failure ->
+                    case parseId label of
+                        Nothing ->
+                            Debug.log "NO ID FOUND" label
+
+                        Just id ->
+                            id ++ " { background-color:red; outline: dashed; };"
+
+        styleSheet =
+            results
+                |> List.map toStyleClass
+                |> String.join ""
+    in
+    Html.node "style"
+        []
+        [ Html.text styleSheet
+        ]
 
 
 viewResult : WithResults (Testable.Element Msg) -> Element.Element Msg
