@@ -1,5 +1,6 @@
 module Tests.ElementAlignment exposing (..)
 
+import Generator
 import Html
 import Testable
 import Testable.Element as Element exposing (..)
@@ -30,8 +31,8 @@ box attrs =
 container : Testable.Element msg -> Testable.Element msg
 container =
     el
-        [ width (px 100)
-        , height (px 100)
+        [ width (px 200)
+        , height (px 200)
         , Background.color lightGrey
         ]
 
@@ -43,48 +44,68 @@ view =
         , container <|
             box []
         , text "alignLeft, centerX, alignRight"
-        , row [ spacing 20 ]
-            [ container <|
-                box [ alignLeft ]
-            , container <|
-                box [ centerX ]
-            , container <|
-                box [ alignRight ]
-            ]
+        , column [ spacing 20 ] <|
+            Generator.sizes
+                (\resizeable ->
+                    row [ spacing 20 ]
+                        [ container <|
+                            resizeable [ Background.color blue, alignLeft ] none
+                        , container <|
+                            resizeable [ Background.color blue, centerX ] none
+                        , container <|
+                            resizeable [ Background.color blue, alignRight ] none
+                        ]
+                )
         , text "top, centerY, bottom"
-        , row [ spacing 20 ]
-            [ container <|
-                box [ alignTop ]
-            , container <|
-                box [ centerY ]
-            , container <|
-                box [ alignBottom ]
-            ]
+        , column [ spacing 20 ] <|
+            Generator.sizes
+                (\resizeable ->
+                    row [ spacing 20 ]
+                        [ container <|
+                            resizeable [ alignTop ] none
+                        , container <|
+                            resizeable [ centerY ] none
+                        , container <|
+                            resizeable [ alignBottom ] none
+                        ]
+                )
         , text "align top ++ alignments"
-        , row [ spacing 20 ]
-            [ container <|
-                box [ alignTop, alignLeft ]
-            , container <|
-                box [ alignTop, centerX ]
-            , container <|
-                box [ alignTop, alignRight ]
-            ]
+        , column [ spacing 20 ] <|
+            Generator.sizes
+                (\resizeable ->
+                    row [ spacing 20 ]
+                        [ container <|
+                            resizeable [ alignTop, alignLeft ] none
+                        , container <|
+                            resizeable [ alignTop, centerX ] none
+                        , container <|
+                            resizeable [ alignTop, alignRight ] none
+                        ]
+                )
         , text "centerY ++ alignments"
-        , row [ spacing 20 ]
-            [ container <|
-                box [ centerY, alignLeft ]
-            , container <|
-                box [ centerY, centerX ]
-            , container <|
-                box [ centerY, alignRight ]
-            ]
+        , column [ spacing 20 ] <|
+            Generator.sizes
+                (\resizeable ->
+                    row [ spacing 20 ]
+                        [ container <|
+                            resizeable [ centerY, alignLeft ] none
+                        , container <|
+                            resizeable [ centerY, centerX ] none
+                        , container <|
+                            resizeable [ centerY, alignRight ] none
+                        ]
+                )
         , text "alignBottom ++ alignments"
-        , row [ spacing 20 ]
-            [ container <|
-                box [ alignBottom, alignLeft ]
-            , container <|
-                box [ alignBottom, centerX ]
-            , container <|
-                box [ alignBottom, alignRight ]
-            ]
+        , column [ spacing 20 ] <|
+            Generator.sizes
+                (\resizeable ->
+                    row [ spacing 20 ]
+                        [ container <|
+                            resizeable [ alignBottom, alignLeft ] none
+                        , container <|
+                            resizeable [ alignBottom, centerX ] none
+                        , container <|
+                            resizeable [ alignBottom, alignRight ] none
+                        ]
+                )
         ]
