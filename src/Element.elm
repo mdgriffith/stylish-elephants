@@ -21,7 +21,7 @@ module Element
         , alignRight
         , alignTop
         , alpha
-        , behind
+        , behindContent
         , below
         , centerX
         , centerY
@@ -228,7 +228,7 @@ Where `"I'm Below"` doesn't change the size of `Element.row`.
 
 This is very useful for things like dropdown menus or tooltips.
 
-@docs above, below, onRight, onLeft, inFront, behind
+@docs above, below, onRight, onLeft, inFront, behindContent
 
 
 # Temporary Styling
@@ -1058,9 +1058,10 @@ inFront element =
     Internal.Nearby Internal.InFront element
 
 
-{-| -}
-behind : Element msg -> Attribute msg
-behind element =
+{-| This will place an element between the background and the content of an element.
+-}
+behindContent : Element msg -> Attribute msg
+behindContent element =
     Internal.Nearby Internal.Behind element
 
 

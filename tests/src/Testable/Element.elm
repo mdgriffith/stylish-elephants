@@ -1005,8 +1005,8 @@ inFront element =
 
 
 {-| -}
-behind : Testable.Element msg -> Testable.Attr msg
-behind element =
+behindContent : Testable.Element msg -> Testable.Attr msg
+behindContent element =
     Testable.Nearby
         { location = Testable.Behind
         , element = element

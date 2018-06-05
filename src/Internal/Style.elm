@@ -1400,7 +1400,7 @@ rules =
                                         , Prop "left" "0"
                                         , Prop "top" "0"
                                         , Prop "margin" "0 !important"
-                                        , Prop "z-index" "-1"
+                                        , Prop "z-index" "0"
                                         , Prop "pointer-events" "none"
                                         , Child (dot classes.any)
                                             [ Prop "pointer-events" "auto"

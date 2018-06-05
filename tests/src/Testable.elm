@@ -247,7 +247,7 @@ renderAttribute level attrIndex attr =
                     [ Element.inFront (renderElement (attrIndex :: -1 :: level) element) ]
 
                 Behind ->
-                    [ Element.behind (renderElement (attrIndex :: -1 :: level) element) ]
+                    [ Element.behindContent (renderElement (attrIndex :: -1 :: level) element) ]
 
         Batch batch ->
             List.indexedMap (renderAttribute (attrIndex :: level)) batch

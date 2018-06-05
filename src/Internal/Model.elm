@@ -1246,7 +1246,7 @@ asElement embedMode children context rendered =
             case htmlChildren of
                 Keyed keyed ->
                     Keyed
-                        ((keyed ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children)
+                        ((List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
                             |> addWhen renderDynamic
                                 ( "dynamic-stylesheet", toStyleSheet options styles )
                             |> addWhen renderStatic
@@ -1255,7 +1255,7 @@ asElement embedMode children context rendered =
 
                 Unkeyed unkeyed ->
                     Unkeyed
-                        ((unkeyed ++ rendered.children)
+                        ((rendered.children ++ unkeyed)
                             |> addWhen renderDynamic (toStyleSheet options styles)
                             |> addWhen renderStatic staticRoot
                         )
