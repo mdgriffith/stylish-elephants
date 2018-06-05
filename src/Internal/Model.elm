@@ -1202,7 +1202,12 @@ asElement embedMode children context rendered =
                     -- TEXT OPTIMIZATION
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
-                    if Flag.present Flag.widthContent rendered.has && Flag.present Flag.heightContent rendered.has && context == asEl then
+                    if
+                        Flag.present Flag.widthContent rendered.has
+                            && Flag.present Flag.heightContent rendered.has
+                            && context
+                            == asEl
+                    then
                         ( ( key, VirtualDom.text str )
                             :: htmls
                         , existingStyles
@@ -1215,18 +1220,48 @@ asElement embedMode children context rendered =
 
                 Empty ->
                     ( htmls, existingStyles )
+
+        ( renderStatic, renderDynamic, options ) =
+            case embedMode of
+                NoStyleSheet ->
+                    ( False, False, defaultOptions )
+
+                StaticRootAndDynamic opts ->
+                    ( True, True, opts )
+
+                OnlyDynamic opts ->
+                    ( False, True, opts )
+
+        styles =
+            case embedMode of
+                NoStyleSheet ->
+                    []
+
+                _ ->
+                    styleChildren
+                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
+                        |> Tuple.second
+
+        renderedChildren =
+            case htmlChildren of
+                Keyed keyed ->
+                    Keyed
+                        ((keyed ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children)
+                            |> addWhen renderDynamic
+                                ( "dynamic-stylesheet", toStyleSheet options styles )
+                            |> addWhen renderStatic
+                                ( "static-stylesheet", staticRoot )
+                        )
+
+                Unkeyed unkeyed ->
+                    Unkeyed
+                        ((unkeyed ++ rendered.children)
+                            |> addWhen renderDynamic (toStyleSheet options styles)
+                            |> addWhen renderStatic staticRoot
+                        )
     in
     case embedMode of
         NoStyleSheet ->
-            let
-                renderedChildren =
-                    case htmlChildren of
-                        Keyed keyed ->
-                            Keyed <| keyed ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children
-
-                        Unkeyed unkeyed ->
-                            Unkeyed (unkeyed ++ rendered.children)
-            in
             case styleChildren of
                 [] ->
                     Unstyled (renderNode rendered renderedChildren Nothing)
@@ -1237,63 +1272,30 @@ asElement embedMode children context rendered =
                         , html = renderNode rendered renderedChildren
                         }
 
-        StaticRootAndDynamic options ->
-            let
-                styles =
-                    styleChildren
-                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
-                        |> Tuple.second
-
-                renderedChildren =
-                    case htmlChildren of
-                        Keyed keyed ->
-                            Keyed <|
-                                ( "static-stylesheet", VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ] )
-                                    :: ( "dynamic-stylesheet", toStyleSheet options styles )
-                                    :: keyed
-                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children
-
-                        Unkeyed unkeyed ->
-                            Unkeyed
-                                (VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
-                                    :: toStyleSheet options styles
-                                    :: unkeyed
-                                    ++ rendered.children
-                                )
-            in
+        _ ->
             Unstyled
                 (renderNode rendered
                     renderedChildren
                     Nothing
                 )
 
-        OnlyDynamic options ->
-            let
-                styles =
-                    styleChildren
-                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
-                        |> Tuple.second
 
-                renderedChildren =
-                    case htmlChildren of
-                        Keyed keyed ->
-                            Keyed <|
-                                ( "dynamic-stylesheet", toStyleSheet options styles )
-                                    :: keyed
-                                    ++ List.map (\x -> ( "nearby-elements-pls", x )) rendered.children
+defaultOptions =
+    { hover = AllowHover
+    , focus = focusDefaultStyle
+    , mode = Layout
+    }
 
-                        Unkeyed unkeyed ->
-                            Unkeyed
-                                (toStyleSheet options styles
-                                    :: unkeyed
-                                    ++ rendered.children
-                                )
-            in
-            Unstyled
-                (renderNode rendered
-                    renderedChildren
-                    Nothing
-                )
+
+staticRoot =
+    VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
+
+
+addWhen ifThis x to =
+    if ifThis then
+        x :: to
+    else
+        to
 
 
 {-| TODO:
