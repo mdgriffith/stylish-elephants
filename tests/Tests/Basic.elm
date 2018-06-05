@@ -2,6 +2,7 @@ module Tests.Basic exposing (view)
 
 {-| -}
 
+import Element as Actual
 import Html
 import Testable
 import Testable.Element as Element exposing (..)
@@ -38,7 +39,7 @@ view =
         , el
             [ width (px 200)
             , height (px 200)
-            , Background.color Palette.blue
+            , Background.color (Actual.rgba 0 0 1 1)
             , Font.color Palette.white
             , below
                 (el
