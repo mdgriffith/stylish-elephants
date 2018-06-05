@@ -149,10 +149,10 @@ padding pad =
             \found _ ->
                 Expect.true ("Padding " ++ String.fromInt pad ++ " is present")
                     (List.all ((==) pad)
-                        [ round found.self.bbox.padding.left
-                        , round found.self.bbox.padding.right
-                        , round found.self.bbox.padding.top
-                        , round found.self.bbox.padding.bottom
+                        [ floor found.self.bbox.padding.left
+                        , floor found.self.bbox.padding.right
+                        , floor found.self.bbox.padding.top
+                        , floor found.self.bbox.padding.bottom
                         ]
                     )
         }
@@ -168,12 +168,12 @@ paddingXY x y =
             \found _ ->
                 Expect.true ("PaddingXY (" ++ String.fromInt x ++ ", " ++ String.fromInt y ++ ") is present")
                     (List.all ((==) x)
-                        [ round found.self.bbox.padding.left
-                        , round found.self.bbox.padding.right
+                        [ floor found.self.bbox.padding.left
+                        , floor found.self.bbox.padding.right
                         ]
                         && List.all ((==) y)
-                            [ round found.self.bbox.padding.top
-                            , round found.self.bbox.padding.bottom
+                            [ floor found.self.bbox.padding.top
+                            , floor found.self.bbox.padding.bottom
                             ]
                     )
         }
@@ -247,8 +247,8 @@ widthHelper maybeMin maybeMax len =
                 , test =
                     \found _ ->
                         Expect.true "exact width is exact"
-                            ((round found.self.bbox.width == val)
-                                && minMaxTest (round found.self.bbox.width)
+                            ((floor found.self.bbox.width == val)
+                                && minMaxTest (floor found.self.bbox.width)
                             )
                 }
 
@@ -273,20 +273,20 @@ widthHelper maybeMin maybeMax len =
                             case context.location of
                                 Testable.IsNearby _ ->
                                     Expect.true "Nearby Element has fill width"
-                                        ((round context.parent.bbox.width == round context.self.bbox.width)
-                                            && minMaxTest (round context.self.bbox.width)
+                                        ((floor context.parent.bbox.width == floor context.self.bbox.width)
+                                            || minMaxTest (floor context.self.bbox.width)
                                         )
 
                                 Testable.InColumn ->
                                     Expect.true "Element within column has fill width"
-                                        ((round parentAvailableWidth == round context.self.bbox.width)
-                                            && minMaxTest (round context.self.bbox.width)
+                                        ((floor parentAvailableWidth == floor context.self.bbox.width)
+                                            || minMaxTest (floor context.self.bbox.width)
                                         )
 
                                 Testable.InEl ->
                                     Expect.true "Element within element has fill width" <|
-                                        (round parentAvailableWidth == round context.self.bbox.width)
-                                            && minMaxTest (round context.self.bbox.width)
+                                        (floor parentAvailableWidth == floor context.self.bbox.width)
+                                            || minMaxTest (floor context.self.bbox.width)
 
                                 _ ->
                                     let
@@ -294,8 +294,8 @@ widthHelper maybeMin maybeMax len =
                                             parentAvailableWidth / toFloat (List.length context.siblings + 1)
                                     in
                                     Expect.true "element has fill width" <|
-                                        (round spacePerPortion == round context.self.bbox.width)
-                                            && minMaxTest (round context.self.bbox.width)
+                                        (floor spacePerPortion == floor context.self.bbox.width)
+                                            || minMaxTest (floor context.self.bbox.width)
                 }
 
         Shrink ->
@@ -404,8 +404,8 @@ heightHelper maybeMin maybeMax len =
                 , test =
                     \found _ ->
                         Expect.true "exact height is exact"
-                            ((round found.self.bbox.height == val)
-                                && minMaxTest (round found.self.bbox.height)
+                            ((floor found.self.bbox.height == val)
+                                && minMaxTest (floor found.self.bbox.height)
                             )
                 }
 
@@ -430,20 +430,20 @@ heightHelper maybeMin maybeMax len =
                             case context.location of
                                 Testable.IsNearby _ ->
                                     Expect.true "Nearby Element has fill height"
-                                        ((round context.parent.bbox.height == round context.self.bbox.height)
-                                            && minMaxTest (round context.self.bbox.height)
+                                        ((floor context.parent.bbox.height == floor context.self.bbox.height)
+                                            || minMaxTest (floor context.self.bbox.height)
                                         )
 
                                 Testable.InColumn ->
                                     Expect.true "Element within column has fill height"
-                                        ((round parentAvailableHeight == round context.self.bbox.height)
-                                            && minMaxTest (round context.self.bbox.height)
+                                        ((floor parentAvailableHeight == floor context.self.bbox.height)
+                                            || minMaxTest (floor context.self.bbox.height)
                                         )
 
                                 Testable.InEl ->
                                     Expect.true "Element within el has fill height" <|
-                                        (round parentAvailableHeight == round context.self.bbox.height)
-                                            && minMaxTest (round context.self.bbox.height)
+                                        (floor parentAvailableHeight == floor context.self.bbox.height)
+                                            || minMaxTest (floor context.self.bbox.height)
 
                                 _ ->
                                     let
@@ -451,8 +451,8 @@ heightHelper maybeMin maybeMax len =
                                             parentAvailableHeight / toFloat (List.length context.siblings + 1)
                                     in
                                     Expect.true "el has fill height" <|
-                                        (round spacePerPortion == round context.self.bbox.height)
-                                            && minMaxTest (round context.self.bbox.height)
+                                        (floor spacePerPortion == floor context.self.bbox.height)
+                                            || minMaxTest (floor context.self.bbox.height)
                 }
 
         Shrink ->
@@ -542,9 +542,26 @@ spacing space =
 
                         distances =
                             List.foldl findDistance [] found.children
+
+                        allAreSpaced =
+                            List.foldl
+                                (\x wrong ->
+                                    if not (x >= space) then
+                                        x :: wrong
+                                    else
+                                        wrong
+                                )
+                                []
+                                distances
                     in
-                    Expect.true ("All children are at least " ++ String.fromInt space ++ " pixels apart.")
-                        (List.all (\x -> x >= space) distances)
+                    Expect.true
+                        ("All children are at least "
+                            ++ String.fromInt space
+                            ++ " pixels apart."
+                            ++ Debug.toString allAreSpaced
+                            ++ " are not though"
+                        )
+                        (allAreSpaced == [])
             }
         ]
 
@@ -580,12 +597,12 @@ alignLeft =
                         ]
                 then
                     Expect.equal
-                        (round found.self.bbox.left)
-                        (round found.parent.bbox.left)
+                        (floor found.self.bbox.left)
+                        (floor found.parent.bbox.left)
                 else if List.length found.siblings == 0 then
                     Expect.equal
-                        (round found.self.bbox.left)
-                        (round (found.parent.bbox.left + found.parent.bbox.padding.left))
+                        (floor found.self.bbox.left)
+                        (floor (found.parent.bbox.left + found.parent.bbox.padding.left))
                 else
                     case found.location of
                         Testable.InRow ->
@@ -602,13 +619,13 @@ alignLeft =
                                         |> List.sum
                             in
                             Expect.equal
-                                (round found.self.bbox.left)
-                                (round (found.parent.bbox.left + (found.parent.bbox.padding.left + widthsOnLeft + spacings)))
+                                (floor found.self.bbox.left)
+                                (floor (found.parent.bbox.left + (found.parent.bbox.padding.left + widthsOnLeft + spacings)))
 
                         _ ->
                             Expect.equal
-                                (round found.self.bbox.left)
-                                (round (found.parent.bbox.left + found.parent.bbox.padding.left))
+                                (floor found.self.bbox.left)
+                                (floor (found.parent.bbox.left + found.parent.bbox.padding.left))
         }
 
 
@@ -633,8 +650,8 @@ centerX =
                     Expect.true "centerX doesn't apply to elements that are onLeft or onRight" True
                 else if List.length found.siblings == 0 then
                     Expect.equal
-                        (round selfCenter)
-                        (round parentCenter)
+                        (floor selfCenter)
+                        (floor parentCenter)
                 else
                     case found.location of
                         Testable.InRow ->
@@ -667,8 +684,8 @@ centerX =
                                           )
                             in
                             Expect.equal
-                                (round selfCenter)
-                                (round expectedCenter)
+                                (floor selfCenter)
+                                (floor expectedCenter)
 
                         _ ->
                             Expect.equal selfCenter parentCenter
@@ -694,12 +711,12 @@ alignRight =
                         ]
                 then
                     Expect.equal
-                        (round found.self.bbox.right)
-                        (round found.parent.bbox.right)
+                        (floor found.self.bbox.right)
+                        (floor found.parent.bbox.right)
                 else if List.length found.siblings == 0 then
                     Expect.equal
-                        (round found.self.bbox.right)
-                        (round (found.parent.bbox.right + found.parent.bbox.padding.right))
+                        (floor found.self.bbox.right)
+                        (floor (found.parent.bbox.right + found.parent.bbox.padding.right))
                 else
                     case found.location of
                         Testable.InRow ->
@@ -716,13 +733,13 @@ alignRight =
                                         |> List.sum
                             in
                             Expect.equal
-                                (round found.self.bbox.right)
-                                (round (found.parent.bbox.right - (found.parent.bbox.padding.right + widthsOnRight + spacings)))
+                                (floor found.self.bbox.right)
+                                (floor (found.parent.bbox.right - (found.parent.bbox.padding.right + widthsOnRight + spacings)))
 
                         _ ->
                             Expect.equal
-                                (round found.self.bbox.right)
-                                (round (found.parent.bbox.right + found.parent.bbox.padding.right))
+                                (floor found.self.bbox.right)
+                                (floor (found.parent.bbox.right + found.parent.bbox.padding.right))
         }
 
 
@@ -745,12 +762,12 @@ alignTop =
                         ]
                 then
                     Expect.equal
-                        (round found.self.bbox.top)
-                        (round found.parent.bbox.top)
+                        (floor found.self.bbox.top)
+                        (floor found.parent.bbox.top)
                 else if List.length found.siblings == 0 then
                     Expect.equal
-                        (round found.self.bbox.top)
-                        (round (found.parent.bbox.top + found.parent.bbox.padding.top))
+                        (floor found.self.bbox.top)
+                        (floor (found.parent.bbox.top + found.parent.bbox.padding.top))
                 else
                     case found.location of
                         Testable.InColumn ->
@@ -767,13 +784,13 @@ alignTop =
                                         |> List.sum
                             in
                             Expect.equal
-                                (round found.self.bbox.top)
-                                (round (found.parent.bbox.top + (found.parent.bbox.padding.top + heightsAbove + spacings)))
+                                (floor found.self.bbox.top)
+                                (floor (found.parent.bbox.top + (found.parent.bbox.padding.top + heightsAbove + spacings)))
 
                         _ ->
                             Expect.equal
-                                (round found.self.bbox.top)
-                                (round found.parent.bbox.top)
+                                (floor found.self.bbox.top)
+                                (floor found.parent.bbox.top)
         }
 
 
@@ -796,12 +813,12 @@ alignBottom =
                         ]
                 then
                     Expect.equal
-                        (round found.self.bbox.bottom)
-                        (round found.parent.bbox.bottom)
+                        (floor found.self.bbox.bottom)
+                        (floor found.parent.bbox.bottom)
                 else if List.length found.siblings == 0 then
                     Expect.equal
-                        (round found.self.bbox.bottom)
-                        (round (found.parent.bbox.bottom + found.parent.bbox.padding.bottom))
+                        (floor found.self.bbox.bottom)
+                        (floor (found.parent.bbox.bottom + found.parent.bbox.padding.bottom))
                 else
                     case found.location of
                         Testable.InColumn ->
@@ -818,18 +835,18 @@ alignBottom =
                                         |> List.sum
                             in
                             Expect.equal
-                                (round found.self.bbox.bottom)
-                                (round (found.parent.bbox.bottom - (found.parent.bbox.padding.bottom + heightsBelow + spacings)))
+                                (floor found.self.bbox.bottom)
+                                (floor (found.parent.bbox.bottom - (found.parent.bbox.padding.bottom + heightsBelow + spacings)))
 
                         _ ->
                             Expect.equal
-                                (round found.self.bbox.bottom)
-                                (round (found.parent.bbox.bottom + found.parent.bbox.padding.bottom))
+                                (floor found.self.bbox.bottom)
+                                (floor (found.parent.bbox.bottom + found.parent.bbox.padding.bottom))
         }
 
 
 expectRoundedEquality x y =
-    Expect.equal (round x) (round y)
+    Expect.equal (floor x) (floor y)
 
 
 {-| -}
@@ -851,8 +868,8 @@ centerY =
                     Expect.true "centerY doesn't apply to elements that are above or below" True
                 else if List.length found.siblings == 0 then
                     Expect.equal
-                        (round selfCenter)
-                        (round parentCenter)
+                        (floor selfCenter)
+                        (floor parentCenter)
                 else
                     case found.location of
                         Testable.InColumn ->
@@ -885,11 +902,11 @@ centerY =
                                           )
                             in
                             Expect.equal
-                                (round selfCenter)
-                                (round expectedCenter)
+                                (floor selfCenter)
+                                (floor expectedCenter)
 
                         _ ->
-                            Expect.equal (round selfCenter) (round parentCenter)
+                            Expect.equal (floor selfCenter) (floor parentCenter)
         }
 
 
@@ -915,7 +932,7 @@ below element =
         , label = "below"
         , test =
             \found _ ->
-                Expect.equal (round found.self.bbox.top) (round found.parent.bbox.bottom)
+                Expect.equal (floor found.self.bbox.top) (floor found.parent.bbox.bottom)
         }
 
 
@@ -928,7 +945,7 @@ onRight element =
         , label = "onRight"
         , test =
             \found _ ->
-                Expect.equal (round found.self.bbox.left) (round found.parent.bbox.right)
+                Expect.equal (floor found.self.bbox.left) (floor found.parent.bbox.right)
         }
 
 
@@ -941,7 +958,7 @@ onLeft element =
         , label = "onLeft"
         , test =
             \found _ ->
-                Expect.equal (round found.self.bbox.right) (round found.parent.bbox.left)
+                Expect.equal (floor found.self.bbox.right) (floor found.parent.bbox.left)
         }
 
 
