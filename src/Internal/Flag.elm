@@ -218,6 +218,14 @@ widthFill =
     flag 39
 
 
+widthBetween =
+    flag 44
+
+
+heightBetween =
+    flag 45
+
+
 alignRight =
     flag 40
 

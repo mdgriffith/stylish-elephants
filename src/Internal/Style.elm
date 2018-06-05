@@ -164,6 +164,8 @@ classes =
     , alignLeft = "al"
     , alignCenterX = "cx"
     , alignCenterY = "cy"
+    , alignedHorizontally = "ah"
+    , alignedVertically = "av"
 
     -- space evenly
     , spaceEvenly = "se"
@@ -197,10 +199,10 @@ classes =
     , hover = "hv"
 
     -- , hoverOpaque = "hover-opaque"
-    , focus = "fs"
+    , focus = "fcs"
 
     -- , focusOpaque = "focus-opaque"
-    , active = "av"
+    , active = "atv"
 
     -- , activeOpaque = "active-opaque"
     --scrollbars
@@ -680,10 +682,20 @@ rules =
                 [ Prop "width" "100%"
                 , Prop "height" "auto"
                 , Prop "min-height" "100%"
-                , Descriptor (dot classes.any ++ dot classes.single ++ dot classes.heightContent)
+                , Prop "z-index" "0"
+                , Descriptor
+                    (dot classes.any
+                        -- ++ dot classes.single
+                        ++ dot classes.heightFill
+                    )
                     [ Prop "height" "100%"
                     , Child (dot classes.heightFill)
                         [ Prop "height" "100%"
+                        ]
+                    ]
+                , Child (dot classes.inFront)
+                    [ Descriptor (dot classes.any)
+                        [ Prop "position" "fixed"
                         ]
                     ]
                 ]
@@ -788,6 +800,9 @@ rules =
                     , Descriptor (dot classes.column)
                         [ Prop "flex-shrink" "1"
                         ]
+                    , Descriptor (dot classes.single)
+                        [ Prop "flex-shrink" "1"
+                        ]
                     ]
                 , Descriptor (dot classes.clip)
                     [ Prop "overflow" "hidden"
@@ -841,11 +856,19 @@ rules =
                         ]
                     , Child (dot classes.widthFill)
                         [ -- alignLeft, alignRight, centerX are overridden by width.
-                          Prop "align-self" "stretch !important"
+                          --   Prop "align-self" "stretch !important"
+                          Prop "width" "100%"
                         ]
                     , Child (dot classes.widthContent)
-                        [ Prop "align-self" "left"
+                        [ Prop "align-self" "flex-start"
                         ]
+
+                    -- , Child (dot classes.widthFill)
+                    --     [ Prop "align-self" "stretch"
+                    --     , Descriptor (dot classes.alignedHorizontally)
+                    --         [ Prop "width" "100%"
+                    --         ]
+                    --     ]
                     , describeAlignment <|
                         \alignment ->
                             case alignment of
@@ -1024,22 +1047,24 @@ rules =
                         ]
                     , Child (dot classes.widthFill)
                         [ -- alignLeft, alignRight, centerX need to be disabled
-                          Prop "align-self" "stretch !important"
+                          --   Prop "align-self" "stretch !important"
+                          Prop "width" "100%"
                         ]
                     , Child (dot classes.widthFillPortion)
                         [ -- alignLeft, alignRight, centerX need to be disabled
-                          Prop "align-self" "stretch !important"
+                          --   Prop "align-self" "stretch !important"
+                          Prop "width" "100%"
                         ]
 
                     -- TODO:: THIs might be necessary, maybe it should move to widthFill?
-                    -- , Child (dot classes.widthFillBetween)
+                    -- , Child (dot classes.widthFill)
                     --     [ Prop "align-self" "stretch"
-                    --     , Descriptor ".aligned-horizontally"
+                    --     , Descriptor (dot classes.alignedHorizontally)
                     --         [ Prop "width" "100%"
                     --         ]
                     --     ]
                     , Child (dot classes.widthContent)
-                        [ Prop "align-self" "left"
+                        [ Prop "align-self" "flex-start"
                         ]
 
                     -- , Child "alignTop:last-of-type.align-container-top"
@@ -1375,9 +1400,9 @@ rules =
                                         , Prop "left" "0"
                                         , Prop "top" "0"
                                         , Prop "margin" "0 !important"
-                                        , Prop "z-index" "0"
+                                        , Prop "z-index" "-1"
                                         , Prop "pointer-events" "none"
-                                        , Child ".se"
+                                        , Child (dot classes.any)
                                             [ Prop "pointer-events" "auto"
                                             ]
                                         ]

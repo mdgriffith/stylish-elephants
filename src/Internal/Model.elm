@@ -263,7 +263,7 @@ renderNode { attributes, node, has } children styles context =
     in
     case context of
         AsRow ->
-            if Flag.present Flag.widthFill has then
+            if Flag.present Flag.widthFill has && not (Flag.present Flag.widthBetween has) then
                 html
             else if Flag.present Flag.alignRight has then
                 VirtualDom.node
@@ -299,7 +299,7 @@ renderNode { attributes, node, has } children styles context =
                 html
 
         AsColumn ->
-            if Flag.present Flag.heightFill has then
+            if Flag.present Flag.heightFill has && not (Flag.present Flag.heightBetween has) then
                 html
             else if Flag.present Flag.centerY has then
                 VirtualDom.node
@@ -835,7 +835,8 @@ gatherWidth w gathered =
 
                 newGathered =
                     { gathered
-                        | attributes = classNameAttr cls :: gathered.attributes
+                        | has = Flag.add Flag.widthBetween gathered.has
+                        , attributes = classNameAttr cls :: gathered.attributes
                         , styles =
                             style :: gathered.styles
                     }
@@ -849,7 +850,8 @@ gatherWidth w gathered =
 
                 newGathered =
                     { gathered
-                        | attributes = classNameAttr cls :: gathered.attributes
+                        | has = Flag.add Flag.widthBetween gathered.has
+                        , attributes = classNameAttr cls :: gathered.attributes
                         , styles =
                             style :: gathered.styles
                     }
@@ -892,7 +894,8 @@ gatherHeight h gathered =
 
                 newGathered =
                     { gathered
-                        | attributes = classNameAttr cls :: gathered.attributes
+                        | has = Flag.add Flag.heightBetween gathered.has
+                        , attributes = classNameAttr cls :: gathered.attributes
                         , styles =
                             style :: gathered.styles
                     }
@@ -906,7 +909,8 @@ gatherHeight h gathered =
 
                 newGathered =
                     { gathered
-                        | attributes = classNameAttr cls :: gathered.attributes
+                        | has = Flag.add Flag.heightBetween gathered.has
+                        , attributes = classNameAttr cls :: gathered.attributes
                         , styles =
                             style :: gathered.styles
                     }
@@ -1795,20 +1799,11 @@ toStyleSheetString options stylesheet =
                                 |> min 1
                                 |> max 0
                     in
-                    if opacity <= 0 then
-                        renderStyle force
-                            maybePseudo
-                            ("." ++ name)
-                            [ Property "opacity" "0"
-                            , Property "pointer-events" "none"
-                            ]
-                    else
-                        renderStyle force
-                            maybePseudo
-                            ("." ++ name)
-                            [ Property "opacity" (String.fromFloat opacity)
-                            , Property "pointer-events" "auto"
-                            ]
+                    renderStyle force
+                        maybePseudo
+                        ("." ++ name)
+                        [ Property "opacity" (String.fromFloat opacity)
+                        ]
 
                 FontSize i ->
                     renderStyle force
