@@ -625,6 +625,13 @@ runTests :
             )
 runTests seed tests =
     let
+        run runner =
+            let
+                ran =
+                    List.map Test.Runner.getFailureReason (runner.run ())
+            in
+            List.map2 Tuple.pair runner.labels ran
+
         results =
             case Test.Runner.fromTest 100 seed tests of
                 Test.Runner.Plain rnrs ->
@@ -642,13 +649,6 @@ runTests seed tests =
                             Debug.log "Invalid tests" invalid
                     in
                     []
-
-        run runner =
-            let
-                ran =
-                    List.map Test.Runner.getFailureReason (runner.run ())
-            in
-            List.map2 Tuple.pair runner.labels ran
     in
     List.concat results
 

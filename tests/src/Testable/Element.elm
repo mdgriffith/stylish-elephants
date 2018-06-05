@@ -596,13 +596,13 @@ alignLeft =
                         , Testable.IsNearby Testable.Below
                         ]
                 then
-                    Expect.equal
-                        (floor found.self.bbox.left)
-                        (floor found.parent.bbox.left)
+                    expectRoundedEquality
+                        found.self.bbox.left
+                        found.parent.bbox.left
                 else if List.length found.siblings == 0 then
-                    Expect.equal
-                        (floor found.self.bbox.left)
-                        (floor (found.parent.bbox.left + found.parent.bbox.padding.left))
+                    expectRoundedEquality
+                        found.self.bbox.left
+                        (found.parent.bbox.left + found.parent.bbox.padding.left)
                 else
                     case found.location of
                         Testable.InRow ->
@@ -618,14 +618,14 @@ alignLeft =
                                         |> List.map (.width << .bbox)
                                         |> List.sum
                             in
-                            Expect.equal
-                                (floor found.self.bbox.left)
-                                (floor (found.parent.bbox.left + (found.parent.bbox.padding.left + widthsOnLeft + spacings)))
+                            expectRoundedEquality
+                                found.self.bbox.left
+                                (found.parent.bbox.left + (found.parent.bbox.padding.left + widthsOnLeft + spacings))
 
                         _ ->
-                            Expect.equal
-                                (floor found.self.bbox.left)
-                                (floor (found.parent.bbox.left + found.parent.bbox.padding.left))
+                            expectRoundedEquality
+                                found.self.bbox.left
+                                (found.parent.bbox.left + found.parent.bbox.padding.left)
         }
 
 
@@ -649,9 +649,9 @@ centerX =
                 if List.member found.location [ Testable.IsNearby Testable.OnRight, Testable.IsNearby Testable.OnLeft ] then
                     Expect.true "centerX doesn't apply to elements that are onLeft or onRight" True
                 else if List.length found.siblings == 0 then
-                    Expect.equal
-                        (floor selfCenter)
-                        (floor parentCenter)
+                    expectRoundedEquality
+                        selfCenter
+                        parentCenter
                 else
                     case found.location of
                         Testable.InRow ->
@@ -683,12 +683,12 @@ centerX =
                                             / 2
                                           )
                             in
-                            Expect.equal
-                                (floor selfCenter)
-                                (floor expectedCenter)
+                            expectRoundedEquality
+                                selfCenter
+                                expectedCenter
 
                         _ ->
-                            Expect.equal selfCenter parentCenter
+                            expectRoundedEquality selfCenter parentCenter
         }
 
 
@@ -710,13 +710,13 @@ alignRight =
                         , Testable.IsNearby Testable.Below
                         ]
                 then
-                    Expect.equal
-                        (floor found.self.bbox.right)
-                        (floor found.parent.bbox.right)
+                    expectRoundedEquality
+                        found.self.bbox.right
+                        found.parent.bbox.right
                 else if List.length found.siblings == 0 then
-                    Expect.equal
-                        (floor found.self.bbox.right)
-                        (floor (found.parent.bbox.right + found.parent.bbox.padding.right))
+                    expectRoundedEquality
+                        found.self.bbox.right
+                        (found.parent.bbox.right + found.parent.bbox.padding.right)
                 else
                     case found.location of
                         Testable.InRow ->
@@ -732,14 +732,14 @@ alignRight =
                                         |> List.map (.width << .bbox)
                                         |> List.sum
                             in
-                            Expect.equal
-                                (floor found.self.bbox.right)
-                                (floor (found.parent.bbox.right - (found.parent.bbox.padding.right + widthsOnRight + spacings)))
+                            expectRoundedEquality
+                                found.self.bbox.right
+                                (found.parent.bbox.right - (found.parent.bbox.padding.right + widthsOnRight + spacings))
 
                         _ ->
-                            Expect.equal
-                                (floor found.self.bbox.right)
-                                (floor (found.parent.bbox.right + found.parent.bbox.padding.right))
+                            expectRoundedEquality
+                                found.self.bbox.right
+                                (found.parent.bbox.right + found.parent.bbox.padding.right)
         }
 
 
@@ -761,13 +761,13 @@ alignTop =
                         , Testable.IsNearby Testable.OnLeft
                         ]
                 then
-                    Expect.equal
-                        (floor found.self.bbox.top)
-                        (floor found.parent.bbox.top)
+                    expectRoundedEquality
+                        found.self.bbox.top
+                        found.parent.bbox.top
                 else if List.length found.siblings == 0 then
-                    Expect.equal
-                        (floor found.self.bbox.top)
-                        (floor (found.parent.bbox.top + found.parent.bbox.padding.top))
+                    expectRoundedEquality
+                        found.self.bbox.top
+                        (found.parent.bbox.top + found.parent.bbox.padding.top)
                 else
                     case found.location of
                         Testable.InColumn ->
@@ -783,14 +783,14 @@ alignTop =
                                         |> List.map (.height << .bbox)
                                         |> List.sum
                             in
-                            Expect.equal
-                                (floor found.self.bbox.top)
-                                (floor (found.parent.bbox.top + (found.parent.bbox.padding.top + heightsAbove + spacings)))
+                            expectRoundedEquality
+                                found.self.bbox.top
+                                (found.parent.bbox.top + (found.parent.bbox.padding.top + heightsAbove + spacings))
 
                         _ ->
-                            Expect.equal
-                                (floor found.self.bbox.top)
-                                (floor found.parent.bbox.top)
+                            expectRoundedEquality
+                                found.self.bbox.top
+                                found.parent.bbox.top
         }
 
 
@@ -812,13 +812,13 @@ alignBottom =
                         , Testable.IsNearby Testable.OnLeft
                         ]
                 then
-                    Expect.equal
-                        (floor found.self.bbox.bottom)
-                        (floor found.parent.bbox.bottom)
+                    expectRoundedEquality
+                        found.self.bbox.bottom
+                        found.parent.bbox.bottom
                 else if List.length found.siblings == 0 then
-                    Expect.equal
-                        (floor found.self.bbox.bottom)
-                        (floor (found.parent.bbox.bottom + found.parent.bbox.padding.bottom))
+                    expectRoundedEquality
+                        found.self.bbox.bottom
+                        (found.parent.bbox.bottom + found.parent.bbox.padding.bottom)
                 else
                     case found.location of
                         Testable.InColumn ->
@@ -834,19 +834,20 @@ alignBottom =
                                         |> List.map (.height << .bbox)
                                         |> List.sum
                             in
-                            Expect.equal
-                                (floor found.self.bbox.bottom)
-                                (floor (found.parent.bbox.bottom - (found.parent.bbox.padding.bottom + heightsBelow + spacings)))
+                            expectRoundedEquality
+                                found.self.bbox.bottom
+                                (found.parent.bbox.bottom - (found.parent.bbox.padding.bottom + heightsBelow + spacings))
 
                         _ ->
-                            Expect.equal
-                                (floor found.self.bbox.bottom)
-                                (floor (found.parent.bbox.bottom + found.parent.bbox.padding.bottom))
+                            expectRoundedEquality
+                                found.self.bbox.bottom
+                                (found.parent.bbox.bottom + found.parent.bbox.padding.bottom)
         }
 
 
 expectRoundedEquality x y =
-    Expect.equal (floor x) (floor y)
+    Expect.true ("within 1 of each other " ++ String.fromFloat x ++ ":" ++ String.fromFloat y)
+        (abs (x - y) < 1)
 
 
 {-| -}
@@ -867,9 +868,9 @@ centerY =
                 if List.member found.location [ Testable.IsNearby Testable.Above, Testable.IsNearby Testable.Below ] then
                     Expect.true "centerY doesn't apply to elements that are above or below" True
                 else if List.length found.siblings == 0 then
-                    Expect.equal
-                        (floor selfCenter)
-                        (floor parentCenter)
+                    expectRoundedEquality
+                        selfCenter
+                        parentCenter
                 else
                     case found.location of
                         Testable.InColumn ->
@@ -901,12 +902,12 @@ centerY =
                                             / 2
                                           )
                             in
-                            Expect.equal
-                                (floor selfCenter)
-                                (floor expectedCenter)
+                            expectRoundedEquality
+                                selfCenter
+                                expectedCenter
 
                         _ ->
-                            Expect.equal (floor selfCenter) (floor parentCenter)
+                            expectRoundedEquality selfCenter parentCenter
         }
 
 
@@ -932,7 +933,7 @@ below element =
         , label = "below"
         , test =
             \found _ ->
-                Expect.equal (floor found.self.bbox.top) (floor found.parent.bbox.bottom)
+                expectRoundedEquality found.self.bbox.top found.parent.bbox.bottom
         }
 
 
@@ -945,7 +946,7 @@ onRight element =
         , label = "onRight"
         , test =
             \found _ ->
-                Expect.equal (floor found.self.bbox.left) (floor found.parent.bbox.right)
+                expectRoundedEquality found.self.bbox.left found.parent.bbox.right
         }
 
 
@@ -958,7 +959,7 @@ onLeft element =
         , label = "onLeft"
         , test =
             \found _ ->
-                Expect.equal (floor found.self.bbox.right) (floor found.parent.bbox.left)
+                expectRoundedEquality found.self.bbox.right found.parent.bbox.left
         }
 
 
