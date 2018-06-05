@@ -24,7 +24,6 @@
     })
 
     app.ports.analyze.subscribe(function (ids) {
-        console.log(ids);
         // ids : List String
         var idsLength = ids.length;
         var results = [];
@@ -40,7 +39,6 @@
             results.push(result);
 
         }
-        console.log(results);
         app.ports.styles.send(results);
     });
 
