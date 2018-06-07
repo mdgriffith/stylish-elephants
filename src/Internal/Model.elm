@@ -589,10 +589,14 @@ gatherAttributes attr gathered =
                             | attributes =
                                 case styleProp of
                                     PseudoSelector _ _ ->
-                                        VirtualDom.property "className" (Json.string Internal.Style.classes.transition) :: classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
+                                        VirtualDom.property "className"
+                                            (Json.string Internal.Style.classes.transition)
+                                            :: classNameAttr (getStyleName styleProp)
+                                            :: gatheredProps.attributes
 
                                     _ ->
-                                        classNameAttr (getStyleName styleProp) :: gatheredProps.attributes
+                                        classNameAttr (getStyleName styleProp)
+                                            :: gatheredProps.attributes
                             , styles = formatStyleClass styleProp :: gatheredProps.styles
                             , has = Flag.add flag gatheredProps.has
                         }
@@ -825,13 +829,31 @@ gatherWidth w gathered =
                     | has = Flag.add Flag.widthFill gathered.has
                     , attributes = classNameAttr (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) :: gathered.attributes
                     , styles =
-                        Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.row ++ " > " ++ (Internal.Style.dot <| "width-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gathered.styles
+                        Single
+                            ("."
+                                ++ Internal.Style.classes.any
+                                ++ "."
+                                ++ Internal.Style.classes.row
+                                ++ " > "
+                                ++ (Internal.Style.dot <| "width-fill-" ++ String.fromInt portion)
+                            )
+                            "flex-grow"
+                            (String.fromInt (portion * 100000))
+                            :: gathered.styles
                 }
 
         Min minSize len ->
             let
                 ( cls, style ) =
-                    ( "min-width-" ++ String.fromInt minSize, Single (".min-width-" ++ String.fromInt minSize) "min-width" (String.fromInt minSize ++ "px") )
+                    ( "min-width-"
+                        ++ String.fromInt minSize
+                    , Single
+                        (".min-width-"
+                            ++ String.fromInt minSize
+                        )
+                        "min-width"
+                        (String.fromInt minSize ++ "px")
+                    )
 
                 newGathered =
                     { gathered
@@ -846,7 +868,11 @@ gatherWidth w gathered =
         Max maxSize len ->
             let
                 ( cls, style ) =
-                    ( "max-width-" ++ String.fromInt maxSize, Single (".max-width-" ++ String.fromInt maxSize) "max-width" (String.fromInt maxSize ++ "px") )
+                    ( "max-width-" ++ String.fromInt maxSize
+                    , Single (".max-width-" ++ String.fromInt maxSize)
+                        "max-width"
+                        (String.fromInt maxSize ++ "px")
+                    )
 
                 newGathered =
                     { gathered
@@ -884,7 +910,20 @@ gatherHeight h gathered =
                     | attributes = classNameAttr (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) :: gathered.attributes
                     , has = Flag.add Flag.heightFill gathered.has
                     , styles =
-                        Single ("." ++ Internal.Style.classes.any ++ "." ++ Internal.Style.classes.column ++ " > " ++ (Internal.Style.dot <| "height-fill-" ++ String.fromInt portion)) "flex-grow" (String.fromInt (portion * 100000)) :: gathered.styles
+                        Single
+                            ("."
+                                ++ Internal.Style.classes.any
+                                ++ "."
+                                ++ Internal.Style.classes.column
+                                ++ " > "
+                                ++ (Internal.Style.dot <|
+                                        "height-fill-"
+                                            ++ String.fromInt portion
+                                   )
+                            )
+                            "flex-grow"
+                            (String.fromInt (portion * 100000))
+                            :: gathered.styles
                 }
 
         Min minSize len ->
@@ -2365,7 +2404,7 @@ getStyleName style =
                 ++ lengthClassName (Tuple.second template.spacing)
 
         GridPosition pos ->
-            "grid-pos-"
+            "gp grid-pos-"
                 ++ String.fromInt pos.row
                 ++ "-"
                 ++ String.fromInt pos.col

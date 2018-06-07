@@ -1156,6 +1156,11 @@ rules =
                     ]
                 , Descriptor (dot classes.grid)
                     [ Prop "display" "-ms-grid"
+                    , Child ".gp"
+                        [ Child (dot classes.any)
+                            [ Prop "width" "100%"
+                            ]
+                        ]
                     , Supports ( "display", "grid" )
                         [ ( "display", "grid" )
                         ]
