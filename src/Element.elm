@@ -94,7 +94,7 @@ module Element
 
 # Basic Elements
 
-@docs Element, Attribute, none, text, el
+@docs Element, none, text, el
 
 
 # Rows and Columns
@@ -120,14 +120,14 @@ Text needs it's own layout primitives.
 
 # Size
 
-@docs width, height, Length, px, shrink, fill, fillPortion, maximum, minimum
+@docs Attribute, width, height, Length, px, shrink, fill, fillPortion, maximum, minimum
 
 
 ## Padding and Spacing
 
 There's no concept of margin in `style-elements`, instead we have padding and spacing.
 
-Padding is what you'd expect, the distance between the outer edge and the content, and spacing is the space between children.
+Padding is the distance between the outer edge and the content, and spacing is the space between children.
 
 So, if we have the following row, with some padding and spacing.
 
@@ -137,9 +137,9 @@ So, if we have the following row, with some padding and spacing.
         , Element.el [] none
         ]
 
-Here's what we can expect.
+Here's what we can expect:
 
-<img src="https://mdgriffith.gitbooks.io/style-elements/content/assets/spacing-400.png" alt="Three boxes spaced 7 pixels apart.  There's a 10 pixel distance from the edge of the parent to the boxes." />
+![Three boxes spaced 7 pixels apart. There's a 10 pixel distance from the edge of the parent to the boxes.](https://mdgriffith.gitbooks.io/style-elements/content/assets/spacing-400.png)
 
 @docs padding, paddingXY, paddingEach
 
@@ -165,7 +165,7 @@ will result in a layout like
 
     |-|-|     |-|        |-|
 
-Where there are two elements on the left, one in the center, and on on the right.
+Where there are two elements on the left, one in the center, and one on the right.
 
 @docs centerX, centerY, alignLeft, alignRight, alignTop, alignBottom
 
@@ -186,7 +186,7 @@ Clip the content if it overflows.
 
 @docs clip, clipX, clipY
 
-If these are present, the element will add a scrollbar if necessary.
+Add a scrollbar if the content is larger than the element.
 
 @docs scrollbars, scrollbarX, scrollbarY
 
@@ -196,14 +196,19 @@ If these are present, the element will add a scrollbar if necessary.
 @docs layout, layoutWith, Option, noStaticStyleSheet, forceHover, noHover, focusStyle, FocusStyle
 
 
-# Links and Images
+# Links
 
 @docs Link, link, newTabLink, download, downloadAs
+
+
+# Images
 
 @docs image
 
 
 # Color
+
+In order to use attributes like `Font.color` and `Background.color`, you'll need to make some colors!
 
 @docs Color, rgba, rgb
 
@@ -275,7 +280,11 @@ rgba =
     Internal.Rgba
 
 
-{-| -}
+{-| Provide the red, green, and blue channels for the color.
+
+Each channel takes a value between 0 and 1.
+
+-}
 rgb : Float -> Float -> Float -> Color
 rgb r g b =
     Internal.Rgba r g b 1
@@ -346,7 +355,7 @@ px =
     Internal.Px
 
 
-{-| Shrink to an element to fit it's contents.
+{-| Shrink an element to fit it's contents.
 -}
 shrink : Length
 shrink =
@@ -378,7 +387,7 @@ minimum i l =
     Internal.Min i l
 
 
-{-| You can add a maximum to a length.
+{-| Add a maximum to a length.
 
     el
         [ height
@@ -522,6 +531,10 @@ text content =
 
 
 {-| The basic building block of your layout.
+
+You can think of an `el` as a `div`, but it can only hae one child.
+
+If you want multiple children, you'll need to use something like `row` or `column`
 
     import Color exposing (blue, darkBlue)
     import Element exposing (Element)
@@ -898,7 +911,7 @@ textColumn attrs children =
 
 {-| Both a source and a description are required for images.
 
-The description is used to describe the image to people using screen readers.
+The description is used for people using screen readers.
 
 Leaving leaving the description blank will cause the image to be ignored by assistive technology. This can make sense for images that are purely decorative and add no additional information.
 
@@ -1052,7 +1065,11 @@ onLeft element =
     Internal.Nearby Internal.OnLeft element
 
 
-{-| -}
+{-| This will place an element in front of another.
+
+If you use this on a `layout` element, it will place the element as fixed to the viewport which can be useful for modals and overlays.
+
+-}
 inFront : Element msg -> Attribute msg
 inFront element =
     Internal.Nearby Internal.InFront element
@@ -1263,7 +1280,7 @@ clipX =
     Internal.Class Flag.overflow classes.clipX
 
 
-{-| Set the cursor to the pointer hand.
+{-| Set the cursor to be a pointing hand when it's hovering over this element.
 -}
 pointer : Attribute msg
 pointer =
