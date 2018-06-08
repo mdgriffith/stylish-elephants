@@ -595,26 +595,28 @@ textHelper textInput attrs textOptions =
                                 []
 
                             Just (Placeholder placeholderAttrs placeholderEl) ->
-                                if String.trim textOptions.text /= "" then
-                                    []
-                                else
-                                    [ Element.clip
-                                    , Element.inFront
-                                        (Element.el
-                                            (defaultTextPadding
-                                                :: noNearbys
-                                                ++ [ Font.color charcoal
-                                                   , Internal.htmlClass classes.noTextSelection
-                                                   , Border.color (Element.rgba 0 0 0 0)
-                                                   , Background.color (Element.rgba 0 0 0 0)
-                                                   , Element.height Element.fill
-                                                   , Element.width Element.fill
-                                                   ]
-                                                ++ placeholderAttrs
-                                            )
-                                            placeholderEl
+                                [ Element.inFront
+                                    (Element.el
+                                        (defaultTextPadding
+                                            :: noNearbys
+                                            ++ [ Font.color charcoal
+                                               , Internal.htmlClass (classes.noTextSelection ++ " " ++ classes.passPointerEvents)
+                                               , Border.color (Element.rgba 0 0 0 0)
+                                               , Background.color (Element.rgba 0 0 0 0)
+                                               , Element.height Element.fill
+                                               , Element.width Element.fill
+                                               , Element.alpha
+                                                    (if String.trim textOptions.text /= "" then
+                                                        0
+                                                     else
+                                                        1
+                                                    )
+                                               ]
+                                            ++ placeholderAttrs
                                         )
-                                    ]
+                                        placeholderEl
+                                    )
+                                ]
                         ]
                 )
                 (Internal.Unkeyed

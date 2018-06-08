@@ -729,8 +729,10 @@ rules =
                 , Prop "text-decoration" "none"
                 , Prop "font-style" "inherit"
                 , Descriptor (dot classes.noTextSelection)
-                    [ Prop "user-select" "none"
+                    [ Prop "-moz-user-select" "none"
+                    , Prop "-webkit-user-select" "none"
                     , Prop "-ms-user-select" "none"
+                    , Prop "user-select" "none"
                     ]
                 , Descriptor (dot classes.cursorPointer)
                     [ Prop "cursor" "pointer"
@@ -739,10 +741,10 @@ rules =
                     [ Prop "cursor" "text"
                     ]
                 , Descriptor (dot classes.passPointerEvents)
-                    [ Prop "pointer-events" "none"
+                    [ Prop "pointer-events" "none !important"
                     ]
                 , Descriptor (dot classes.capturePointerEvents)
-                    [ Prop "pointer-events" "auto"
+                    [ Prop "pointer-events" "auto !important"
                     ]
                 , Descriptor (dot classes.transparent)
                     [ Prop "opacity" "0"
