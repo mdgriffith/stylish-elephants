@@ -663,10 +663,18 @@ dot c =
 
 
 overrides =
-    """@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {
-  .se.row > .se { flex-basis: auto !important; }
-  .se.row > .se.container { flex-basis: auto !important; }
-}"""
+    """@media screen and (-ms-high-contrast: active), (-ms-high-contrast: none) {"""
+        ++ dot classes.any
+        ++ dot classes.row
+        ++ " > "
+        ++ dot classes.any
+        ++ " { flex-basis: auto !important; } "
+        ++ dot classes.any
+        ++ dot classes.row
+        ++ " > "
+        ++ dot classes.any
+        ++ dot classes.container
+        ++ " { flex-basis: auto !important; }}"
 
 
 rules : String
