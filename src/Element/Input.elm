@@ -411,6 +411,7 @@ textHelper textInput attrs textOptions =
                     , [ value textOptions.text
                       , Internal.Attr (Html.Attributes.type_ inputType)
                       , spellcheck textInput.spellchecked
+                      , Internal.htmlClass classes.inputText
                       , case textInput.autofill of
                             Nothing ->
                                 Internal.NoAttribute

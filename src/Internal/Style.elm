@@ -241,6 +241,9 @@ classes =
     , textRight = "tr"
     , textLeft = "tl"
     , transition = "ts"
+
+    -- inputText
+    , inputText = "it"
     }
 
 
@@ -833,6 +836,11 @@ rules =
                 , Descriptor (dot classes.text)
                     [ Prop "white-space" "pre"
                     , Prop "display" "inline-block"
+                    ]
+                , Descriptor (dot classes.inputText)
+                    -- chrome and safari have a minimum recognized line height for text input of 1.05
+                    -- If it's 1, it bumps up to something like 1.2
+                    [ Prop "line-height" "1.05"
                     ]
                 , Descriptor (dot classes.single)
                     [ Prop "display" "flex"
