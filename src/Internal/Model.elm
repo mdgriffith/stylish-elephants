@@ -3,7 +3,7 @@ module Internal.Model exposing (..)
 {-| -}
 
 import Internal.Flag as Flag exposing (Flag)
-import Internal.Style exposing (classes)
+import Internal.Style exposing (classes, dot)
 import Json.Encode as Json
 import Set exposing (Set)
 import VirtualDom
@@ -1631,7 +1631,7 @@ renderFocusStyle :
     FocusStyle
     -> Style
 renderFocusStyle focus =
-    Style ".se:focus .focusable, .se.focusable:focus"
+    Style (Internal.Style.dot classes.any ++ ":focus .focusable, " ++ Internal.Style.dot classes.any ++ ".focusable:focus")
         (List.filterMap identity
             [ Maybe.map (\color -> Property "border-color" (formatColor color)) focus.borderColor
             , Maybe.map (\color -> Property "background-color" (formatColor color)) focus.backgroundColor
