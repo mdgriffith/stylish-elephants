@@ -14,6 +14,7 @@ module Element
         , Length
         , Link
         , Option
+        , Orientation(..)
         , Table
         , above
         , alignBottom
@@ -243,7 +244,7 @@ This is very useful for things like dropdown menus or tooltips.
 
 # Responsiveness
 
-@docs Device, DeviceClass, classifyDevice
+@docs Device, DeviceClass, Orientation, classifyDevice
 
 
 # Scaling
@@ -1290,7 +1291,7 @@ pointer =
 {-| -}
 type alias Device =
     { class : DeviceClass
-    , portrait : Bool
+    , orientation : Orientation
     }
 
 
@@ -1300,6 +1301,12 @@ type DeviceClass
     | Tablet
     | Desktop
     | BigDesktop
+
+
+{-| -}
+type Orientation
+    = Portrait
+    | Landscape
 
 
 {-| Takes in a Window.Size and returns a device profile which can be used for responsiveness.
@@ -1315,7 +1322,11 @@ classifyDevice window =
             Desktop
         else
             BigDesktop
-    , portrait = window.width < window.height
+    , orientation =
+        if window.width < window.height then
+            Portrait
+        else
+            Landscape
     }
 
 
