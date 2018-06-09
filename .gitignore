@@ -11,3 +11,5 @@ tests/html-generation/rendered/
 
 env
 elm.js
+
+examples/temporary/
