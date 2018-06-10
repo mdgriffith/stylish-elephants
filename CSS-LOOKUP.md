@@ -14,4 +14,6 @@ CSS    |  Style Elements  | Description
 `float:left` `float:right` | `alignLeft` or `alignRight` when inside a `paragraph` or a `textColumn` |
 `opacity` | `alpha` |
 `margin` | __N/A__  Instead, check out `padding` and `spacing` |  `margin` in CSS was designed to fight with `padding`.  This library was designed to minimize override logic and properties that fight with each other in order to create a layout language that is predictable.  The result is that in style elements, there's generally only *one place* where an effect can happen.
+`:hover`, `:focus`, `:active` | `mouseOver`, `focused`, `mouseDown`  | Only certain styles are allowed to be in a pseudo state.  They have the type `Attr decorative msg`, which means they can be either an `Attribute` or a `Decoration`.
+`
 
