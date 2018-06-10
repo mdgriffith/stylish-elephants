@@ -4,7 +4,6 @@ This library creates a new language around layout and style, though if you're al
 
 > I know how I can do it in CSS, but how could I approach the problem using Style Elements?
 
-# Concepts
 
 CSS    |  Style Elements  | Description
 -------|------------------|------------
@@ -15,5 +14,5 @@ CSS    |  Style Elements  | Description
 `opacity` | `alpha` |
 `margin` | __N/A__  Instead, check out `padding` and `spacing` |  `margin` in CSS was designed to fight with `padding`.  This library was designed to minimize override logic and properties that fight with each other in order to create a layout language that is predictable.  The result is that in style elements, there's generally only *one place* where an effect can happen.
 `:hover`, `:focus`, `:active` | `mouseOver`, `focused`, `mouseDown`  | Only certain styles are allowed to be in a pseudo state.  They have the type `Attr decorative msg`, which means they can be either an `Attribute` or a `Decoration`.
-`
+
 
