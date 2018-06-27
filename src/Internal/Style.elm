@@ -244,6 +244,7 @@ classes =
 
     -- inputText
     , inputText = "it"
+    , inputMultiline = "iml"
     }
 
 
@@ -1260,6 +1261,9 @@ rules =
                                     ( []
                                     , []
                                     )
+                    ]
+                , Descriptor (dot classes.inputMultiline)
+                    [ Prop "white-space" "normal"
                     ]
                 , Descriptor (dot classes.paragraph)
                     [ Prop "display" "block"

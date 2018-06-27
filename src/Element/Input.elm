@@ -486,6 +486,7 @@ textHelper textInput attrs textOptions =
                     in
                     ( "textarea"
                     , [ spellcheck textInput.spellchecked
+                      , Internal.htmlClass classes.inputMultiline
                       , Maybe.map autofill textInput.autofill
                             |> Maybe.withDefault Internal.NoAttribute
                       , case maybePadding of
