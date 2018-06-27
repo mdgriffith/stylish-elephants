@@ -1263,7 +1263,7 @@ rules =
                                     )
                     ]
                 , Descriptor (dot classes.inputMultiline)
-                    [ Prop "white-space" "normal"
+                    [ Prop "white-space" "pre-wrap"
                     ]
                 , Descriptor (dot classes.paragraph)
                     [ Prop "display" "block"
