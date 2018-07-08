@@ -608,10 +608,10 @@ textHelper textInput attrs textOptions =
                                                , Element.height Element.fill
                                                , Element.width Element.fill
                                                , Element.alpha
-                                                    (if String.trim textOptions.text /= "" then
-                                                        0
-                                                     else
+                                                    (if textOptions.text == "" then
                                                         1
+                                                     else
+                                                        0
                                                     )
                                                ]
                                             ++ placeholderAttrs
