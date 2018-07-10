@@ -244,6 +244,16 @@ This is very useful for things like dropdown menus or tooltips.
 
 # Responsiveness
 
+The main technique for responsiveness is to store window size information in your model.
+
+Install the `Window` package, and both
+
+  - Set up a subscription to `Window.resizes`
+
+  - And for the initial window size you'll need to either pass in the window size via program `flags`, or run the following on `init`:
+
+    Task.perform (\size -> WindowResize { width = size.width, height = size.height }) Window.size
+
 @docs Device, DeviceClass, Orientation, classifyDevice
 
 

@@ -79,7 +79,7 @@ Though it's also smart enough to not conflict with existing nodes.
 
 So, this code
 
-    link [ Area.heading 1 ]
+    link [ Region.heading 1 ]
         { url = "http://fruits.com"
         , label = text "Best site ever"
         }
