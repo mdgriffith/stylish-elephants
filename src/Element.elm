@@ -246,13 +246,13 @@ This is very useful for things like dropdown menus or tooltips.
 
 The main technique for responsiveness is to store window size information in your model.
 
-Install the `Window` package, and both
+Install the `Window` package, and set up a subscription to `Window.resizes`.
 
-  - Set up a subscription to `Window.resizes`
-
-  - And for the initial window size you'll need to either pass in the window size via program `flags`, or run the following on `init`:
+You'll also need to retrieve the initial window size. You can either run the following task:
 
     Task.perform (\size -> WindowResize { width = size.width, height = size.height }) Window.size
+
+Or pass in `window.innerWidth` and `window.innerHeight` as flags to your program, which is the preferred way. This requires minor setup on the JS side, but allows you to avoid the state where you don't have window info.
 
 @docs Device, DeviceClass, Orientation, classifyDevice
 
