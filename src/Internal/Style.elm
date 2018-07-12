@@ -129,7 +129,7 @@ contentName desc =
 
 
 classes =
-    { root = "se"
+    { root = "ui"
     , any = "s"
     , single = "e"
     , row = "r"
@@ -147,7 +147,7 @@ classes =
     , heightFill = "hf"
     , heightContent = "hc"
     , heightFillPortion = "hfp"
-    , seButton = "sb"
+    , seButton = "sbt"
 
     -- nearby elements
     , above = "a"
@@ -168,8 +168,8 @@ classes =
     , alignedVertically = "av"
 
     -- space evenly
-    , spaceEvenly = "se"
-    , container = "cr"
+    , spaceEvenly = "sev"
+    , container = "ctr"
     , alignContainerRight = "acr"
     , alignContainerBottom = "acb"
     , alignContainerCenterX = "accx"
@@ -307,7 +307,6 @@ unicode =
     , capturePointerEvents = "capture-pointer-events"
     , transparent = "transparent"
     , opaque = "opaque"
-    , overflowHidden = "overflow-hidden"
 
     --scrollbars
     , scrollbars = "scrollbars"
@@ -404,7 +403,6 @@ single =
     , capturePointerEvents = "capture-pointer-events"
     , transparent = "transparent"
     , opaque = "opaque"
-    , overflowHidden = "overflow-hidden"
 
     --scrollbars
     , scrollbars = "scrollbars"
@@ -794,10 +792,6 @@ rules =
                                 , "font-size"
                                 ]
                         )
-                    ]
-                , Descriptor (dot classes.overflowHidden)
-                    [ Prop "overflow" "hidden"
-                    , Prop "-ms-overflow-style" "none"
                     ]
                 , Descriptor (dot classes.scrollbars)
                     [ Prop "overflow" "auto"
