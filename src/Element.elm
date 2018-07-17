@@ -950,17 +950,17 @@ image attrs { src, description } =
     Internal.element Internal.noStyleSheet
         Internal.asEl
         Nothing
-        (clip
+        (Internal.htmlClass classes.imageContainer
             :: attrs
         )
         (Internal.Unkeyed
             [ Internal.element Internal.noStyleSheet
                 Internal.asEl
                 (Just "img")
-                (imageAttributes
-                    ++ [ Internal.Attr <| Html.Attributes.src src
-                       , Internal.Attr <| Html.Attributes.alt description
-                       ]
+                ([ Internal.Attr <| Html.Attributes.src src
+                 , Internal.Attr <| Html.Attributes.alt description
+                 ]
+                    ++ imageAttributes
                 )
                 (Internal.Unkeyed [])
             ]

@@ -138,6 +138,7 @@ classes =
     , paragraph = "p"
     , text = "t"
     , grid = "g"
+    , imageContainer = "ic"
 
     -- widhts/heights
     , widthFill = "wf"
@@ -684,6 +685,9 @@ rules =
                 [ Prop "height" "100%"
                 , Prop "padding" "0"
                 , Prop "margin" "0"
+                ]
+            , Class (dot classes.any ++ dot classes.single ++ dot classes.imageContainer)
+                [ Prop "display" "block"
                 ]
             , Class (dot classes.any ++ ":focus")
                 [ Prop "outline" "none"

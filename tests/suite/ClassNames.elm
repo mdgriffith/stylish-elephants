@@ -47,6 +47,7 @@ allClassNameFns =
     , ( .paragraph, "paragraph" )
     , ( .text, "text" )
     , ( .grid, "grid" )
+    , ( .imageContainer, "imageContainer" )
 
     -- widhts/heights
     , ( .widthFill, "widthFill" )
