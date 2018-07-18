@@ -1206,16 +1206,24 @@ asElement embedMode children context rendered =
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
                     -- interferes with css grid
-                    -- if rendered.width == Just Content && rendered.height == Just Content && context == asEl then
-                    --     ( VirtualDom.text str
-                    --         :: htmls
-                    --     , existingStyles
-                    --     ) else
-                    if context == asEl then
-                        ( textElementFill str
+                    if
+                        (Flag.present Flag.widthContent rendered.has
+                            && Flag.present Flag.heightContent rendered.has
+                            && context
+                            == asEl
+                        )
+                            || context
+                            == asParagraph
+                    then
+                        ( VirtualDom.text str
                             :: htmls
                         , existingStyles
                         )
+                        -- if context == asEl then
+                        --     ( textElementFill str
+                        --         :: htmls
+                        --     , existingStyles
+                        --     )
                     else
                         ( textElement str
                             :: htmls
@@ -1242,10 +1250,13 @@ asElement embedMode children context rendered =
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
                     if
-                        Flag.present Flag.widthContent rendered.has
+                        (Flag.present Flag.widthContent rendered.has
                             && Flag.present Flag.heightContent rendered.has
                             && context
                             == asEl
+                        )
+                            || context
+                            == asParagraph
                     then
                         ( ( key, VirtualDom.text str )
                             :: htmls
