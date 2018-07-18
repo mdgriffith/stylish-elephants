@@ -583,7 +583,7 @@ row attrs children =
         Nothing
         (Internal.htmlClass classes.contentLeft
             :: Internal.htmlClass classes.contentCenterY
-            :: width fill
+            :: width shrink
             :: height shrink
             :: attrs
         )
@@ -598,8 +598,8 @@ column attrs children =
         Nothing
         (Internal.htmlClass classes.contentTop
             :: Internal.htmlClass classes.contentLeft
-            :: height fill
-            :: width fill
+            :: height shrink
+            :: width shrink
             :: attrs
         )
         (Internal.Unkeyed children)
