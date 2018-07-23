@@ -733,7 +733,12 @@ gatherAttributes attr gathered =
                         ]
             in
             { gathered
-                | styles =
+                | attributes =
+                    if location == Behind then
+                        classNameAttr classes.hasBehind :: gathered.attributes
+                    else
+                        gathered.attributes
+                , styles =
                     case styles of
                         Nothing ->
                             gathered.styles
@@ -741,6 +746,12 @@ gatherAttributes attr gathered =
                         Just newStyles ->
                             newStyles
                 , children = nearbyElement :: gathered.children
+
+                -- , has =
+                --     if location == Behind then
+                --         Flag.add Flag.behind gathered.has
+                --     else
+                --         gathered.has
             }
 
         AlignX x ->
@@ -1176,6 +1187,14 @@ element embedMode context node attributes children =
         |> asElement embedMode children context
 
 
+space =
+    VirtualDom.text " "
+
+
+keyedSpace =
+    ( " ", space )
+
+
 asElement : EmbedStyle -> Children (Element msg) -> LayoutContext -> Gathered msg -> Element msg
 asElement embedMode children context rendered =
     let
@@ -1192,40 +1211,59 @@ asElement embedMode children context rendered =
         gather child ( htmls, existingStyles ) =
             case child of
                 Unstyled html ->
-                    ( html context :: htmls
-                    , existingStyles
-                    )
+                    if context == asParagraph then
+                        ( html context :: space :: htmls
+                        , existingStyles
+                        )
+                    else
+                        ( html context :: htmls
+                        , existingStyles
+                        )
 
                 Styled styled ->
-                    ( styled.html Nothing context :: htmls
-                    , styled.styles ++ existingStyles
-                    )
+                    if context == asParagraph then
+                        ( styled.html Nothing context :: space :: htmls
+                        , styled.styles ++ existingStyles
+                        )
+                    else
+                        ( styled.html Nothing context :: htmls
+                        , styled.styles ++ existingStyles
+                        )
 
                 Text str ->
                     -- TEXT OPTIMIZATION
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
                     -- interferes with css grid
+                    -- Maybe we could unpack text elements in a paragraph as well,
+                    -- however  embedded style elements that are larger than the line height will overlap with exisitng text.
+                    -- I don't think that's what we want.
                     if
-                        (Flag.present Flag.widthContent rendered.has
-                            && Flag.present Flag.heightContent rendered.has
-                            && context
+                        context
                             == asEl
-                        )
+                            -- && Flag.present Flag.widthContent rendered.has
+                            -- && Flag.present Flag.heightContent rendered.has
+                            -- && (not <| Flag.present Flag.behind rendered.has)
                             || context
                             == asParagraph
+                        -- && (not <| Flag.present Flag.behind rendered.has)
                     then
-                        ( VirtualDom.text str
+                        ( VirtualDom.text
+                            (if context == asParagraph then
+                                str ++ " "
+                             else
+                                str
+                            )
                             :: htmls
                         , existingStyles
                         )
-                        -- if context == asEl then
-                        --     ( textElementFill str
-                        --         :: htmls
-                        --     , existingStyles
-                        --     )
                     else
-                        ( textElement str
+                        ( textElement
+                            (if context == asParagraph then
+                                str ++ " "
+                             else
+                                str
+                            )
                             :: htmls
                         , existingStyles
                         )
@@ -1236,34 +1274,59 @@ asElement embedMode children context rendered =
         gatherKeyed ( key, child ) ( htmls, existingStyles ) =
             case child of
                 Unstyled html ->
-                    ( ( key, html context ) :: htmls
-                    , existingStyles
-                    )
+                    if context == asParagraph then
+                        ( ( key, html context ) :: ( "sp", space ) :: htmls
+                        , existingStyles
+                        )
+                    else
+                        ( ( key, html context ) :: htmls
+                        , existingStyles
+                        )
 
                 Styled styled ->
-                    ( ( key, styled.html Nothing context ) :: htmls
-                    , styled.styles ++ existingStyles
-                    )
+                    if context == asParagraph then
+                        ( ( key, styled.html Nothing context )
+                            :: ( "sp", space )
+                            :: htmls
+                        , styled.styles ++ existingStyles
+                        )
+                    else
+                        ( ( key, styled.html Nothing context ) :: htmls
+                        , styled.styles ++ existingStyles
+                        )
 
                 Text str ->
                     -- TEXT OPTIMIZATION
                     -- You can have raw text if the element is an el, and has `width-content` and `height-content`
                     -- Same if it's a column or row with one child and width-content, height-content
                     if
-                        (Flag.present Flag.widthContent rendered.has
-                            && Flag.present Flag.heightContent rendered.has
-                            && context
+                        context
                             == asEl
-                        )
+                            -- && (not <| Flag.present Flag.behind rendered.has)
                             || context
                             == asParagraph
+                        -- && (not <| Flag.present Flag.behind rendered.has)
                     then
-                        ( ( key, VirtualDom.text str )
+                        ( ( key
+                          , VirtualDom.text
+                                (if context == asParagraph then
+                                    str ++ " "
+                                 else
+                                    str
+                                )
+                          )
                             :: htmls
                         , existingStyles
                         )
                     else
-                        ( ( key, textElement str )
+                        ( ( key
+                          , textElement
+                                (if context == asParagraph then
+                                    str ++ " "
+                                 else
+                                    str
+                                )
+                          )
                             :: htmls
                         , existingStyles
                         )
@@ -1300,14 +1363,14 @@ asElement embedMode children context rendered =
                             |> addWhen renderDynamic
                                 ( "dynamic-stylesheet", toStyleSheet options styles )
                             |> addWhen renderStatic
-                                ( "static-stylesheet", staticRoot )
+                                ( "static-stylesheet", VirtualDom.lazy staticRoot unit )
                         )
 
                 Unkeyed unkeyed ->
                     Unkeyed
                         ((rendered.children ++ unkeyed)
                             |> addWhen renderDynamic (toStyleSheet options styles)
-                            |> addWhen renderStatic staticRoot
+                            |> addWhen renderStatic (VirtualDom.lazy staticRoot unit)
                         )
     in
     case embedMode of
@@ -1330,6 +1393,10 @@ asElement embedMode children context rendered =
                 )
 
 
+unit =
+    0
+
+
 defaultOptions =
     { hover = AllowHover
     , focus = focusDefaultStyle
@@ -1337,7 +1404,7 @@ defaultOptions =
     }
 
 
-staticRoot =
+staticRoot _ =
     VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
 
 
@@ -1934,6 +2001,13 @@ toStyleSheetString options stylesheet =
                             ("textarea" ++ class)
                             [ Property "line-height" ("calc(1em + " ++ String.fromInt y ++ "px)")
                             ]
+
+                        -- , renderStyle force
+                        --     maybePseudo
+                        --     (class ++ paragraph ++ " > " ++ any)
+                        --     [ Property "margin-right" xPx
+                        --     , Property "margin-bottom" yPx
+                        --     ]
                         , renderStyle force
                             maybePseudo
                             (class ++ paragraph ++ " > " ++ left)

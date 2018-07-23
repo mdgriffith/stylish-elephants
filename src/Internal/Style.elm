@@ -157,6 +157,7 @@ classes =
     , onLeft = "ol"
     , inFront = "fr"
     , behind = "bh"
+    , hasBehind = "hbh"
 
     -- alignments
     , alignTop = "at"
@@ -853,6 +854,12 @@ rules =
                     [ Prop "display" "flex"
                     , Prop "flex-direction" "column"
                     , Prop "white-space" "pre"
+                    , Descriptor (dot classes.hasBehind)
+                        [ Prop "z-index" "0"
+                        , Child (dot classes.behind)
+                            [ Prop "z-index" "-1"
+                            ]
+                        ]
                     , Descriptor (dot classes.seButton)
                         -- Special default for text in a button.
                         -- This is overridden is they put the text inside an `el`
@@ -1266,6 +1273,12 @@ rules =
                 , Descriptor (dot classes.paragraph)
                     [ Prop "display" "block"
                     , Prop "white-space" "normal"
+                    , Descriptor (dot classes.hasBehind)
+                        [ Prop "z-index" "0"
+                        , Child (dot classes.behind)
+                            [ Prop "z-index" "-1"
+                            ]
+                        ]
                     , Child (dot classes.text)
                         [ Prop "display" "inline"
                         , Prop "white-space" "normal"
