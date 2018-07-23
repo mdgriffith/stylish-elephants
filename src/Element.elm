@@ -443,8 +443,9 @@ layoutWith { options } attrs child =
                 [ classes.root
                 , classes.any
                 , classes.single
-                , classes.contentCenterX
-                , classes.contentCenterY
+
+                -- , classes.contentCenterX
+                -- , classes.contentCenterY
                 ]
             )
             :: (Internal.rootStyle ++ attrs)
