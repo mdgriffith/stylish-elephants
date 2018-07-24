@@ -566,7 +566,7 @@ el : List (Attribute msg) -> Element msg -> Element msg
 el attrs child =
     Internal.element Internal.noStyleSheet
         Internal.asEl
-        Nothing
+        Internal.div
         (width shrink
             :: height shrink
             :: attrs
@@ -581,7 +581,7 @@ row attrs children =
     Internal.element
         Internal.noStyleSheet
         Internal.asRow
-        Nothing
+        Internal.div
         (Internal.htmlClass classes.contentLeft
             :: Internal.htmlClass classes.contentCenterY
             :: width shrink
@@ -596,7 +596,7 @@ column : List (Attribute msg) -> List (Element msg) -> Element msg
 column attrs children =
     Internal.element Internal.noStyleSheet
         Internal.asColumn
-        Nothing
+        Internal.div
         (Internal.htmlClass classes.contentTop
             :: Internal.htmlClass classes.contentLeft
             :: height shrink
@@ -758,7 +758,7 @@ tableHelper attrs config =
             Internal.element
                 Internal.noStyleSheet
                 Internal.asEl
-                Nothing
+                Internal.div
                 [ Internal.StyleClass Flag.gridPosition
                     (Internal.GridPosition
                         { row = rowLevel
@@ -823,7 +823,7 @@ tableHelper attrs config =
     in
     Internal.element Internal.noStyleSheet
         Internal.asGrid
-        Nothing
+        Internal.div
         (width fill
             :: template
             :: attrs
@@ -878,7 +878,7 @@ paragraph : List (Attribute msg) -> List (Element msg) -> Element msg
 paragraph attrs children =
     Internal.element Internal.noStyleSheet
         Internal.asParagraph
-        (Just "p")
+        (Internal.NodeName "p")
         (width fill
             :: spacing 5
             :: attrs
@@ -910,7 +910,7 @@ textColumn attrs children =
     Internal.element
         Internal.noStyleSheet
         Internal.asTextColumn
-        Nothing
+        Internal.div
         (width
             (fill
                 |> minimum 500
@@ -950,14 +950,14 @@ image attrs { src, description } =
     in
     Internal.element Internal.noStyleSheet
         Internal.asEl
-        Nothing
+        Internal.div
         (Internal.htmlClass classes.imageContainer
             :: attrs
         )
         (Internal.Unkeyed
             [ Internal.element Internal.noStyleSheet
                 Internal.asEl
-                (Just "img")
+                (Internal.NodeName "img")
                 ([ Internal.Attr <| Html.Attributes.src src
                  , Internal.Attr <| Html.Attributes.alt description
                  ]
@@ -987,7 +987,7 @@ link : List (Attribute msg) -> Link msg -> Element msg
 link attrs { url, label } =
     Internal.element Internal.noStyleSheet
         Internal.asEl
-        (Just "a")
+        (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
             :: width shrink
@@ -1004,7 +1004,7 @@ newTabLink : List (Attribute msg) -> Link msg -> Element msg
 newTabLink attrs { url, label } =
     Internal.element Internal.noStyleSheet
         Internal.asEl
-        (Just "a")
+        (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
             :: Internal.Attr (Html.Attributes.target "_blank")
@@ -1023,7 +1023,7 @@ download : List (Attribute msg) -> Link msg -> Element msg
 download attrs { url, label } =
     Internal.element Internal.noStyleSheet
         Internal.asEl
-        (Just "a")
+        (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.download "")
             :: width shrink
@@ -1041,7 +1041,7 @@ downloadAs : List (Attribute msg) -> { label : Element msg, filename : String, u
 downloadAs attrs { url, filename, label } =
     Internal.element Internal.noStyleSheet
         Internal.asEl
-        (Just "a")
+        (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
             :: Internal.Attr (Html.Attributes.download filename)
             :: width shrink
@@ -1109,56 +1109,56 @@ height =
 {-| -}
 scale : Float -> Attr decorative msg
 scale n =
-    Internal.StyleClass Flag.scale (Internal.Transform (Internal.Scale n n 1))
+    Internal.StyleClass Flag.scale (Internal.Transform (Internal.Scale ( n, n, 1 )))
 
 
 {-| -}
 rotate : Float -> Attr decorative msg
 rotate angle =
-    Internal.StyleClass Flag.rotate (Internal.Transform (Internal.Rotate 0 0 1 angle))
+    Internal.StyleClass Flag.rotate (Internal.Transform (Internal.Rotate ( 0, 0, 1 ) angle))
 
 
 {-| -}
 moveUp : Float -> Attr decorative msg
 moveUp y =
-    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.Move Nothing (Just (negate y)) Nothing))
+    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.MoveY (negate y)))
 
 
 {-| -}
 moveDown : Float -> Attr decorative msg
 moveDown y =
-    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.Move Nothing (Just y) Nothing))
+    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.MoveY y))
 
 
 {-| -}
 moveRight : Float -> Attr decorative msg
 moveRight x =
-    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.Move (Just x) Nothing Nothing))
+    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.MoveX x))
 
 
 {-| -}
 moveLeft : Float -> Attr decorative msg
 moveLeft x =
-    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.Move (Just (negate x)) Nothing Nothing))
+    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.MoveX (negate x)))
 
 
 {-| -}
 padding : Int -> Attribute msg
 padding x =
-    Internal.StyleClass Flag.padding (Internal.PaddingStyle x x x x)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle (Internal.paddingName x x x x) x x x x)
 
 
 {-| Set horizontal and vertical padding.
 -}
 paddingXY : Int -> Int -> Attribute msg
 paddingXY x y =
-    Internal.StyleClass Flag.padding (Internal.PaddingStyle y x y x)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle (Internal.paddingName y x y x) y x y x)
 
 
 {-| -}
 paddingEach : { bottom : Int, left : Int, right : Int, top : Int } -> Attribute msg
 paddingEach { top, right, bottom, left } =
-    Internal.StyleClass Flag.padding (Internal.PaddingStyle top right bottom left)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle (Internal.paddingName top right bottom left) top right bottom left)
 
 
 {-| -}
@@ -1206,7 +1206,7 @@ spaceEvenly =
 {-| -}
 spacing : Int -> Attribute msg
 spacing x =
-    Internal.StyleClass Flag.spacing (Internal.SpacingStyle x x)
+    Internal.StyleClass Flag.spacing (Internal.SpacingStyle (Internal.spacingName x x) x x)
 
 
 {-| In the majority of cases you'll just need to use `spacing`, which will work as intended.
@@ -1216,7 +1216,7 @@ However for some layouts, like `textColumn`, you may want to set a different spa
 -}
 spacingXY : Int -> Int -> Attribute msg
 spacingXY x y =
-    Internal.StyleClass Flag.spacing (Internal.SpacingStyle x y)
+    Internal.StyleClass Flag.spacing (Internal.SpacingStyle (Internal.spacingName x y) x y)
 
 
 {-| Make an element transparent and have it ignore any mouse or touch events, though it will stil take up space.

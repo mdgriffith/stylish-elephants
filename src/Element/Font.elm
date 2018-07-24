@@ -316,19 +316,20 @@ shadow :
     }
     -> Attr decorative msg
 shadow shade =
-    Internal.TextShadow
-        { offset = shade.offset
-        , blur = shade.blur
-        , color = shade.color
-        }
+    Internal.StyleClass Flag.txtShadows <|
+        Internal.Single (Internal.textShadowName shade) "text-shadow" (Internal.formatTextShadow shade)
 
 
 {-| A glow is just a simplified shadow
 -}
 glow : Color -> Float -> Attr decorative msg
 glow clr i =
-    Internal.TextShadow
-        { offset = ( 0, 0 )
-        , blur = i * 2
-        , color = clr
-        }
+    let
+        shade =
+            { offset = ( 0, 0 )
+            , blur = i * 2
+            , color = clr
+            }
+    in
+    Internal.StyleClass Flag.txtShadows <|
+        Internal.Single (Internal.textShadowName shade) "text-shadow" (Internal.formatTextShadow shade)

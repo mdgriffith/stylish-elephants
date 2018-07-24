@@ -139,7 +139,7 @@ roundEach { topLeft, topRight, bottomLeft, bottomRight } =
 -}
 glow : Color -> Float -> Attr decorative msg
 glow clr size =
-    box
+    shadow
         { offset = ( 0, 0 )
         , size = size
         , blur = size * 2
@@ -159,21 +159,25 @@ innerGlow clr size =
 
 
 {-| -}
-box :
+shadow :
     { offset : ( Float, Float )
     , size : Float
     , blur : Float
     , color : Color
     }
     -> Attr decorative msg
-box shade =
-    Internal.BoxShadow
-        { inset = False
-        , offset = shade.offset
-        , size = shade.size
-        , blur = shade.blur
-        , color = shade.color
-        }
+shadow almostShade =
+    let
+        shade =
+            { inset = False
+            , offset = almostShade.offset
+            , size = almostShade.size
+            , blur = almostShade.blur
+            , color = almostShade.color
+            }
+    in
+    Internal.StyleClass Flag.shadows <|
+        Internal.Single (Internal.boxShadowName shade) "box-shadow" (Internal.formatBoxShadow shade)
 
 
 {-| -}
@@ -184,29 +188,34 @@ innerShadow :
     , color : Color
     }
     -> Attr decorative msg
-innerShadow shade =
-    Internal.BoxShadow
-        { inset = True
-        , offset = shade.offset
-        , size = shade.size
-        , blur = shade.blur
-        , color = shade.color
-        }
+innerShadow almostShade =
+    let
+        shade =
+            { inset = True
+            , offset = almostShade.offset
+            , size = almostShade.size
+            , blur = almostShade.blur
+            , color = almostShade.color
+            }
+    in
+    Internal.StyleClass Flag.shadows <|
+        Internal.Single (Internal.boxShadowName shade) "box-shadow" (Internal.formatBoxShadow shade)
 
 
-{-| -}
-shadow :
-    { offset : ( Float, Float )
-    , blur : Float
-    , size : Float
-    , color : Color
-    }
-    -> Attr decorative msg
-shadow shade =
-    Internal.BoxShadow
-        { inset = False
-        , offset = shade.offset
-        , size = shade.size
-        , blur = shade.blur
-        , color = shade.color
-        }
+
+-- {-| -}
+-- shadow :
+--     { offset : ( Float, Float )
+--     , blur : Float
+--     , size : Float
+--     , color : Color
+--     }
+--     -> Attr decorative msg
+-- shadow shade =
+--     Internal.BoxShadow
+--         { inset = False
+--         , offset = shade.offset
+--         , size = shade.size
+--         , blur = shade.blur
+--         , color = shade.color
+--         }

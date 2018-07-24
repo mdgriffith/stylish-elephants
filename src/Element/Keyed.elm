@@ -26,7 +26,7 @@ el : List (Attribute msg) -> ( String, Element msg ) -> Element msg
 el attrs child =
     Internal.element Internal.NoStyleSheet
         Internal.asEl
-        Nothing
+        Internal.div
         (width Element.shrink
             :: height Element.shrink
             :: attrs
@@ -40,7 +40,7 @@ row attrs children =
     Internal.element
         Internal.NoStyleSheet
         Internal.asRow
-        Nothing
+        Internal.div
         (Internal.htmlClass classes.contentLeft
             :: Internal.htmlClass classes.contentCenterY
             :: width fill
@@ -54,7 +54,7 @@ column : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
 column attrs children =
     Internal.element Internal.NoStyleSheet
         Internal.asColumn
-        Nothing
+        Internal.div
         (Internal.htmlClass classes.contentTop
             :: Internal.htmlClass classes.contentLeft
             :: height fill

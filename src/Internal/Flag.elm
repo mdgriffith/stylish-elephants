@@ -52,6 +52,16 @@ add myFlag (Field one two) =
             Field one (Bitwise.or second two)
 
 
+{-| Generally you want to use `add`, which keeps a distinction between Fields and Flags.
+
+Merging will combine two fields
+
+-}
+merge : Field -> Field -> Field
+merge (Field one two) (Field three four) =
+    Field (Bitwise.or one three) (Bitwise.or two four)
+
+
 flag : Int -> Flag
 flag i =
     if i > 31 then
@@ -132,6 +142,10 @@ letterSpacing =
 
 borderRound =
     flag 17
+
+
+txtShadows =
+    flag 18
 
 
 shadows =
