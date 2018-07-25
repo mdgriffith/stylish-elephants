@@ -86,6 +86,13 @@ type Style
     | Shadows String String
 
 
+type Transformation
+    = Untransformed
+    | Moved XYZ
+      --              translate, scale, rotate
+    | FullTransform XYZ XYZ XYZ Angle
+
+
 type PseudoClass
     = Focus
     | Hover
@@ -104,28 +111,12 @@ type Property
     = Property String String
 
 
-type Transformation
-    = MoveX Float
-    | MoveY Float
-    | MoveZ Float
-    | MoveXYZ XYZ
-    | Rotate XYZ Float
-    | Scale XYZ
-
-
 type alias XYZ =
     ( Float, Float, Float )
 
 
 type alias Angle =
     Float
-
-
-type Transform
-    = Untransformed
-    | Moved XYZ
-      --              translate, scale, rotate
-    | FullTransform XYZ XYZ XYZ Angle
 
 
 type Attribute aligned msg
@@ -141,6 +132,16 @@ type Attribute aligned msg
     | Width Length
     | Height Length
     | Nearby Location (Element msg)
+    | TransformComponent Flag TransformComponent
+
+
+type TransformComponent
+    = MoveX Float
+    | MoveY Float
+    | MoveZ Float
+    | MoveXYZ XYZ
+    | Rotate XYZ Float
+    | Scale XYZ
 
 
 type Description
@@ -201,25 +202,6 @@ type alias Gathered msg =
     , children : List (VirtualDom.Node msg)
     , has : Flag.Field
     }
-
-
-type alias Decorated x =
-    { focus : Maybe x
-    , hover : Maybe x
-    , normal : Maybe x
-    , active : Maybe x
-    }
-
-
-type alias TransformationGroup =
-    { rotate : Maybe Rotation
-    , translate : Maybe ( Maybe Float, Maybe Float, Maybe Float )
-    , scale : Maybe ( Float, Float, Float )
-    }
-
-
-type Rotation
-    = Rotation Float Float Float Float
 
 
 htmlClass : String -> Attribute aligned msg
@@ -359,10 +341,11 @@ finalizeNode has node attributes children embedMode parentContext =
 
 embedWith static opts styles children =
     if static then
-        VirtualDom.lazy staticRoot unit
+        staticRoot
             :: (styles
                     |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
                     |> Tuple.second
+                    -- |> sortedReduce
                     |> toStyleSheet opts
                )
             :: children
@@ -370,6 +353,7 @@ embedWith static opts styles children =
         (styles
             |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
             |> Tuple.second
+            -- |> sortedReduce
             |> toStyleSheet opts
         )
             :: children
@@ -377,11 +361,12 @@ embedWith static opts styles children =
 
 embedKeyed static opts styles children =
     if static then
-        ( "static-stylesheet", VirtualDom.lazy staticRoot unit )
+        ( "static-stylesheet", staticRoot )
             :: ( "dynamic-stylesheet"
                , styles
                     |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
                     |> Tuple.second
+                    -- |> sortedReduce
                     |> toStyleSheet opts
                )
             :: children
@@ -390,9 +375,33 @@ embedKeyed static opts styles children =
         , styles
             |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
             |> Tuple.second
+            -- |> sortedReduce
             |> toStyleSheet opts
         )
             :: children
+
+
+sortedReduce styles =
+    styles
+        |> List.map (\x -> ( getStyleName x, x ))
+        |> List.sortBy Tuple.first
+        |> reduceRecursive []
+
+
+reduceRecursive : List Style -> List ( String, Style ) -> List Style
+reduceRecursive found styles =
+    case styles of
+        [] ->
+            found
+
+        ( _, headOfList ) :: [] ->
+            headOfList :: found
+
+        ( headOfListName, headOfList ) :: ( otherName, other ) :: remaining ->
+            if headOfListName /= otherName then
+                reduceRecursive (headOfList :: found) (( otherName, other ) :: remaining)
+            else
+                reduceRecursive found (( otherName, other ) :: remaining)
 
 
 addNodeName : String -> NodeName -> NodeName
@@ -434,27 +443,162 @@ alignYName align =
             classes.alignedVertically ++ " " ++ classes.alignCenterY
 
 
-emptyTransformationStates =
-    { focus = Nothing
-    , hover = Nothing
-    , normal = Nothing
-    , active = Nothing
-    }
+transformClass transform =
+    case transform of
+        Untransformed ->
+            Nothing
+
+        Moved ( x, y, z ) ->
+            Just <|
+                "mv-"
+                    ++ floatClass x
+                    ++ "-"
+                    ++ floatClass y
+                    ++ "-"
+                    ++ floatClass z
+
+        FullTransform ( tx, ty, tz ) ( sx, sy, sz ) ( ox, oy, oz ) angle ->
+            Just <|
+                "tfrm-"
+                    ++ floatClass tx
+                    ++ "-"
+                    ++ floatClass ty
+                    ++ "-"
+                    ++ floatClass tz
+                    ++ "-"
+                    ++ floatClass sx
+                    ++ "-"
+                    ++ floatClass sy
+                    ++ "-"
+                    ++ floatClass sz
+                    ++ "-"
+                    ++ floatClass ox
+                    ++ "-"
+                    ++ floatClass oy
+                    ++ "-"
+                    ++ floatClass oz
+                    ++ "-"
+                    ++ floatClass angle
 
 
-emptyTransformGroup =
-    { translate = Nothing
-    , rotate = Nothing
-    , scale = Nothing
-    }
+transformValue transform =
+    case transform of
+        Untransformed ->
+            Nothing
+
+        Moved ( x, y, z ) ->
+            Just <|
+                "translate3d("
+                    ++ String.fromFloat x
+                    ++ "px, "
+                    ++ String.fromFloat y
+                    ++ "px, "
+                    ++ String.fromFloat z
+                    ++ "px)"
+
+        FullTransform ( tx, ty, tz ) ( sx, sy, sz ) ( ox, oy, oz ) angle ->
+            let
+                translate =
+                    "translate3d("
+                        ++ String.fromFloat tx
+                        ++ "px, "
+                        ++ String.fromFloat ty
+                        ++ "px, "
+                        ++ String.fromFloat tz
+                        ++ "px)"
+
+                scale =
+                    "scale3d("
+                        ++ String.fromFloat sx
+                        ++ ", "
+                        ++ String.fromFloat sy
+                        ++ ", "
+                        ++ String.fromFloat sz
+                        ++ ")"
+
+                rotate =
+                    "rotate3d("
+                        ++ String.fromFloat ox
+                        ++ ", "
+                        ++ String.fromFloat oy
+                        ++ ", "
+                        ++ String.fromFloat oz
+                        ++ ", "
+                        ++ String.fromFloat angle
+                        ++ "rad)"
+            in
+            Just <| translate ++ " " ++ scale ++ " " ++ rotate
 
 
-gatherAttrRecursive : NodeName -> Flag.Field -> Transform -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
+composeTransformation transform component =
+    case transform of
+        Untransformed ->
+            case component of
+                MoveX x ->
+                    Moved ( x, 0, 0 )
+
+                MoveY y ->
+                    Moved ( 0, y, 0 )
+
+                MoveZ z ->
+                    Moved ( 0, 0, z )
+
+                MoveXYZ xyz ->
+                    Moved xyz
+
+                Rotate xyz angle ->
+                    FullTransform ( 0, 0, 0 ) ( 1, 1, 1 ) xyz angle
+
+                Scale xyz ->
+                    FullTransform ( 0, 0, 0 ) xyz ( 0, 0, 1 ) 0
+
+        Moved (( x, y, z ) as moved) ->
+            case component of
+                MoveX newX ->
+                    Moved ( newX, y, z )
+
+                MoveY newY ->
+                    Moved ( x, newY, z )
+
+                MoveZ newZ ->
+                    Moved ( x, y, newZ )
+
+                MoveXYZ xyz ->
+                    Moved xyz
+
+                Rotate xyz angle ->
+                    FullTransform moved ( 1, 1, 1 ) xyz angle
+
+                Scale scale ->
+                    FullTransform moved scale ( 0, 0, 1 ) 0
+
+        FullTransform (( x, y, z ) as moved) scaled origin angle ->
+            case component of
+                MoveX newX ->
+                    FullTransform ( newX, y, z ) scaled origin angle
+
+                MoveY newY ->
+                    FullTransform ( x, newY, z ) scaled origin angle
+
+                MoveZ newZ ->
+                    FullTransform ( x, y, newZ ) scaled origin angle
+
+                MoveXYZ newMove ->
+                    FullTransform newMove scaled origin angle
+
+                Rotate newOrigin newAngle ->
+                    FullTransform moved scaled newOrigin newAngle
+
+                Scale newScale ->
+                    FullTransform moved newScale origin angle
+
+
+gatherAttrRecursive : NodeName -> Flag.Field -> Transformation -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
 gatherAttrRecursive node has transform styles attrs children elementAttrs =
     case elementAttrs of
         [] ->
-            case transform of
-                Untransformed ->
+            case transformClass transform of
+                Nothing ->
                     { attributes = attrs
                     , styles = styles
                     , node = node
@@ -462,88 +606,9 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     , has = has
                     }
 
-                Moved ( x, y, z ) ->
-                    let
-                        val =
-                            "translate3d("
-                                ++ String.fromFloat x
-                                ++ "px, "
-                                ++ String.fromFloat y
-                                ++ "px, "
-                                ++ String.fromFloat z
-                                ++ "px)"
-
-                        class =
-                            "mv-"
-                                ++ String.fromFloat x
-                                ++ "-"
-                                ++ String.fromFloat y
-                                ++ "-"
-                                ++ String.fromFloat z
-                    in
+                Just class ->
                     { attributes = Html.Attributes.class class :: attrs
-                    , styles = Single class "transform" val :: styles
-                    , node = node
-                    , children = children
-                    , has = has
-                    }
-
-                FullTransform ( tx, ty, tz ) ( sx, sy, sz ) ( ox, oy, oz ) angle ->
-                    let
-                        translate =
-                            "translate3d("
-                                ++ String.fromFloat tx
-                                ++ "px, "
-                                ++ String.fromFloat ty
-                                ++ "px, "
-                                ++ String.fromFloat tz
-                                ++ "px)"
-
-                        scale =
-                            "scale3d("
-                                ++ String.fromFloat sx
-                                ++ ", "
-                                ++ String.fromFloat sy
-                                ++ ", "
-                                ++ String.fromFloat sz
-                                ++ ")"
-
-                        rotate =
-                            "rotate3d("
-                                ++ String.fromFloat ox
-                                ++ ", "
-                                ++ String.fromFloat oy
-                                ++ ", "
-                                ++ String.fromFloat oz
-                                ++ ", "
-                                ++ String.fromFloat angle
-                                ++ "rad)"
-                                ++ ")"
-
-                        class =
-                            "tfrm-"
-                                ++ String.fromFloat tx
-                                ++ "-"
-                                ++ String.fromFloat ty
-                                ++ "-"
-                                ++ String.fromFloat tz
-                                ++ "-"
-                                ++ String.fromFloat sx
-                                ++ "-"
-                                ++ String.fromFloat sy
-                                ++ "-"
-                                ++ String.fromFloat sz
-                                ++ "-"
-                                ++ String.fromFloat ox
-                                ++ "-"
-                                ++ String.fromFloat oy
-                                ++ "-"
-                                ++ String.fromFloat oz
-                                ++ "-"
-                                ++ String.fromFloat angle
-                    in
-                    { attributes = Html.Attributes.class class :: attrs
-                    , styles = Single class "transform" (translate ++ " " ++ scale ++ " " ++ rotate) :: styles
+                    , styles = Transform transform :: styles
                     , node = node
                     , children = children
                     , has = has
@@ -567,91 +632,26 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     if Flag.present flag has then
                         gatherAttrRecursive node has transform styles attrs children remaining
                     else
-                        case style of
-                            Transform newTransform ->
-                                let
-                                    newTransformation =
-                                        case transform of
-                                            Untransformed ->
-                                                case newTransform of
-                                                    MoveX x ->
-                                                        Moved ( x, 0, 0 )
+                        gatherAttrRecursive
+                            node
+                            (Flag.add flag has)
+                            transform
+                            (style :: styles)
+                            (Html.Attributes.class (getStyleName style)
+                                :: attrs
+                            )
+                            children
+                            remaining
 
-                                                    MoveY y ->
-                                                        Moved ( 0, y, 0 )
-
-                                                    MoveZ z ->
-                                                        Moved ( 0, 0, z )
-
-                                                    MoveXYZ xyz ->
-                                                        Moved xyz
-
-                                                    Rotate xyz angle ->
-                                                        FullTransform ( 0, 0, 0 ) ( 1, 1, 1 ) xyz angle
-
-                                                    Scale xyz ->
-                                                        FullTransform ( 0, 0, 0 ) xyz ( 0, 0, 1 ) 0
-
-                                            Moved (( x, y, z ) as moved) ->
-                                                case newTransform of
-                                                    MoveX newX ->
-                                                        Moved ( newX, y, z )
-
-                                                    MoveY newY ->
-                                                        Moved ( x, newY, z )
-
-                                                    MoveZ newZ ->
-                                                        Moved ( x, y, newZ )
-
-                                                    MoveXYZ xyz ->
-                                                        Moved xyz
-
-                                                    Rotate xyz angle ->
-                                                        FullTransform moved ( 1, 1, 1 ) xyz angle
-
-                                                    Scale scale ->
-                                                        FullTransform moved scale ( 0, 0, 1 ) 0
-
-                                            FullTransform (( x, y, z ) as moved) scaled origin angle ->
-                                                case newTransform of
-                                                    MoveX newX ->
-                                                        FullTransform ( newX, y, z ) scaled origin angle
-
-                                                    MoveY newY ->
-                                                        FullTransform ( x, newY, z ) scaled origin angle
-
-                                                    MoveZ newZ ->
-                                                        FullTransform ( x, y, newZ ) scaled origin angle
-
-                                                    MoveXYZ newMove ->
-                                                        FullTransform newMove scaled origin angle
-
-                                                    Rotate newOrigin newAngle ->
-                                                        FullTransform moved scaled newOrigin newAngle
-
-                                                    Scale newScale ->
-                                                        FullTransform moved newScale origin angle
-                                in
-                                gatherAttrRecursive
-                                    node
-                                    (Flag.add flag has)
-                                    newTransformation
-                                    styles
-                                    attrs
-                                    children
-                                    remaining
-
-                            _ ->
-                                gatherAttrRecursive
-                                    node
-                                    (Flag.add flag has)
-                                    transform
-                                    (style :: styles)
-                                    (Html.Attributes.class (getStyleName style)
-                                        :: attrs
-                                    )
-                                    children
-                                    remaining
+                TransformComponent flag component ->
+                    gatherAttrRecursive
+                        node
+                        (Flag.add flag has)
+                        (composeTransformation transform component)
+                        styles
+                        attrs
+                        children
+                        remaining
 
                 Width width ->
                     if Flag.present Flag.width has then
@@ -1105,105 +1105,6 @@ renderHeight h =
             )
 
 
-{-| -}
-renderTransformationGroup : Maybe PseudoClass -> TransformationGroup -> Maybe ( String, Style )
-renderTransformationGroup maybePseudo group =
-    let
-        translate =
-            Maybe.map
-                (\( x, y, z ) ->
-                    "translate3d("
-                        ++ String.fromFloat (Maybe.withDefault 0 x)
-                        ++ "px, "
-                        ++ String.fromFloat (Maybe.withDefault 0 y)
-                        ++ "px, "
-                        ++ String.fromFloat (Maybe.withDefault 0 z)
-                        ++ "px)"
-                )
-                group.translate
-
-        scale =
-            Maybe.map
-                (\( x, y, z ) ->
-                    "scale3d(" ++ String.fromFloat x ++ ", " ++ String.fromFloat y ++ ", " ++ String.fromFloat z ++ ")"
-                )
-                group.scale
-
-        rotate =
-            Maybe.map
-                (\(Rotation x y z angle) ->
-                    "rotate3d(" ++ String.fromFloat x ++ "," ++ String.fromFloat y ++ "," ++ String.fromFloat z ++ "," ++ String.fromFloat angle ++ "rad)"
-                )
-                group.rotate
-
-        transformations =
-            List.filterMap identity
-                [ scale
-                , translate
-                , rotate
-                ]
-
-        name =
-            String.join "-" <|
-                List.filterMap identity
-                    [ Maybe.map
-                        (\( x, y, z ) ->
-                            "move-"
-                                ++ floatClass (Maybe.withDefault 0 x)
-                                ++ "-"
-                                ++ floatClass (Maybe.withDefault 0 y)
-                                ++ "-"
-                                ++ floatClass (Maybe.withDefault 0 z)
-                        )
-                        group.translate
-                    , Maybe.map
-                        (\( x, y, z ) ->
-                            "scale" ++ floatClass x ++ "-" ++ floatClass y ++ "-" ++ floatClass z
-                        )
-                        group.scale
-                    , Maybe.map
-                        (\(Rotation x y z angle) ->
-                            "rotate-" ++ floatClass x ++ "-" ++ floatClass y ++ "-" ++ floatClass z ++ "-" ++ floatClass angle
-                        )
-                        group.rotate
-                    ]
-    in
-    case transformations of
-        [] ->
-            Nothing
-
-        trans ->
-            let
-                transforms =
-                    String.join " " trans
-
-                ( classOnElement, classInStylesheet ) =
-                    case maybePseudo of
-                        Nothing ->
-                            ( "transform-" ++ name
-                            , "transform-" ++ name
-                            )
-
-                        Just pseudo ->
-                            case pseudo of
-                                Hover ->
-                                    ( "transform-" ++ name ++ "-hover"
-                                    , "transform-" ++ name ++ "-hover:hover"
-                                    )
-
-                                Focus ->
-                                    ( "transform-" ++ name ++ "-focus"
-                                    , "transform-" ++ name ++ "-focus:focus, .se:focus ~ .transform-" ++ name ++ "-focus"
-                                    )
-
-                                Active ->
-                                    ( "transform-" ++ name ++ "-active"
-                                    , "transform-" ++ name ++ "-active:active"
-                                    )
-            in
-            Just ( classOnElement, Single classInStylesheet "transform" transforms )
-
-
 rowClass =
     Html.Attributes.class (classes.any ++ " " ++ classes.row)
 
@@ -1444,7 +1345,7 @@ defaultOptions =
     }
 
 
-staticRoot _ =
+staticRoot =
     VirtualDom.node "style" [] [ VirtualDom.text Internal.Style.rules ]
 
 
@@ -1510,6 +1411,12 @@ filter attrs =
                             ( found, has )
                         else
                             ( x :: found, Set.insert "align-y" has )
+
+                    TransformComponent _ _ ->
+                        if Set.member "transform" has then
+                            ( found, has )
+                        else
+                            ( x :: found, Set.insert "transform" has )
             )
             ( [], Set.empty )
             attrs
@@ -1886,54 +1793,82 @@ toStyleSheet options styleSheet =
 toStyleSheetString : OptionRecord -> List Style -> String
 toStyleSheetString options stylesheet =
     let
+        renderTopLevels rule =
+            case rule of
+                FontFamily name typefaces ->
+                    let
+                        getImports font =
+                            case font of
+                                ImportFont _ url ->
+                                    Just ("@import url('" ++ url ++ "');")
+
+                                _ ->
+                                    Nothing
+                    in
+                    typefaces
+                        |> List.filterMap getImports
+                        |> String.join "\n"
+                        |> Just
+
+                _ ->
+                    Nothing
+
         renderProps force (Property key val) existing =
             if force then
                 existing ++ "\n  " ++ key ++ ": " ++ val ++ " !important;"
             else
                 existing ++ "\n  " ++ key ++ ": " ++ val ++ ";"
 
-        renderStyle force maybePseudo selector props =
+        renderStyle maybePseudo selector props =
             case maybePseudo of
                 Nothing ->
-                    selector ++ "{" ++ List.foldl (renderProps force) "" props ++ "\n}"
+                    selector ++ "{" ++ List.foldl (renderProps False) "" props ++ "\n}"
 
                 Just pseudo ->
                     case pseudo of
                         Hover ->
-                            selector ++ ":hover {" ++ List.foldl (renderProps force) "" props ++ "\n}"
+                            case options.hover of
+                                NoHover ->
+                                    ""
+
+                                ForceHover ->
+                                    selector ++ "-hv {" ++ List.foldl (renderProps True) "" props ++ "\n}"
+
+                                AllowHover ->
+                                    selector ++ "-hv:hover {" ++ List.foldl (renderProps False) "" props ++ "\n}"
 
                         Focus ->
                             let
                                 renderedProps =
-                                    List.foldl (renderProps force) "" props
+                                    List.foldl (renderProps False) "" props
                             in
                             String.join "\n"
                                 [ selector
-                                    ++ ":focus {"
+                                    ++ "-fs:focus {"
                                     ++ renderedProps
                                     ++ "\n}"
                                 , ".se:focus ~ "
                                     ++ selector
-                                    ++ ":not(.focus)  {"
+                                    ++ "-fs:not(.focus)  {"
                                     ++ renderedProps
                                     ++ "\n}"
                                 , ".se:focus "
                                     ++ selector
-                                    ++ "  {"
+                                    ++ "-fs  {"
                                     ++ renderedProps
                                     ++ "\n}"
                                 ]
 
                         Active ->
-                            selector ++ ":active {" ++ List.foldl (renderProps force) "" props ++ "\n}"
+                            selector ++ "-act:active {" ++ List.foldl (renderProps False) "" props ++ "\n}"
 
-        renderStyleRule rule maybePseudo force =
+        renderStyleRule rule maybePseudo =
             case rule of
                 Style selector props ->
-                    renderStyle force maybePseudo selector props
+                    renderStyle maybePseudo selector props
 
                 Shadows name prop ->
-                    renderStyle force
+                    renderStyle
                         maybePseudo
                         ("." ++ name)
                         [ Property "box-shadow" prop
@@ -1946,35 +1881,35 @@ toStyleSheetString options stylesheet =
                                 |> min 1
                                 |> max 0
                     in
-                    renderStyle force
+                    renderStyle
                         maybePseudo
                         ("." ++ name)
                         [ Property "opacity" (String.fromFloat opacity)
                         ]
 
                 FontSize i ->
-                    renderStyle force
+                    renderStyle
                         maybePseudo
                         (".font-size-" ++ String.fromInt i)
                         [ Property "font-size" (String.fromInt i ++ "px")
                         ]
 
                 FontFamily name typefaces ->
-                    renderStyle force
+                    renderStyle
                         maybePseudo
                         ("." ++ name)
                         [ Property "font-family" (renderFont typefaces)
                         ]
 
                 Single class prop val ->
-                    renderStyle force
+                    renderStyle
                         maybePseudo
                         ("." ++ class)
                         [ Property prop val
                         ]
 
                 Colored class prop color ->
-                    renderStyle force
+                    renderStyle
                         maybePseudo
                         ("." ++ class)
                         [ Property prop (formatColor color)
@@ -2014,39 +1949,39 @@ toStyleSheetString options stylesheet =
                     in
                     List.foldl (++)
                         ""
-                        [ renderStyle force maybePseudo (class ++ row ++ " > " ++ any ++ " + " ++ any) [ Property "margin-left" xPx ]
-                        , renderStyle force maybePseudo (class ++ column ++ " > " ++ any ++ " + " ++ any) [ Property "margin-top" yPx ]
-                        , renderStyle force maybePseudo (class ++ page ++ " > " ++ any ++ " + " ++ any) [ Property "margin-top" yPx ]
-                        , renderStyle force maybePseudo (class ++ page ++ " > " ++ left) [ Property "margin-right" xPx ]
-                        , renderStyle force maybePseudo (class ++ page ++ " > " ++ right) [ Property "margin-left" xPx ]
-                        , renderStyle force
+                        [ renderStyle maybePseudo (class ++ row ++ " > " ++ any ++ " + " ++ any) [ Property "margin-left" xPx ]
+                        , renderStyle maybePseudo (class ++ column ++ " > " ++ any ++ " + " ++ any) [ Property "margin-top" yPx ]
+                        , renderStyle maybePseudo (class ++ page ++ " > " ++ any ++ " + " ++ any) [ Property "margin-top" yPx ]
+                        , renderStyle maybePseudo (class ++ page ++ " > " ++ left) [ Property "margin-right" xPx ]
+                        , renderStyle maybePseudo (class ++ page ++ " > " ++ right) [ Property "margin-left" xPx ]
+                        , renderStyle
                             maybePseudo
                             (class ++ paragraph)
                             [ Property "line-height" ("calc(1em + " ++ String.fromInt y ++ "px)")
                             ]
-                        , renderStyle force
+                        , renderStyle
                             maybePseudo
                             ("textarea" ++ class)
                             [ Property "line-height" ("calc(1em + " ++ String.fromInt y ++ "px)")
                             ]
 
-                        -- , renderStyle force
+                        -- , renderStyle
                         --     maybePseudo
                         --     (class ++ paragraph ++ " > " ++ any)
                         --     [ Property "margin-right" xPx
                         --     , Property "margin-bottom" yPx
                         --     ]
-                        , renderStyle force
+                        , renderStyle
                             maybePseudo
                             (class ++ paragraph ++ " > " ++ left)
                             [ Property "margin-right" xPx
                             ]
-                        , renderStyle force
+                        , renderStyle
                             maybePseudo
                             (class ++ paragraph ++ " > " ++ right)
                             [ Property "margin-left" xPx
                             ]
-                        , renderStyle force
+                        , renderStyle
                             maybePseudo
                             (class ++ paragraph ++ "::after")
                             [ Property "content" "''"
@@ -2055,7 +1990,7 @@ toStyleSheetString options stylesheet =
                             , Property "width" "0"
                             , Property "margin-top" (String.fromInt (-1 * (y // 2)) ++ "px")
                             ]
-                        , renderStyle force
+                        , renderStyle
                             maybePseudo
                             (class ++ paragraph ++ "::before")
                             [ Property "content" "''"
@@ -2072,7 +2007,7 @@ toStyleSheetString options stylesheet =
                             "."
                                 ++ cls
                     in
-                    renderStyle force
+                    renderStyle
                         maybePseudo
                         class
                         [ Property "padding"
@@ -2244,53 +2179,34 @@ toStyleSheetString options stylesheet =
                 PseudoSelector class styles ->
                     let
                         renderPseudoRule style =
-                            case class of
-                                Focus ->
-                                    renderStyleRule style (Just Focus) False
-
-                                Active ->
-                                    renderStyleRule style (Just Active) False
-
-                                Hover ->
-                                    case options.hover of
-                                        NoHover ->
-                                            ""
-
-                                        AllowHover ->
-                                            renderStyleRule style (Just Hover) False
-
-                                        ForceHover ->
-                                            renderStyleRule style Nothing True
+                            renderStyleRule style (Just class)
                     in
                     List.map renderPseudoRule styles
                         |> String.join " "
 
-                Transform _ ->
-                    ""
-
-        renderTopLevels rule =
-            case rule of
-                FontFamily name typefaces ->
+                Transform transform ->
                     let
-                        getImports font =
-                            case font of
-                                ImportFont _ url ->
-                                    Just ("@import url('" ++ url ++ "');")
+                        val =
+                            transformValue transform
 
-                                _ ->
-                                    Nothing
+                        class =
+                            transformClass transform
                     in
-                    typefaces
-                        |> List.filterMap getImports
-                        |> String.join "\n"
-                        |> Just
+                    case ( class, val ) of
+                        ( Just cls, Just v ) ->
+                            renderStyle
+                                maybePseudo
+                                ("." ++ cls)
+                                [ Property "transform"
+                                    v
+                                ]
 
-                _ ->
-                    Nothing
+                        _ ->
+                            ""
 
         combine style rendered =
             { rendered
-                | rules = rendered.rules ++ renderStyleRule style Nothing False
+                | rules = rendered.rules ++ renderStyleRule style Nothing
                 , topLevel =
                     case renderTopLevels style of
                         Nothing ->
@@ -2300,8 +2216,9 @@ toStyleSheetString options stylesheet =
                             rendered.topLevel ++ topLevel
             }
     in
-    List.foldl combine { rules = "", topLevel = "" } stylesheet
-        |> (\{ rules, topLevel } -> topLevel ++ rules)
+    case List.foldl combine { rules = "", topLevel = "" } stylesheet of
+        { topLevel, rules } ->
+            topLevel ++ rules
 
 
 lengthClassName : Length -> String
@@ -2405,19 +2322,6 @@ formatColorClass (Rgba red green blue alpha) =
         ++ floatClass alpha
 
 
-pseudoClassName : PseudoClass -> String
-pseudoClassName class =
-    case class of
-        Focus ->
-            "focus"
-
-        Hover ->
-            "hover"
-
-        Active ->
-            "active"
-
-
 spacingName x y =
     "spacing-" ++ String.fromInt x ++ "-" ++ String.fromInt y
 
@@ -2484,12 +2388,23 @@ getStyleName style =
                 ++ String.fromInt pos.height
 
         PseudoSelector selector subStyle ->
-            pseudoClassName selector
-                :: List.map getStyleName subStyle
+            let
+                name =
+                    case selector of
+                        Focus ->
+                            "fs"
+
+                        Hover ->
+                            "hv"
+
+                        Active ->
+                            "act"
+            in
+            List.map (\sty -> getStyleName sty ++ "-" ++ name) subStyle
                 |> String.join " "
 
-        Transform _ ->
-            "transformation"
+        Transform x ->
+            Maybe.withDefault "" (transformClass x)
 
 
 
@@ -2582,6 +2497,9 @@ mapAttr fn attr =
         Attr htmlAttr ->
             Attr (VirtualDom.mapAttribute fn htmlAttr)
 
+        TransformComponent fl trans ->
+            TransformComponent fl trans
+
 
 mapAttrFromStyle : (msg -> msg1) -> Attribute Never msg -> Attribute () msg1
 mapAttrFromStyle fn attr =
@@ -2617,35 +2535,27 @@ mapAttrFromStyle fn attr =
         Attr htmlAttr ->
             Attr (VirtualDom.mapAttribute fn htmlAttr)
 
+        TransformComponent fl trans ->
+            TransformComponent fl trans
+
 
 unwrapDecorations : List (Attribute Never Never) -> List Style
 unwrapDecorations attrs =
-    let
-        joinShadows x styles =
-            case x of
-                Shadows name shadowProps ->
-                    case styles.shadows of
-                        Nothing ->
-                            { styles | shadows = Just ( name, shadowProps ) }
+    case List.foldl unwrapDecsHelper ( [], Untransformed ) attrs of
+        ( styles, transform ) ->
+            Transform transform :: styles
 
-                        Just ( existingName, existingShadow ) ->
-                            { styles | shadows = Just ( existingName ++ name, existingShadow ++ ", " ++ shadowProps ) }
 
-                _ ->
-                    { styles | styles = x :: styles.styles }
+unwrapDecsHelper attr ( styles, trans ) =
+    case removeNever attr of
+        StyleClass _ style ->
+            ( style :: styles, trans )
 
-        addShadow styles =
-            case styles.shadows of
-                Nothing ->
-                    styles.styles
+        TransformComponent flag component ->
+            ( styles, composeTransformation trans component )
 
-                Just ( shadowName, shadowProps ) ->
-                    Shadows shadowName shadowProps :: styles.styles
-    in
-    attrs
-        |> List.filterMap (onlyStyles << removeNever)
-        |> List.foldr joinShadows { shadows = Nothing, styles = [] }
-        |> addShadow
+        _ ->
+            ( styles, trans )
 
 
 removeNever : Attribute Never Never -> Attribute () msg

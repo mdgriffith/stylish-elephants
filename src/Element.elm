@@ -1106,50 +1106,50 @@ height =
 {-| -}
 scale : Float -> Attr decorative msg
 scale n =
-    Internal.StyleClass Flag.scale (Internal.Transform (Internal.Scale ( n, n, 1 )))
+    Internal.TransformComponent Flag.scale (Internal.Scale ( n, n, 1 ))
 
 
 {-| -}
 rotate : Float -> Attr decorative msg
 rotate angle =
-    Internal.StyleClass Flag.rotate (Internal.Transform (Internal.Rotate ( 0, 0, 1 ) angle))
+    Internal.TransformComponent Flag.rotate (Internal.Rotate ( 0, 0, 1 ) angle)
 
 
 {-| -}
 moveUp : Float -> Attr decorative msg
 moveUp y =
-    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.MoveY (negate y)))
+    Internal.TransformComponent Flag.moveY (Internal.MoveY (negate y))
 
 
 {-| -}
 moveDown : Float -> Attr decorative msg
 moveDown y =
-    Internal.StyleClass Flag.moveY (Internal.Transform (Internal.MoveY y))
+    Internal.TransformComponent Flag.moveY (Internal.MoveY y)
 
 
 {-| -}
 moveRight : Float -> Attr decorative msg
 moveRight x =
-    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.MoveX x))
+    Internal.TransformComponent Flag.moveX (Internal.MoveX x)
 
 
 {-| -}
 moveLeft : Float -> Attr decorative msg
 moveLeft x =
-    Internal.StyleClass Flag.moveX (Internal.Transform (Internal.MoveX (negate x)))
+    Internal.TransformComponent Flag.moveX (Internal.MoveX (negate x))
 
 
 {-| -}
 padding : Int -> Attribute msg
 padding x =
-    Internal.StyleClass Flag.padding (Internal.PaddingStyle (Internal.paddingName x x x x) x x x x)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x) x x x x)
 
 
 {-| Set horizontal and vertical padding.
 -}
 paddingXY : Int -> Int -> Attribute msg
 paddingXY x y =
-    Internal.StyleClass Flag.padding (Internal.PaddingStyle (Internal.paddingName y x y x) y x y x)
+    Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x ++ "-" ++ String.fromInt y) y x y x)
 
 
 {-| -}
@@ -1371,10 +1371,7 @@ mouseOver : List Decoration -> Attribute msg
 mouseOver decs =
     Internal.StyleClass Flag.hover <|
         Internal.PseudoSelector Internal.Hover
-            (decs
-                |> Internal.unwrapDecorations
-                |> List.map (Internal.tag Internal.Style.classes.hover)
-            )
+            (Internal.unwrapDecorations decs)
 
 
 {-| -}
@@ -1382,10 +1379,7 @@ mouseDown : List Decoration -> Attribute msg
 mouseDown decs =
     Internal.StyleClass Flag.active <|
         Internal.PseudoSelector Internal.Active
-            (decs
-                |> Internal.unwrapDecorations
-                |> List.map (Internal.tag Internal.Style.classes.active)
-            )
+            (Internal.unwrapDecorations decs)
 
 
 {-| -}
@@ -1393,7 +1387,4 @@ focused : List Decoration -> Attribute msg
 focused decs =
     Internal.StyleClass Flag.focus <|
         Internal.PseudoSelector Internal.Focus
-            (decs
-                |> Internal.unwrapDecorations
-                |> List.map (Internal.tag Internal.Style.classes.focus)
-            )
+            (Internal.unwrapDecorations decs)
