@@ -144,13 +144,13 @@ button :
         }
     -> Element msg
 button attrs { onPress, label } =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asEl
         -- We don't explicitly label this node as a button,
         -- because buttons fire a bunch of times when you hold down the enter key.
         -- We'd like to fire just once on the enter key, which means using keyup instead of keydown.
         -- Because we have no way to disable keydown, though our messages get doubled.
-        Nothing
+        Internal.div
         (Element.width Element.shrink
             :: Element.height Element.shrink
             :: Internal.htmlClass classes.contentCenterX
@@ -235,9 +235,9 @@ checkbox attrs { label, icon, checked, onChange } =
     in
     applyLabel attributes
         label
-        (Internal.element Internal.noStyleSheet
+        (Internal.element
             Internal.asEl
-            Nothing
+            Internal.div
             [ Internal.Attr <|
                 Html.Attributes.attribute "role" "checkbox"
             , Internal.Attr <|
@@ -449,7 +449,7 @@ textHelper textInput attrs textOptions =
                                                     Just i ->
                                                         found
 
-                                            Internal.StyleClass _ (Internal.PaddingStyle t r b l) ->
+                                            Internal.StyleClass _ (Internal.PaddingStyle _ t r b l) ->
                                                 case found.maybePadding of
                                                     Nothing ->
                                                         { found
@@ -460,7 +460,7 @@ textHelper textInput attrs textOptions =
                                                     _ ->
                                                         found
 
-                                            Internal.StyleClass _ (Internal.SpacingStyle x y) ->
+                                            Internal.StyleClass _ (Internal.SpacingStyle _ x y) ->
                                                 case found.maybeSpacing of
                                                     Nothing ->
                                                         { found
@@ -553,7 +553,7 @@ textHelper textInput attrs textOptions =
                         Internal.AlignY _ ->
                             True
 
-                        Internal.StyleClass _ (Internal.SpacingStyle _ _) ->
+                        Internal.StyleClass _ (Internal.SpacingStyle _ _ _) ->
                             True
 
                         Internal.StyleClass _ (Internal.FontSize _) ->
@@ -579,16 +579,16 @@ textHelper textInput attrs textOptions =
             Internal.get attributes <|
                 \attr ->
                     case attr of
-                        Internal.StyleClass _ (Internal.PaddingStyle _ _ _ _) ->
+                        Internal.StyleClass _ (Internal.PaddingStyle _ _ _ _ _) ->
                             True
 
                         _ ->
                             False
 
         inputElement =
-            Internal.element Internal.noStyleSheet
+            Internal.element
                 Internal.asEl
-                Nothing
+                Internal.div
                 (Element.width Element.fill
                     :: List.concat
                         [ nearbys
@@ -622,9 +622,9 @@ textHelper textInput attrs textOptions =
                         ]
                 )
                 (Internal.Unkeyed
-                    [ Internal.element Internal.noStyleSheet
+                    [ Internal.element
                         Internal.asEl
-                        (Just inputNode)
+                        (Internal.NodeName inputNode)
                         (List.concat
                             [ [ focusDefault attrs
                               ]
@@ -834,52 +834,52 @@ applyLabel attrs label input =
         Label position labelAttrs labelChild ->
             let
                 labelElement =
-                    Internal.element Internal.noStyleSheet
+                    Internal.element
                         Internal.asEl
-                        Nothing
+                        Internal.div
                         labelAttrs
                         (Internal.Unkeyed [ labelChild ])
             in
             case position of
                 Internal.Above ->
-                    Internal.element Internal.noStyleSheet
+                    Internal.element
                         Internal.asColumn
-                        (Just "label")
+                        (Internal.NodeName "label")
                         attrs
                         (Internal.Unkeyed [ labelElement, input ])
 
                 Internal.Below ->
-                    Internal.element Internal.noStyleSheet
+                    Internal.element
                         Internal.asColumn
-                        (Just "label")
+                        (Internal.NodeName "label")
                         attrs
                         (Internal.Unkeyed [ input, labelElement ])
 
                 Internal.OnRight ->
-                    Internal.element Internal.noStyleSheet
+                    Internal.element
                         Internal.asRow
-                        (Just "label")
+                        (Internal.NodeName "label")
                         attrs
                         (Internal.Unkeyed [ input, labelElement ])
 
                 Internal.OnLeft ->
-                    Internal.element Internal.noStyleSheet
+                    Internal.element
                         Internal.asRow
-                        (Just "label")
+                        (Internal.NodeName "label")
                         attrs
                         (Internal.Unkeyed [ labelElement, input ])
 
                 Internal.InFront ->
-                    Internal.element Internal.noStyleSheet
+                    Internal.element
                         Internal.asRow
-                        (Just "label")
+                        (Internal.NodeName "label")
                         attrs
                         (Internal.Unkeyed [ labelElement, input ])
 
                 Internal.Behind ->
-                    Internal.element Internal.noStyleSheet
+                    Internal.element
                         Internal.asRow
-                        (Just "label")
+                        (Internal.NodeName "label")
                         attrs
                         (Internal.Unkeyed [ labelElement, input ])
 
@@ -1268,9 +1268,9 @@ type Orientation
 
 column : List (Attribute msg) -> List (Internal.Element msg) -> Internal.Element msg
 column attributes children =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asColumn
-        Nothing
+        Internal.div
         (Element.height Element.shrink
             :: Element.width Element.fill
             :: attributes
@@ -1281,9 +1281,8 @@ column attributes children =
 row : List (Attribute msg) -> List (Internal.Element msg) -> Internal.Element msg
 row attributes children =
     Internal.element
-        Internal.noStyleSheet
         Internal.asRow
-        Nothing
+        Internal.div
         (Element.width Element.fill
             :: attributes
         )
