@@ -106,7 +106,7 @@ First you need to specify what direction the gradient is going by providing an a
 The colors will be evenly spaced.
 
 -}
-gradient : Float -> List Color -> Attribute msg
+gradient : Float -> List Color -> Attr decorative msg
 gradient angle colors =
     Internal.StyleClass Flag.bgGradient <|
         Internal.Single ("bg-grad-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass colors))
