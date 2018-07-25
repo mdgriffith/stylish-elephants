@@ -593,13 +593,13 @@ composeTransformation transform component =
                     FullTransform moved newScale origin angle
 
 
-gatherAttrRecursive : NodeName -> Flag.Field -> Transformation -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
-gatherAttrRecursive node has transform styles attrs children elementAttrs =
+gatherAttrRecursive : String -> NodeName -> Flag.Field -> Transformation -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
+gatherAttrRecursive classes node has transform styles attrs children elementAttrs =
     case elementAttrs of
         [] ->
             case transformClass transform of
                 Nothing ->
-                    { attributes = attrs
+                    { attributes = Html.Attributes.class classes :: attrs
                     , styles = styles
                     , node = node
                     , children = children
@@ -607,7 +607,7 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     }
 
                 Just class ->
-                    { attributes = Html.Attributes.class class :: attrs
+                    { attributes = Html.Attributes.class (classes ++ " " ++ class) :: attrs
                     , styles = Transform transform :: styles
                     , node = node
                     , children = children
@@ -617,34 +617,32 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
         attribute :: remaining ->
             case attribute of
                 NoAttribute ->
-                    gatherAttrRecursive node has transform styles attrs children remaining
+                    gatherAttrRecursive classes node has transform styles attrs children remaining
 
                 Class flag exactClassName ->
                     if Flag.present flag has then
-                        gatherAttrRecursive node has transform styles attrs children remaining
+                        gatherAttrRecursive classes node has transform styles attrs children remaining
                     else
-                        gatherAttrRecursive node (Flag.add flag has) transform styles (Html.Attributes.class exactClassName :: attrs) children remaining
+                        gatherAttrRecursive (exactClassName ++ " " ++ classes) node (Flag.add flag has) transform styles attrs children remaining
 
                 Attr actualAttribute ->
-                    gatherAttrRecursive node has transform styles (actualAttribute :: attrs) children remaining
+                    gatherAttrRecursive classes node has transform styles (actualAttribute :: attrs) children remaining
 
                 StyleClass flag style ->
                     if Flag.present flag has then
-                        gatherAttrRecursive node has transform styles attrs children remaining
+                        gatherAttrRecursive classes node has transform styles attrs children remaining
                     else
-                        gatherAttrRecursive
+                        gatherAttrRecursive (getStyleName style ++ " " ++ classes)
                             node
                             (Flag.add flag has)
                             transform
                             (style :: styles)
-                            (Html.Attributes.class (getStyleName style)
-                                :: attrs
-                            )
+                            attrs
                             children
                             remaining
 
                 TransformComponent flag component ->
-                    gatherAttrRecursive
+                    gatherAttrRecursive classes
                         node
                         (Flag.add flag has)
                         (composeTransformation transform component)
@@ -655,41 +653,41 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
 
                 Width width ->
                     if Flag.present Flag.width has then
-                        gatherAttrRecursive node has transform styles attrs children remaining
+                        gatherAttrRecursive classes node has transform styles attrs children remaining
                     else
                         case width of
                             Px px ->
-                                gatherAttrRecursive
+                                gatherAttrRecursive ((Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px) ++ " " ++ classes)
                                     node
                                     (Flag.add Flag.width has)
                                     transform
                                     (Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: styles)
-                                    (Html.Attributes.class (Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px) :: attrs)
+                                    attrs
                                     children
                                     remaining
 
                             Content ->
-                                gatherAttrRecursive
+                                gatherAttrRecursive (classes ++ " " ++ Internal.Style.classes.widthContent)
                                     node
                                     (Flag.add Flag.widthContent (Flag.add Flag.width has))
                                     transform
                                     styles
-                                    (Html.Attributes.class Internal.Style.classes.widthContent :: attrs)
+                                    attrs
                                     children
                                     remaining
 
                             Fill portion ->
                                 if portion == 1 then
-                                    gatherAttrRecursive
+                                    gatherAttrRecursive (classes ++ " " ++ Internal.Style.classes.widthFill)
                                         node
                                         (Flag.add Flag.widthFill (Flag.add Flag.width has))
                                         transform
                                         styles
-                                        (Html.Attributes.class Internal.Style.classes.widthFill :: attrs)
+                                        attrs
                                         children
                                         remaining
                                 else
-                                    gatherAttrRecursive
+                                    gatherAttrRecursive (classes ++ " " ++ Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion)
                                         node
                                         (Flag.add Flag.widthFill (Flag.add Flag.width has))
                                         transform
@@ -704,27 +702,27 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                             (String.fromInt (portion * 100000))
                                             :: styles
                                         )
-                                        (Html.Attributes.class (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) :: attrs)
+                                        attrs
                                         children
                                         remaining
 
                             _ ->
                                 let
-                                    ( addToFlags, newAttrs, newStyles ) =
+                                    ( addToFlags, newClass, newStyles ) =
                                         renderWidth width
                                 in
-                                gatherAttrRecursive
+                                gatherAttrRecursive (classes ++ " " ++ newClass)
                                     node
                                     (Flag.merge addToFlags has)
                                     transform
                                     (newStyles ++ styles)
-                                    (newAttrs ++ attrs)
+                                    attrs
                                     children
                                     remaining
 
                 Height height ->
                     if Flag.present Flag.height has then
-                        gatherAttrRecursive node has transform styles attrs children remaining
+                        gatherAttrRecursive classes node has transform styles attrs children remaining
                     else
                         case height of
                             Px px ->
@@ -735,37 +733,37 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     name =
                                         "height-px-" ++ val
                                 in
-                                gatherAttrRecursive
+                                gatherAttrRecursive (name ++ " " ++ classes)
                                     node
                                     (Flag.add Flag.height has)
                                     transform
                                     (Single name "height " val :: styles)
-                                    (Html.Attributes.class name :: attrs)
+                                    attrs
                                     children
                                     remaining
 
                             Content ->
-                                gatherAttrRecursive
+                                gatherAttrRecursive (Internal.Style.classes.heightContent ++ " " ++ classes)
                                     node
                                     (Flag.add Flag.heightContent (Flag.add Flag.height has))
                                     transform
                                     styles
-                                    (Html.Attributes.class Internal.Style.classes.heightContent :: attrs)
+                                    attrs
                                     children
                                     remaining
 
                             Fill portion ->
                                 if portion == 1 then
-                                    gatherAttrRecursive
+                                    gatherAttrRecursive (Internal.Style.classes.heightFill ++ " " ++ classes)
                                         node
                                         (Flag.add Flag.heightFill (Flag.add Flag.height has))
                                         transform
                                         styles
-                                        (Html.Attributes.class Internal.Style.classes.heightFill :: attrs)
+                                        attrs
                                         children
                                         remaining
                                 else
-                                    gatherAttrRecursive
+                                    gatherAttrRecursive (classes ++ " " ++ (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion))
                                         node
                                         (Flag.add Flag.heightFill (Flag.add Flag.height has))
                                         transform
@@ -780,57 +778,57 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                             (String.fromInt (portion * 100000))
                                             :: styles
                                         )
-                                        (Html.Attributes.class (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) :: attrs)
+                                        attrs
                                         children
                                         remaining
 
                             _ ->
                                 let
-                                    ( addToFlags, newAttrs, newStyles ) =
+                                    ( addToFlags, newClass, newStyles ) =
                                         renderHeight height
                                 in
-                                gatherAttrRecursive
+                                gatherAttrRecursive (classes ++ " " ++ newClass)
                                     node
                                     (Flag.merge addToFlags has)
                                     transform
                                     (newStyles ++ styles)
-                                    (newAttrs ++ attrs)
+                                    attrs
                                     children
                                     remaining
 
                 Describe description ->
                     case description of
                         Main ->
-                            gatherAttrRecursive (addNodeName "main" node) has transform styles attrs children remaining
+                            gatherAttrRecursive classes (addNodeName "main" node) has transform styles attrs children remaining
 
                         Navigation ->
-                            gatherAttrRecursive (addNodeName "nav" node) has transform styles attrs children remaining
+                            gatherAttrRecursive classes (addNodeName "nav" node) has transform styles attrs children remaining
 
                         ContentInfo ->
-                            gatherAttrRecursive (addNodeName "footer" node) has transform styles attrs children remaining
+                            gatherAttrRecursive classes (addNodeName "footer" node) has transform styles attrs children remaining
 
                         Complementary ->
-                            gatherAttrRecursive (addNodeName "aside" node) has transform styles attrs children remaining
+                            gatherAttrRecursive classes (addNodeName "aside" node) has transform styles attrs children remaining
 
                         Heading i ->
                             if i <= 1 then
-                                gatherAttrRecursive (addNodeName "h1" node) has transform styles attrs children remaining
+                                gatherAttrRecursive classes (addNodeName "h1" node) has transform styles attrs children remaining
                             else if i < 7 then
-                                gatherAttrRecursive (addNodeName ("h" ++ String.fromInt i) node) has transform styles attrs children remaining
+                                gatherAttrRecursive classes (addNodeName ("h" ++ String.fromInt i) node) has transform styles attrs children remaining
                             else
-                                gatherAttrRecursive (addNodeName "h6" node) has transform styles attrs children remaining
+                                gatherAttrRecursive classes (addNodeName "h6" node) has transform styles attrs children remaining
 
                         Button ->
-                            gatherAttrRecursive node has transform styles (VirtualDom.attribute "role" "button" :: attrs) children remaining
+                            gatherAttrRecursive classes node has transform styles (VirtualDom.attribute "role" "button" :: attrs) children remaining
 
                         Label label ->
-                            gatherAttrRecursive node has transform styles (VirtualDom.attribute "aria-label" label :: attrs) children remaining
+                            gatherAttrRecursive classes node has transform styles (VirtualDom.attribute "aria-label" label :: attrs) children remaining
 
                         LivePolite ->
-                            gatherAttrRecursive node has transform styles (VirtualDom.attribute "aria-live" "polite" :: attrs) children remaining
+                            gatherAttrRecursive classes node has transform styles (VirtualDom.attribute "aria-live" "polite" :: attrs) children remaining
 
                         LiveAssertive ->
-                            gatherAttrRecursive node has transform styles (VirtualDom.attribute "aria-live" "assertive" :: attrs) children remaining
+                            gatherAttrRecursive classes node has transform styles (VirtualDom.attribute "aria-live" "assertive" :: attrs) children remaining
 
                 Nearby location elem ->
                     let
@@ -854,27 +852,45 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     case location of
                                         Above ->
                                             String.join " "
-                                                [ classes.any, classes.single, classes.above ]
+                                                [ Internal.Style.classes.any
+                                                , Internal.Style.classes.single
+                                                , Internal.Style.classes.above
+                                                ]
 
                                         Below ->
                                             String.join " "
-                                                [ classes.any, classes.single, classes.below ]
+                                                [ Internal.Style.classes.any
+                                                , Internal.Style.classes.single
+                                                , Internal.Style.classes.below
+                                                ]
 
                                         OnRight ->
                                             String.join " "
-                                                [ classes.any, classes.single, classes.onRight ]
+                                                [ Internal.Style.classes.any
+                                                , Internal.Style.classes.single
+                                                , Internal.Style.classes.onRight
+                                                ]
 
                                         OnLeft ->
                                             String.join " "
-                                                [ classes.any, classes.single, classes.onLeft ]
+                                                [ Internal.Style.classes.any
+                                                , Internal.Style.classes.single
+                                                , Internal.Style.classes.onLeft
+                                                ]
 
                                         InFront ->
                                             String.join " "
-                                                [ classes.any, classes.single, classes.inFront ]
+                                                [ Internal.Style.classes.any
+                                                , Internal.Style.classes.single
+                                                , Internal.Style.classes.inFront
+                                                ]
 
                                         Behind ->
                                             String.join " "
-                                                [ classes.any, classes.single, classes.behind ]
+                                                [ Internal.Style.classes.any
+                                                , Internal.Style.classes.single
+                                                , Internal.Style.classes.behind
+                                                ]
                                 ]
                                 [ case elem of
                                     Empty ->
@@ -890,19 +906,19 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                         styled.html NoStyleSheet asEl
                                 ]
 
-                        newAttributes =
+                        newClasses =
                             if location == Behind then
-                                Html.Attributes.class classes.hasBehind :: attrs
+                                Internal.Style.classes.hasBehind ++ " " ++ classes
                             else
-                                attrs
+                                classes
                     in
-                    gatherAttrRecursive node has transform newStyles newAttributes (nearbyElement :: children) remaining
+                    gatherAttrRecursive newClasses node has transform newStyles attrs (nearbyElement :: children) remaining
 
                 AlignX x ->
                     if Flag.present Flag.xAlign has then
-                        gatherAttrRecursive node has transform styles attrs children remaining
+                        gatherAttrRecursive classes node has transform styles attrs children remaining
                     else
-                        gatherAttrRecursive
+                        gatherAttrRecursive (alignXName x ++ " " ++ classes)
                             node
                             (has
                                 |> Flag.add Flag.xAlign
@@ -920,15 +936,15 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                             )
                             transform
                             styles
-                            (Html.Attributes.class (alignXName x) :: attrs)
+                            attrs
                             children
                             remaining
 
                 AlignY y ->
                     if Flag.present Flag.yAlign has then
-                        gatherAttrRecursive node has transform styles attrs children remaining
+                        gatherAttrRecursive classes node has transform styles attrs children remaining
                     else
-                        gatherAttrRecursive
+                        gatherAttrRecursive (alignYName y ++ " " ++ classes)
                             node
                             (Flag.add Flag.yAlign has
                                 |> (\flags ->
@@ -945,7 +961,7 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                             )
                             transform
                             styles
-                            (Html.Attributes.class (alignYName y) :: attrs)
+                            attrs
                             children
                             remaining
 
@@ -954,25 +970,25 @@ renderWidth w =
     case w of
         Px px ->
             ( Flag.none
-            , [ Html.Attributes.class (Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px) ]
+            , Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px
             , [ Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") ]
             )
 
         Content ->
             ( Flag.add Flag.widthContent Flag.none
-            , [ Html.Attributes.class Internal.Style.classes.widthContent ]
+            , Internal.Style.classes.widthContent
             , []
             )
 
         Fill portion ->
             if portion == 1 then
                 ( Flag.add Flag.widthFill Flag.none
-                , [ Html.Attributes.class Internal.Style.classes.widthFill ]
+                , Internal.Style.classes.widthFill
                 , []
                 )
             else
                 ( Flag.add Flag.widthFill Flag.none
-                , [ Html.Attributes.class (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) ]
+                , Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion
                 , [ Single
                         (Internal.Style.classes.any
                             ++ "."
@@ -1001,7 +1017,7 @@ renderWidth w =
                     renderWidth len
             in
             ( Flag.add Flag.widthBetween newFlag
-            , Html.Attributes.class cls :: newAttrs
+            , cls ++ " " ++ newAttrs
             , style :: newStyle
             )
 
@@ -1019,7 +1035,7 @@ renderWidth w =
                     renderWidth len
             in
             ( Flag.add Flag.widthBetween newFlag
-            , Html.Attributes.class cls :: newAttrs
+            , cls ++ " " ++ newAttrs
             , style :: newStyle
             )
 
@@ -1035,25 +1051,25 @@ renderHeight h =
                     "height-px-" ++ val
             in
             ( Flag.none
-            , [ Html.Attributes.class name ]
+            , name
             , [ Single name "height" (val ++ "px") ]
             )
 
         Content ->
             ( Flag.add Flag.heightContent Flag.none
-            , [ Html.Attributes.class Internal.Style.classes.heightContent ]
+            , Internal.Style.classes.heightContent
             , []
             )
 
         Fill portion ->
             if portion == 1 then
                 ( Flag.add Flag.heightFill Flag.none
-                , [ Html.Attributes.class Internal.Style.classes.heightFill ]
+                , Internal.Style.classes.heightFill
                 , []
                 )
             else
                 ( Flag.add Flag.heightFill Flag.none
-                , [ Html.Attributes.class (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) ]
+                , Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion
                 , [ Single
                         (Internal.Style.classes.any
                             ++ "."
@@ -1079,10 +1095,10 @@ renderHeight h =
                         (String.fromInt minSize ++ "px")
 
                 ( newFlag, newAttrs, newStyle ) =
-                    renderWidth len
+                    renderHeight len
             in
             ( Flag.add Flag.heightBetween newFlag
-            , Html.Attributes.class cls :: newAttrs
+            , cls ++ " " ++ newAttrs
             , style :: newStyle
             )
 
@@ -1097,36 +1113,36 @@ renderHeight h =
                         (String.fromInt maxSize ++ "px")
 
                 ( newFlag, newAttrs, newStyle ) =
-                    renderWidth len
+                    renderHeight len
             in
             ( Flag.add Flag.heightBetween newFlag
-            , Html.Attributes.class cls :: newAttrs
+            , cls ++ " " ++ newAttrs
             , style :: newStyle
             )
 
 
 rowClass =
-    Html.Attributes.class (classes.any ++ " " ++ classes.row)
+    classes.any ++ " " ++ classes.row
 
 
 columnClass =
-    Html.Attributes.class (classes.any ++ " " ++ classes.column)
+    classes.any ++ " " ++ classes.column
 
 
 singleClass =
-    Html.Attributes.class (classes.any ++ " " ++ classes.single)
+    classes.any ++ " " ++ classes.single
 
 
 gridClass =
-    Html.Attributes.class (classes.any ++ " " ++ classes.grid)
+    classes.any ++ " " ++ classes.grid
 
 
 paragraphClass =
-    Html.Attributes.class (classes.any ++ " " ++ classes.paragraph)
+    classes.any ++ " " ++ classes.paragraph
 
 
 pageClass =
-    Html.Attributes.class (classes.any ++ " " ++ classes.page)
+    classes.any ++ " " ++ classes.page
 
 
 contextClasses context =
@@ -1154,7 +1170,7 @@ element : LayoutContext -> NodeName -> List (Attribute aligned msg) -> Children 
 element context node attributes children =
     attributes
         |> List.reverse
-        |> gatherAttrRecursive node Flag.none untransformed [] [ contextClasses context ] []
+        |> gatherAttrRecursive (contextClasses context) node Flag.none untransformed [] [] []
         |> createElement context children
 
 
