@@ -596,8 +596,11 @@ column attrs children =
     Internal.element
         Internal.asColumn
         Internal.div
-        (Internal.htmlClass classes.contentTop
-            :: Internal.htmlClass classes.contentLeft
+        (Internal.htmlClass
+            (classes.contentTop
+                ++ " "
+                ++ classes.contentLeft
+            )
             :: height shrink
             :: width shrink
             :: attrs
@@ -989,8 +992,11 @@ link attrs { url, label } =
             :: Internal.Attr (Html.Attributes.rel "noopener noreferrer")
             :: width shrink
             :: height shrink
-            :: Internal.htmlClass classes.contentCenterX
-            :: Internal.htmlClass classes.contentCenterY
+            :: Internal.htmlClass
+                (classes.contentCenterX
+                    ++ " "
+                    ++ classes.contentCenterY
+                )
             :: attrs
         )
         (Internal.Unkeyed [ label ])
@@ -1007,8 +1013,7 @@ newTabLink attrs { url, label } =
             :: Internal.Attr (Html.Attributes.target "_blank")
             :: width shrink
             :: height shrink
-            :: Internal.htmlClass classes.contentCenterX
-            :: Internal.htmlClass classes.contentCenterY
+            :: Internal.htmlClass (classes.contentCenterX ++ " " ++ classes.contentCenterY)
             :: attrs
         )
         (Internal.Unkeyed [ label ])
