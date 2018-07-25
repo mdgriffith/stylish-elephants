@@ -1311,7 +1311,7 @@ createElement context children rendered =
                             Styled
                                 { styles = styles
                                 , html =
-                                    finalizeNode rendered.has rendered.node rendered.attributes (Keyed keyed)
+                                    finalizeNode rendered.has rendered.node rendered.attributes (Keyed (List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed))
                                 }
 
         Unkeyed unkeyedChildren ->
@@ -1330,7 +1330,7 @@ createElement context children rendered =
                         _ ->
                             Styled
                                 { styles = styles
-                                , html = finalizeNode rendered.has rendered.node rendered.attributes (Unkeyed unkeyed)
+                                , html = finalizeNode rendered.has rendered.node rendered.attributes (Unkeyed (rendered.children ++ unkeyed))
                                 }
 
 
