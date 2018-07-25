@@ -16,10 +16,21 @@ type Element msg
     = Unstyled (LayoutContext -> VirtualDom.Node msg)
     | Styled
         { styles : List Style
-        , html : Maybe String -> LayoutContext -> VirtualDom.Node msg
+        , html : EmbedStyle -> LayoutContext -> VirtualDom.Node msg
         }
     | Text String
     | Empty
+
+
+type EmbedStyle
+    = NoStyleSheet
+    | StaticRootAndDynamic OptionRecord (List Style)
+    | OnlyDynamic OptionRecord (List Style)
+
+
+noStyleSheet : EmbedStyle
+noStyleSheet =
+    NoStyleSheet
 
 
 type LayoutContext
@@ -132,21 +143,6 @@ type Attribute aligned msg
     | Nearby Location (Element msg)
 
 
-
--- | TextShadow
---     { offset : ( Float, Float )
---     , blur : Float
---     , color : Color
---     }
--- | BoxShadow
---     { inset : Bool
---     , offset : ( Float, Float )
---     , size : Float
---     , blur : Float
---     , color : Color
---     }
-
-
 type Description
     = Main
     | Navigation
@@ -203,9 +199,6 @@ type alias Gathered msg =
     , attributes : List (VirtualDom.Attribute msg)
     , styles : List Style
     , children : List (VirtualDom.Node msg)
-    , boxShadows : Maybe ( String, String )
-    , textShadows : Maybe ( String, String )
-    , transform : Maybe (Decorated TransformationGroup)
     , has : Flag.Field
     }
 
@@ -240,24 +233,22 @@ unstyled =
     Unstyled << always
 
 
-{-| -}
-renderNode : Gathered msg -> Children (VirtualDom.Node msg) -> Maybe String -> LayoutContext -> VirtualDom.Node msg
-renderNode { attributes, node, has } children styles context =
+finalizeNode has node attributes children embedMode parentContext =
     let
-        createNode nodeName attrs withStyles =
+        createNode nodeName attrs =
             case children of
                 Keyed keyed ->
                     VirtualDom.keyedNode nodeName
                         attrs
-                        (case withStyles of
-                            Nothing ->
+                        (case embedMode of
+                            NoStyleSheet ->
                                 keyed
 
-                            Just stylesheet ->
-                                ( "stylesheet"
-                                , VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ VirtualDom.text stylesheet ]
-                                )
-                                    :: keyed
+                            OnlyDynamic opts styles ->
+                                embedKeyed False opts styles keyed
+
+                            StaticRootAndDynamic opts styles ->
+                                embedKeyed True opts styles keyed
                         )
 
                 Unkeyed unkeyed ->
@@ -272,29 +263,32 @@ renderNode { attributes, node, has } children styles context =
                             VirtualDom.node nodeName
                     )
                         attrs
-                        (case withStyles of
-                            Nothing ->
+                        (case embedMode of
+                            NoStyleSheet ->
                                 unkeyed
 
-                            Just stylesheet ->
-                                VirtualDom.node "style" [ Html.Attributes.class "stylesheet" ] [ VirtualDom.text stylesheet ] :: unkeyed
+                            OnlyDynamic opts styles ->
+                                embedWith False opts styles unkeyed
+
+                            StaticRootAndDynamic opts styles ->
+                                embedWith True opts styles unkeyed
                         )
 
         html =
             case node of
                 Generic ->
-                    createNode "div" attributes styles
+                    createNode "div" attributes
 
                 NodeName nodeName ->
-                    createNode nodeName attributes styles
+                    createNode nodeName attributes
 
                 Embedded nodeName internal ->
                     VirtualDom.node nodeName
                         attributes
-                        [ createNode internal [ Html.Attributes.class (classes.any ++ " " ++ classes.single) ] styles
+                        [ createNode internal [ Html.Attributes.class (classes.any ++ " " ++ classes.single) ]
                         ]
     in
-    case context of
+    case parentContext of
         AsRow ->
             if Flag.present Flag.widthFill has && not (Flag.present Flag.widthBetween has) then
                 html
@@ -363,6 +357,44 @@ renderNode { attributes, node, has } children styles context =
             html
 
 
+embedWith static opts styles children =
+    if static then
+        VirtualDom.lazy staticRoot unit
+            :: (styles
+                    |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+                    |> Tuple.second
+                    |> toStyleSheet opts
+               )
+            :: children
+    else
+        (styles
+            |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+            |> Tuple.second
+            |> toStyleSheet opts
+        )
+            :: children
+
+
+embedKeyed static opts styles children =
+    if static then
+        ( "static-stylesheet", VirtualDom.lazy staticRoot unit )
+            :: ( "dynamic-stylesheet"
+               , styles
+                    |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+                    |> Tuple.second
+                    |> toStyleSheet opts
+               )
+            :: children
+    else
+        ( "dynamic-stylesheet"
+        , styles
+            |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+            |> Tuple.second
+            |> toStyleSheet opts
+        )
+            :: children
+
+
 addNodeName : String -> NodeName -> NodeName
 addNodeName newNode old =
     case old of
@@ -402,17 +434,6 @@ alignYName align =
             classes.alignedVertically ++ " " ++ classes.alignCenterY
 
 
-{-| replace a
--}
-addIfNothing val existing =
-    case existing of
-        Nothing ->
-            val
-
-        x ->
-            x
-
-
 emptyTransformationStates =
     { focus = Nothing
     , hover = Nothing
@@ -428,128 +449,6 @@ emptyTransformGroup =
     }
 
 
-
--- stackOn : Maybe PseudoClass -> Transformation -> Gathered msg -> Gathered msg
--- stackOn maybePseudo transform gathered =
---     let
---         states =
---             Maybe.withDefault emptyTransformationStates gathered.transform
---     in
---     case maybePseudo of
---         Nothing ->
---             let
---                 normal =
---                     states.normal
---             in
---             { gathered
---                 | transform =
---                     Just
---                         { states
---                             | normal =
---                                 normal
---                                     |> Maybe.withDefault emptyTransformGroup
---                                     |> stackTransforms transform
---                                     |> Just
---                         }
---             }
---         Just Hover ->
---             let
---                 hover =
---                     states.hover
---             in
---             { gathered
---                 | transform =
---                     Just
---                         { states
---                             | hover =
---                                 hover
---                                     |> Maybe.withDefault emptyTransformGroup
---                                     |> stackTransforms transform
---                                     |> Just
---                         }
---             }
---         Just Active ->
---             let
---                 active =
---                     states.active
---             in
---             { gathered
---                 | transform =
---                     Just
---                         { states
---                             | active =
---                                 active
---                                     |> Maybe.withDefault emptyTransformGroup
---                                     |> stackTransforms transform
---                                     |> Just
---                         }
---             }
---         Just Focus ->
---             let
---                 focus =
---                     states.focus
---             in
---             { gathered
---                 | transform =
---                     Just
---                         { states
---                             | focus =
---                                 focus
---                                     |> Maybe.withDefault emptyTransformGroup
---                                     |> stackTransforms transform
---                                     |> Just
---                         }
---             }
--- {-| -}
--- stackTransforms : Transformation -> TransformationGroup -> TransformationGroup
--- stackTransforms transform group =
---     case transform of
---         Move mx my mz ->
---             case group.translate of
---                 Nothing ->
---                     { group
---                         | translate =
---                             Just ( mx, my, mz )
---                     }
---                 Just ( existingX, existingY, existingZ ) ->
---                     { group
---                         | translate =
---                             Just
---                                 ( addIfNothing mx existingX
---                                 , addIfNothing my existingY
---                                 , addIfNothing mz existingZ
---                                 )
---                     }
---         Rotate x y z angle ->
---             { group
---                 | rotate = addIfNothing (Just (Rotation x y z angle)) group.rotate
---             }
---         Scale x y z ->
---             { group
---                 | scale = addIfNothing (Just ( x, y, z )) group.scale
---             }
-
-
-addNormalStyle flag styleProp gatheredProps =
-    if Flag.present flag gatheredProps.has then
-        gatheredProps
-    else
-        { gatheredProps
-            | attributes =
-                case styleProp of
-                    PseudoSelector _ _ ->
-                        Html.Attributes.class Internal.Style.classes.transition
-                            :: Html.Attributes.class (getStyleName styleProp)
-                            :: gatheredProps.attributes
-
-                    _ ->
-                        Html.Attributes.class (getStyleName styleProp)
-                            :: gatheredProps.attributes
-            , styles = styleProp :: gatheredProps.styles
-            , has = Flag.add flag gatheredProps.has
-        }
-
-
 gatherAttrRecursive : NodeName -> Flag.Field -> Transform -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
 gatherAttrRecursive node has transform styles attrs children elementAttrs =
     case elementAttrs of
@@ -558,11 +457,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                 Untransformed ->
                     { attributes = attrs
                     , styles = styles
-                    , node = div
+                    , node = node
                     , children = children
-                    , transform = Nothing
-                    , boxShadows = Nothing
-                    , textShadows = Nothing
                     , has = has
                     }
 
@@ -587,11 +483,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     in
                     { attributes = Html.Attributes.class class :: attrs
                     , styles = Single class "transform" val :: styles
-                    , node = div
+                    , node = node
                     , children = children
-                    , transform = Nothing
-                    , boxShadows = Nothing
-                    , textShadows = Nothing
                     , has = has
                     }
 
@@ -651,11 +544,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     in
                     { attributes = Html.Attributes.class class :: attrs
                     , styles = Single class "transform" (translate ++ " " ++ scale ++ " " ++ rotate) :: styles
-                    , node = div
+                    , node = node
                     , children = children
-                    , transform = Nothing
-                    , boxShadows = Nothing
-                    , textShadows = Nothing
                     , has = has
                     }
 
@@ -742,7 +632,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                                     Scale newScale ->
                                                         FullTransform moved newScale origin angle
                                 in
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.add flag has)
                                     newTransformation
                                     styles
@@ -751,7 +642,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     remaining
 
                             _ ->
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.add flag has)
                                     transform
                                     (style :: styles)
@@ -767,7 +659,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     else
                         case width of
                             Px px ->
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.add Flag.width has)
                                     transform
                                     (Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: styles)
@@ -776,7 +669,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     remaining
 
                             Content ->
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.add Flag.widthContent (Flag.add Flag.width has))
                                     transform
                                     styles
@@ -786,7 +680,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
 
                             Fill portion ->
                                 if portion == 1 then
-                                    gatherAttrRecursive node
+                                    gatherAttrRecursive
+                                        node
                                         (Flag.add Flag.widthFill (Flag.add Flag.width has))
                                         transform
                                         styles
@@ -794,7 +689,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                         children
                                         remaining
                                 else
-                                    gatherAttrRecursive node
+                                    gatherAttrRecursive
+                                        node
                                         (Flag.add Flag.widthFill (Flag.add Flag.width has))
                                         transform
                                         (Single
@@ -817,7 +713,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     ( addToFlags, newAttrs, newStyles ) =
                                         renderWidth width
                                 in
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.merge addToFlags has)
                                     transform
                                     (newStyles ++ styles)
@@ -838,7 +735,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     name =
                                         "height-px-" ++ val
                                 in
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.add Flag.height has)
                                     transform
                                     (Single name "height " val :: styles)
@@ -847,7 +745,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     remaining
 
                             Content ->
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.add Flag.heightContent (Flag.add Flag.height has))
                                     transform
                                     styles
@@ -857,7 +756,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
 
                             Fill portion ->
                                 if portion == 1 then
-                                    gatherAttrRecursive node
+                                    gatherAttrRecursive
+                                        node
                                         (Flag.add Flag.heightFill (Flag.add Flag.height has))
                                         transform
                                         styles
@@ -865,7 +765,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                         children
                                         remaining
                                 else
-                                    gatherAttrRecursive node
+                                    gatherAttrRecursive
+                                        node
                                         (Flag.add Flag.heightFill (Flag.add Flag.height has))
                                         transform
                                         (Single
@@ -888,7 +789,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                     ( addToFlags, newAttrs, newStyles ) =
                                         renderHeight height
                                 in
-                                gatherAttrRecursive node
+                                gatherAttrRecursive
+                                    node
                                     (Flag.merge addToFlags has)
                                     transform
                                     (newStyles ++ styles)
@@ -985,7 +887,7 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                                         html asEl
 
                                     Styled styled ->
-                                        styled.html Nothing asEl
+                                        styled.html NoStyleSheet asEl
                                 ]
 
                         newAttributes =
@@ -1000,7 +902,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     if Flag.present Flag.xAlign has then
                         gatherAttrRecursive node has transform styles attrs children remaining
                     else
-                        gatherAttrRecursive node
+                        gatherAttrRecursive
+                            node
                             (has
                                 |> Flag.add Flag.xAlign
                                 |> (\flags ->
@@ -1025,7 +928,8 @@ gatherAttrRecursive node has transform styles attrs children elementAttrs =
                     if Flag.present Flag.yAlign has then
                         gatherAttrRecursive node has transform styles attrs children remaining
                     else
-                        gatherAttrRecursive node
+                        gatherAttrRecursive
+                            node
                             (Flag.add Flag.yAlign has
                                 |> (\flags ->
                                         case y of
@@ -1201,413 +1105,6 @@ renderHeight h =
             )
 
 
-gatherAttributes : Attribute aligned msg -> Gathered msg -> Gathered msg
-gatherAttributes attr gathered =
-    case attr of
-        NoAttribute ->
-            gathered
-
-        Class flag exactClassName ->
-            if Flag.present flag gathered.has then
-                gathered
-            else
-                { gathered
-                    | attributes = Html.Attributes.class exactClassName :: gathered.attributes
-                    , has = Flag.add flag gathered.has
-                }
-
-        Attr attribute ->
-            { gathered | attributes = attribute :: gathered.attributes }
-
-        StyleClass flag style ->
-            case style of
-                -- DISABLED BECAUSE OF CONVENIENCE :/
-                -- Transform transformation ->
-                --     stackOn Nothing transformation gathered
-                PseudoSelector pseudo props ->
-                    let
-                        ( transformationProps, otherProps ) =
-                            List.partition (\x -> forTransforms x /= Nothing) props
-
-                        forTransforms attribute =
-                            case attribute of
-                                Transform x ->
-                                    Just x
-
-                                _ ->
-                                    Nothing
-
-                        withTransforms =
-                            transformationProps
-                                |> List.filterMap forTransforms
-                                |> always gathered
-
-                        -- |> List.foldr (stackOn (Just pseudo)) gathered
-                    in
-                    addNormalStyle flag (PseudoSelector pseudo otherProps) withTransforms
-
-                _ ->
-                    addNormalStyle flag style gathered
-
-        Width width ->
-            if not (Flag.present Flag.width gathered.has) then
-                gatherWidth width { gathered | has = Flag.add Flag.width gathered.has }
-            else
-                gathered
-
-        Height height ->
-            if not (Flag.present Flag.height gathered.has) then
-                gatherHeight height { gathered | has = Flag.add Flag.height gathered.has }
-            else
-                gathered
-
-        Describe description ->
-            case description of
-                Main ->
-                    { gathered | node = addNodeName "main" gathered.node }
-
-                Navigation ->
-                    { gathered | node = addNodeName "nav" gathered.node }
-
-                ContentInfo ->
-                    { gathered | node = addNodeName "footer" gathered.node }
-
-                Complementary ->
-                    { gathered | node = addNodeName "aside" gathered.node }
-
-                Heading i ->
-                    if i <= 1 then
-                        { gathered | node = addNodeName "h1" gathered.node }
-                    else if i < 7 then
-                        { gathered | node = addNodeName ("h" ++ String.fromInt i) gathered.node }
-                    else
-                        { gathered | node = addNodeName "h6" gathered.node }
-
-                Button ->
-                    { gathered | attributes = VirtualDom.attribute "role" "button" :: gathered.attributes }
-
-                Label label ->
-                    { gathered | attributes = VirtualDom.attribute "aria-label" label :: gathered.attributes }
-
-                LivePolite ->
-                    { gathered | attributes = VirtualDom.attribute "aria-live" "polite" :: gathered.attributes }
-
-                LiveAssertive ->
-                    { gathered | attributes = VirtualDom.attribute "aria-live" "assertive" :: gathered.attributes }
-
-        Nearby location elem ->
-            let
-                styles =
-                    case elem of
-                        Empty ->
-                            Nothing
-
-                        Text str ->
-                            Nothing
-
-                        Unstyled html ->
-                            Nothing
-
-                        Styled styled ->
-                            Just <| gathered.styles ++ styled.styles
-
-                nearbyElement =
-                    Html.div
-                        [ Html.Attributes.class <|
-                            case location of
-                                Above ->
-                                    String.join " "
-                                        [ classes.any, classes.single, classes.above ]
-
-                                Below ->
-                                    String.join " "
-                                        [ classes.any, classes.single, classes.below ]
-
-                                OnRight ->
-                                    String.join " "
-                                        [ classes.any, classes.single, classes.onRight ]
-
-                                OnLeft ->
-                                    String.join " "
-                                        [ classes.any, classes.single, classes.onLeft ]
-
-                                InFront ->
-                                    String.join " "
-                                        [ classes.any, classes.single, classes.inFront ]
-
-                                Behind ->
-                                    String.join " "
-                                        [ classes.any, classes.single, classes.behind ]
-                        ]
-                        [ case elem of
-                            Empty ->
-                                VirtualDom.text ""
-
-                            Text str ->
-                                textElement str
-
-                            Unstyled html ->
-                                html asEl
-
-                            Styled styled ->
-                                styled.html Nothing asEl
-                        ]
-            in
-            { gathered
-                | attributes =
-                    if location == Behind then
-                        Html.Attributes.class classes.hasBehind :: gathered.attributes
-                    else
-                        gathered.attributes
-                , styles =
-                    case styles of
-                        Nothing ->
-                            gathered.styles
-
-                        Just newStyles ->
-                            newStyles
-                , children = nearbyElement :: gathered.children
-            }
-
-        AlignX x ->
-            if not (Flag.present Flag.xAlign gathered.has) then
-                { gathered
-                    | attributes = Html.Attributes.class (alignXName x) :: gathered.attributes
-                    , has =
-                        gathered.has
-                            |> Flag.add Flag.xAlign
-                            |> (\flags ->
-                                    case x of
-                                        CenterX ->
-                                            Flag.add Flag.centerX flags
-
-                                        Right ->
-                                            Flag.add Flag.alignRight flags
-
-                                        _ ->
-                                            flags
-                               )
-                }
-            else
-                gathered
-
-        AlignY y ->
-            if not (Flag.present Flag.yAlign gathered.has) then
-                { gathered
-                    | attributes = Html.Attributes.class (alignYName y) :: gathered.attributes
-                    , has =
-                        gathered.has
-                            |> Flag.add Flag.yAlign
-                            |> (\flags ->
-                                    case y of
-                                        CenterY ->
-                                            Flag.add Flag.centerY flags
-
-                                        Bottom ->
-                                            Flag.add Flag.alignBottom flags
-
-                                        _ ->
-                                            flags
-                               )
-                }
-            else
-                gathered
-
-
-
--- BoxShadow shadow ->
---     case gathered.boxShadows of
---         Nothing ->
---             { gathered | boxShadows = Just ( boxShadowName shadow, formatBoxShadow shadow ) }
---         Just ( existingClass, existing ) ->
---             { gathered | boxShadows = Just ( boxShadowName shadow ++ "-" ++ existingClass, formatBoxShadow shadow ++ ", " ++ existing ) }
--- TextShadow shadow ->
---     case gathered.textShadows of
---         Nothing ->
---             { gathered | textShadows = Just ( textShadowName shadow, formatTextShadow shadow ) }
---         Just ( existingClass, existing ) ->
---             { gathered | textShadows = Just ( textShadowName shadow ++ "-" ++ existingClass, formatTextShadow shadow ++ ", " ++ existing ) }
-
-
-gatherWidth w gathered =
-    case w of
-        Px px ->
-            { gathered
-                | attributes = Html.Attributes.class (Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px) :: gathered.attributes
-                , styles = Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: gathered.styles
-            }
-
-        Content ->
-            { gathered
-                | attributes = Html.Attributes.class Internal.Style.classes.widthContent :: gathered.attributes
-                , has = Flag.add Flag.widthContent gathered.has
-            }
-
-        Fill portion ->
-            if portion == 1 then
-                { gathered
-                    | attributes = Html.Attributes.class Internal.Style.classes.widthFill :: gathered.attributes
-                    , has = Flag.add Flag.widthFill gathered.has
-                }
-            else
-                { gathered
-                    | has = Flag.add Flag.widthFill gathered.has
-                    , attributes = Html.Attributes.class (Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion) :: gathered.attributes
-                    , styles =
-                        Single
-                            (Internal.Style.classes.any
-                                ++ "."
-                                ++ Internal.Style.classes.row
-                                ++ " > "
-                                ++ (Internal.Style.dot <| "width-fill-" ++ String.fromInt portion)
-                            )
-                            "flex-grow"
-                            (String.fromInt (portion * 100000))
-                            :: gathered.styles
-                }
-
-        Min minSize len ->
-            let
-                cls =
-                    "min-width-"
-                        ++ String.fromInt minSize
-
-                style =
-                    Single
-                        cls
-                        "min-width"
-                        (String.fromInt minSize ++ "px")
-
-                newGathered =
-                    { gathered
-                        | has = Flag.add Flag.widthBetween gathered.has
-                        , attributes = Html.Attributes.class cls :: gathered.attributes
-                        , styles =
-                            style :: gathered.styles
-                    }
-            in
-            gatherWidth len newGathered
-
-        Max maxSize len ->
-            let
-                cls =
-                    "max-width-" ++ String.fromInt maxSize
-
-                style =
-                    Single cls
-                        "max-width"
-                        (String.fromInt maxSize ++ "px")
-
-                newGathered =
-                    { gathered
-                        | has = Flag.add Flag.widthBetween gathered.has
-                        , attributes = Html.Attributes.class cls :: gathered.attributes
-                        , styles =
-                            style :: gathered.styles
-                    }
-            in
-            gatherWidth len newGathered
-
-
-gatherHeight h gathered =
-    case h of
-        Px px ->
-            { gathered
-                | attributes = Html.Attributes.class ("height-px-" ++ String.fromInt px) :: gathered.attributes
-                , styles = Single ("height-px-" ++ String.fromInt px) "height" (String.fromInt px ++ "px") :: gathered.styles
-            }
-
-        Content ->
-            { gathered
-                | attributes = Html.Attributes.class Internal.Style.classes.heightContent :: gathered.attributes
-                , has = Flag.add Flag.heightContent gathered.has
-            }
-
-        Fill portion ->
-            if portion == 1 then
-                { gathered
-                    | attributes = Html.Attributes.class Internal.Style.classes.heightFill :: gathered.attributes
-                    , has = Flag.add Flag.heightFill gathered.has
-                }
-            else
-                { gathered
-                    | attributes = Html.Attributes.class (Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion) :: gathered.attributes
-                    , has = Flag.add Flag.heightFill gathered.has
-                    , styles =
-                        Single
-                            (Internal.Style.classes.any
-                                ++ "."
-                                ++ Internal.Style.classes.column
-                                ++ " > "
-                                ++ (Internal.Style.dot <|
-                                        "height-fill-"
-                                            ++ String.fromInt portion
-                                   )
-                            )
-                            "flex-grow"
-                            (String.fromInt (portion * 100000))
-                            :: gathered.styles
-                }
-
-        Min minSize len ->
-            let
-                cls =
-                    "min-height-" ++ String.fromInt minSize
-
-                style =
-                    Single cls "min-height" (String.fromInt minSize ++ "px")
-
-                newGathered =
-                    { gathered
-                        | has = Flag.add Flag.heightBetween gathered.has
-                        , attributes = Html.Attributes.class cls :: gathered.attributes
-                        , styles =
-                            style :: gathered.styles
-                    }
-            in
-            gatherHeight len newGathered
-
-        Max maxSize len ->
-            let
-                cls =
-                    "max-height-" ++ String.fromInt maxSize
-
-                style =
-                    Single cls "max-height" (String.fromInt maxSize ++ "px")
-
-                newGathered =
-                    { gathered
-                        | has = Flag.add Flag.heightBetween gathered.has
-                        , attributes = Html.Attributes.class cls :: gathered.attributes
-                        , styles =
-                            style :: gathered.styles
-                    }
-            in
-            gatherHeight len newGathered
-
-
-
--- initGathered : Maybe String -> Gathered msg
-
-
-initGathered node =
-    { attributes = []
-    , styles = []
-    , node = node
-
-    -- case maybeNodeName of
-    --     Nothing ->
-    --         Generic
-    --     Just name ->
-    --         NodeName name
-    , children = []
-    , transform = Nothing
-    , boxShadows = Nothing
-    , textShadows = Nothing
-    , has = Flag.none
-    }
-
-
 {-| -}
 renderTransformationGroup : Maybe PseudoClass -> TransformationGroup -> Maybe ( String, Style )
 renderTransformationGroup maybePseudo group =
@@ -1707,81 +1204,6 @@ renderTransformationGroup maybePseudo group =
             Just ( classOnElement, Single classInStylesheet "transform" transforms )
 
 
-finalize : Gathered msg -> Gathered msg
-finalize gathered =
-    let
-        add new ( classes, styles ) =
-            case new of
-                Nothing ->
-                    ( classes, styles )
-
-                Just ( newClass, newStyle ) ->
-                    ( newClass :: classes
-                    , newStyle :: styles
-                    )
-
-        addTransform ( classes, styles ) =
-            case gathered.transform of
-                Nothing ->
-                    ( classes, styles )
-
-                Just transform ->
-                    ( classes, styles )
-                        |> add (Maybe.andThen (renderTransformationGroup Nothing) transform.normal)
-                        |> add (Maybe.andThen (renderTransformationGroup (Just Focus)) transform.focus)
-                        |> add (Maybe.andThen (renderTransformationGroup (Just Hover)) transform.hover)
-                        |> add (Maybe.andThen (renderTransformationGroup (Just Active)) transform.active)
-
-        addBoxShadows ( classes, styles ) =
-            case gathered.boxShadows of
-                Nothing ->
-                    ( classes, styles )
-
-                Just ( shadowClass, shades ) ->
-                    ( shadowClass :: classes
-                    , Single shadowClass "box-shadow" shades
-                        :: styles
-                    )
-
-        addTextShadows ( classes, styles ) =
-            case gathered.textShadows of
-                Nothing ->
-                    ( classes, styles )
-
-                Just ( shadowClass, shades ) ->
-                    ( shadowClass :: classes
-                    , Single shadowClass "text-shadow" shades
-                        :: styles
-                    )
-
-        ( newClasses, newStyles ) =
-            ( [], gathered.styles )
-                |> addBoxShadows
-                |> addTextShadows
-                |> addTransform
-    in
-    { gathered
-        | styles = newStyles
-        , attributes =
-            Html.Attributes.class (String.join " " newClasses) :: gathered.attributes
-    }
-
-
-type EmbedStyle
-    = NoStyleSheet
-    | StaticRootAndDynamic OptionRecord
-    | OnlyDynamic OptionRecord
-
-
-noStyleSheet : EmbedStyle
-noStyleSheet =
-    NoStyleSheet
-
-
-
--- contextClasses : LayoutContext -> Attribute aligned msg
-
-
 rowClass =
     Html.Attributes.class (classes.any ++ " " ++ classes.row)
 
@@ -1827,16 +1249,12 @@ contextClasses context =
             pageClass
 
 
-element : EmbedStyle -> LayoutContext -> NodeName -> List (Attribute aligned msg) -> Children (Element msg) -> Element msg
-element embedMode context node attributes children =
-    -- (Attr (contextClasses context) :: attributes)
-    -- |> List.foldr gatherAttributes (initGathered node)
-    -- |> finalize
-    -- |> asElement embedMode children context
+element : LayoutContext -> NodeName -> List (Attribute aligned msg) -> Children (Element msg) -> Element msg
+element context node attributes children =
     attributes
         |> List.reverse
         |> gatherAttrRecursive node Flag.none untransformed [] [ contextClasses context ] []
-        |> createElement embedMode children context
+        |> createElement context children
 
 
 untransformed =
@@ -1851,8 +1269,8 @@ keyedSpace =
     ( " ", space )
 
 
-createElement : EmbedStyle -> Children (Element msg) -> LayoutContext -> Gathered msg -> Element msg
-createElement embedMode children context rendered =
+createElement : LayoutContext -> Children (Element msg) -> Gathered msg -> Element msg
+createElement context children rendered =
     let
         gather child ( htmls, existingStyles ) =
             case child of
@@ -1868,11 +1286,11 @@ createElement embedMode children context rendered =
 
                 Styled styled ->
                     if context == asParagraph then
-                        ( styled.html Nothing context :: space :: htmls
+                        ( styled.html NoStyleSheet context :: space :: htmls
                         , styled.styles ++ existingStyles
                         )
                     else
-                        ( styled.html Nothing context :: htmls
+                        ( styled.html NoStyleSheet context :: htmls
                         , styled.styles ++ existingStyles
                         )
 
@@ -1927,13 +1345,13 @@ createElement embedMode children context rendered =
 
                 Styled styled ->
                     if context == asParagraph then
-                        ( ( key, styled.html Nothing context )
+                        ( ( key, styled.html NoStyleSheet context )
                             :: ( "sp", space )
                             :: htmls
                         , styled.styles ++ existingStyles
                         )
                     else
-                        ( ( key, styled.html Nothing context ) :: htmls
+                        ( ( key, styled.html NoStyleSheet context ) :: htmls
                         , styled.styles ++ existingStyles
                         )
 
@@ -1974,317 +1392,45 @@ createElement embedMode children context rendered =
                 Empty ->
                     ( htmls, existingStyles )
     in
-    case embedMode of
-        NoStyleSheet ->
-            case children of
-                Keyed keyedChildren ->
-                    case List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren of
-                        ( keyed, styles ) ->
-                            case styles of
-                                [] ->
-                                    Unstyled
-                                        (renderNode rendered
-                                            (Keyed <| List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
-                                            Nothing
-                                        )
-
-                                _ ->
-                                    Styled
-                                        { styles = styles
-                                        , html = renderNode rendered (Keyed keyed)
-                                        }
-
-                Unkeyed unkeyedChildren ->
-                    case List.foldr gather ( [], rendered.styles ) unkeyedChildren of
-                        ( unkeyed, styles ) ->
-                            case styles of
-                                [] ->
-                                    Unstyled
-                                        (renderNode rendered
-                                            (Unkeyed <| rendered.children ++ unkeyed)
-                                            Nothing
-                                        )
-
-                                _ ->
-                                    Styled
-                                        { styles = styles
-                                        , html = renderNode rendered (Unkeyed unkeyed)
-                                        }
-
-        StaticRootAndDynamic opts ->
-            case children of
-                Keyed keyedChildren ->
-                    case List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren of
-                        ( keyed, styles ) ->
+    case children of
+        Keyed keyedChildren ->
+            case List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren of
+                ( keyed, styles ) ->
+                    case styles of
+                        [] ->
                             Unstyled
-                                (renderNode rendered
-                                    (Keyed
-                                        (( "static-stylesheet", VirtualDom.lazy staticRoot unit )
-                                            :: ( "dynamic-stylesheet"
-                                               , styles
-                                                    |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-                                                    |> Tuple.second
-                                                    |> toStyleSheet opts
-                                               )
-                                            :: (List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
-                                        )
-                                    )
-                                    Nothing
+                                (finalizeNode rendered.has
+                                    rendered.node
+                                    rendered.attributes
+                                    (Keyed <| List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
+                                    NoStyleSheet
                                 )
 
-                Unkeyed unkeyedChildren ->
-                    case List.foldr gather ( [], rendered.styles ) unkeyedChildren of
-                        ( unkeyed, styles ) ->
+                        _ ->
+                            Styled
+                                { styles = styles
+                                , html =
+                                    finalizeNode rendered.has rendered.node rendered.attributes (Keyed keyed)
+                                }
+
+        Unkeyed unkeyedChildren ->
+            case List.foldr gather ( [], rendered.styles ) unkeyedChildren of
+                ( unkeyed, styles ) ->
+                    case styles of
+                        [] ->
                             Unstyled
-                                (renderNode rendered
-                                    (Unkeyed
-                                        (VirtualDom.lazy staticRoot unit
-                                            :: (styles
-                                                    |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-                                                    |> Tuple.second
-                                                    |> toStyleSheet opts
-                                               )
-                                            :: (rendered.children ++ unkeyed)
-                                        )
-                                    )
-                                    Nothing
+                                (finalizeNode rendered.has
+                                    rendered.node
+                                    rendered.attributes
+                                    (Unkeyed <| rendered.children ++ unkeyed)
+                                    NoStyleSheet
                                 )
 
-        OnlyDynamic opts ->
-            case children of
-                Keyed keyedChildren ->
-                    case List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren of
-                        ( keyed, styles ) ->
-                            Unstyled
-                                (renderNode rendered
-                                    (Keyed
-                                        (( "dynamic-stylesheet"
-                                         , styles
-                                            |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-                                            |> Tuple.second
-                                            |> toStyleSheet opts
-                                         )
-                                            :: (List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
-                                        )
-                                    )
-                                    Nothing
-                                )
-
-                Unkeyed unkeyedChildren ->
-                    case List.foldr gather ( [], rendered.styles ) unkeyedChildren of
-                        ( unkeyed, styles ) ->
-                            Unstyled
-                                (renderNode rendered
-                                    (Unkeyed
-                                        ((styles
-                                            |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-                                            |> Tuple.second
-                                            |> toStyleSheet opts
-                                         )
-                                            :: (rendered.children ++ unkeyed)
-                                        )
-                                    )
-                                    Nothing
-                                )
-
-
-asElement : EmbedStyle -> Children (Element msg) -> LayoutContext -> Gathered msg -> Element msg
-asElement embedMode children context rendered =
-    let
-        ( htmlChildren, styleChildren ) =
-            case children of
-                Keyed keyedChildren ->
-                    List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren
-                        |> Tuple.mapFirst Keyed
-
-                Unkeyed unkeyedChildren ->
-                    List.foldr gather ( [], rendered.styles ) unkeyedChildren
-                        |> Tuple.mapFirst Unkeyed
-
-        gather child ( htmls, existingStyles ) =
-            case child of
-                Unstyled html ->
-                    if context == asParagraph then
-                        ( html context :: space :: htmls
-                        , existingStyles
-                        )
-                    else
-                        ( html context :: htmls
-                        , existingStyles
-                        )
-
-                Styled styled ->
-                    if context == asParagraph then
-                        ( styled.html Nothing context :: space :: htmls
-                        , styled.styles ++ existingStyles
-                        )
-                    else
-                        ( styled.html Nothing context :: htmls
-                        , styled.styles ++ existingStyles
-                        )
-
-                Text str ->
-                    -- TEXT OPTIMIZATION
-                    -- You can have raw text if the element is an el, and has `width-content` and `height-content`
-                    -- Same if it's a column or row with one child and width-content, height-content
-                    -- interferes with css grid
-                    -- Maybe we could unpack text elements in a paragraph as well,
-                    -- however  embedded style elements that are larger than the line height will overlap with exisitng text.
-                    -- I don't think that's what we want.
-                    if
-                        context
-                            == asEl
-                            -- && Flag.present Flag.widthContent rendered.has
-                            -- && Flag.present Flag.heightContent rendered.has
-                            -- && (not <| Flag.present Flag.behind rendered.has)
-                            || context
-                            == asParagraph
-                        -- && (not <| Flag.present Flag.behind rendered.has)
-                    then
-                        ( VirtualDom.text
-                            (if context == asParagraph then
-                                str ++ " "
-                             else
-                                str
-                            )
-                            :: htmls
-                        , existingStyles
-                        )
-                    else
-                        ( textElement
-                            (if context == asParagraph then
-                                str ++ " "
-                             else
-                                str
-                            )
-                            :: htmls
-                        , existingStyles
-                        )
-
-                Empty ->
-                    ( htmls, existingStyles )
-
-        gatherKeyed ( key, child ) ( htmls, existingStyles ) =
-            case child of
-                Unstyled html ->
-                    if context == asParagraph then
-                        ( ( key, html context ) :: ( "sp", space ) :: htmls
-                        , existingStyles
-                        )
-                    else
-                        ( ( key, html context ) :: htmls
-                        , existingStyles
-                        )
-
-                Styled styled ->
-                    if context == asParagraph then
-                        ( ( key, styled.html Nothing context )
-                            :: ( "sp", space )
-                            :: htmls
-                        , styled.styles ++ existingStyles
-                        )
-                    else
-                        ( ( key, styled.html Nothing context ) :: htmls
-                        , styled.styles ++ existingStyles
-                        )
-
-                Text str ->
-                    -- TEXT OPTIMIZATION
-                    -- You can have raw text if the element is an el, and has `width-content` and `height-content`
-                    -- Same if it's a column or row with one child and width-content, height-content
-                    if
-                        context
-                            == asEl
-                            -- && (not <| Flag.present Flag.behind rendered.has)
-                            || context
-                            == asParagraph
-                        -- && (not <| Flag.present Flag.behind rendered.has)
-                    then
-                        ( ( key
-                          , VirtualDom.text
-                                (if context == asParagraph then
-                                    str ++ " "
-                                 else
-                                    str
-                                )
-                          )
-                            :: htmls
-                        , existingStyles
-                        )
-                    else
-                        ( ( key
-                          , textElement
-                                (if context == asParagraph then
-                                    str ++ " "
-                                 else
-                                    str
-                                )
-                          )
-                            :: htmls
-                        , existingStyles
-                        )
-
-                Empty ->
-                    ( htmls, existingStyles )
-
-        ( renderStatic, renderDynamic, options ) =
-            case embedMode of
-                NoStyleSheet ->
-                    ( False, False, defaultOptions )
-
-                StaticRootAndDynamic opts ->
-                    ( True, True, opts )
-
-                OnlyDynamic opts ->
-                    ( False, True, opts )
-
-        styles =
-            case embedMode of
-                NoStyleSheet ->
-                    []
-
-                _ ->
-                    styleChildren
-                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
-                        |> Tuple.second
-
-        renderedChildren =
-            case htmlChildren of
-                Keyed keyed ->
-                    Keyed
-                        ((List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
-                            |> addWhen renderDynamic
-                                ( "dynamic-stylesheet", toStyleSheet options styles )
-                            |> addWhen renderStatic
-                                ( "static-stylesheet", VirtualDom.lazy staticRoot unit )
-                        )
-
-                Unkeyed unkeyed ->
-                    Unkeyed
-                        ((rendered.children ++ unkeyed)
-                            |> addWhen renderDynamic (toStyleSheet options styles)
-                            |> addWhen renderStatic (VirtualDom.lazy staticRoot unit)
-                         -- (VirtualDom.lazy staticRoot unit)
-                        )
-    in
-    case embedMode of
-        NoStyleSheet ->
-            case styleChildren of
-                [] ->
-                    Unstyled (renderNode rendered renderedChildren Nothing)
-
-                _ ->
-                    Styled
-                        { styles = styleChildren
-                        , html = renderNode rendered renderedChildren
-                        }
-
-        _ ->
-            Unstyled
-                (renderNode rendered
-                    renderedChildren
-                    Nothing
-                )
+                        _ ->
+                            Styled
+                                { styles = styles
+                                , html = finalizeNode rendered.has rendered.node rendered.attributes (Unkeyed unkeyed)
+                                }
 
 
 unit =
@@ -2462,21 +1608,17 @@ type Children x
     | Keyed (List ( String, x ))
 
 
-toHtml : OptionRecord -> Element msg -> VirtualDom.Node msg
-toHtml options el =
+
+-- toHtml : OptionRecord -> Element msg -> VirtualDom.Node msg
+
+
+toHtml mode el =
     case el of
         Unstyled html ->
             html asEl
 
         Styled { styles, html } ->
-            let
-                styleSheet =
-                    styles
-                        |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle options.focus ] )
-                        |> Tuple.second
-                        |> toStyleSheetString options
-            in
-            html (Just styleSheet) asEl
+            html (mode styles) asEl
 
         Text text ->
             textElement text
@@ -2500,8 +1642,8 @@ renderRoot optionList attributes child =
                 _ ->
                     StaticRootAndDynamic options
     in
-    element embedStyle asEl div attributes (Unkeyed [ child ])
-        |> toHtml options
+    element asEl div attributes (Unkeyed [ child ])
+        |> toHtml embedStyle
 
 
 type RenderMode

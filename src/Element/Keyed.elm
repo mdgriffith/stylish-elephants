@@ -24,7 +24,7 @@ import Internal.Style exposing (classes)
 {-| -}
 el : List (Attribute msg) -> ( String, Element msg ) -> Element msg
 el attrs child =
-    Internal.element Internal.NoStyleSheet
+    Internal.element
         Internal.asEl
         Internal.div
         (width Element.shrink
@@ -38,7 +38,6 @@ el attrs child =
 row : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
 row attrs children =
     Internal.element
-        Internal.NoStyleSheet
         Internal.asRow
         Internal.div
         (Internal.htmlClass classes.contentLeft
@@ -52,7 +51,7 @@ row attrs children =
 {-| -}
 column : List (Attribute msg) -> List ( String, Element msg ) -> Element msg
 column attrs children =
-    Internal.element Internal.NoStyleSheet
+    Internal.element
         Internal.asColumn
         Internal.div
         (Internal.htmlClass classes.contentTop

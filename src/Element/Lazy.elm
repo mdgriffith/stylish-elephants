@@ -81,20 +81,31 @@ embed x =
 
         Styled styled ->
             styled.html
-                (Just
-                    (toStyleSheetString
-                        { hover = AllowHover
-                        , focus =
-                            { borderColor = Nothing
-                            , shadow = Nothing
-                            , backgroundColor = Nothing
-                            }
-                        , mode = Layout
+                (Internal.Model.OnlyDynamic
+                    { hover = AllowHover
+                    , focus =
+                        { borderColor = Nothing
+                        , shadow = Nothing
+                        , backgroundColor = Nothing
                         }
-                        styled.styles
-                    )
+                    , mode = Layout
+                    }
+                    styled.styles
                 )
 
+        -- -- (Just
+        -- --     (toStyleSheetString
+        --         { hover = AllowHover
+        --         , focus =
+        --             { borderColor = Nothing
+        --             , shadow = Nothing
+        --             , backgroundColor = Nothing
+        --             }
+        --         , mode = Layout
+        --         }
+        -- --         styled.styles
+        -- --     )
+        -- -- )
         Text text ->
             always (VirtualDom.text text)
 

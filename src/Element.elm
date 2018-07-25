@@ -564,7 +564,7 @@ If you want multiple children, you'll need to use something like `row` or `colum
 -}
 el : List (Attribute msg) -> Element msg -> Element msg
 el attrs child =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asEl
         Internal.div
         (width shrink
@@ -579,7 +579,6 @@ el attrs child =
 row : List (Attribute msg) -> List (Element msg) -> Element msg
 row attrs children =
     Internal.element
-        Internal.noStyleSheet
         Internal.asRow
         Internal.div
         (Internal.htmlClass classes.contentLeft
@@ -594,7 +593,7 @@ row attrs children =
 {-| -}
 column : List (Attribute msg) -> List (Element msg) -> Element msg
 column attrs children =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asColumn
         Internal.div
         (Internal.htmlClass classes.contentTop
@@ -756,7 +755,6 @@ tableHelper attrs config =
 
         onGrid rowLevel columnLevel elem =
             Internal.element
-                Internal.noStyleSheet
                 Internal.asEl
                 Internal.div
                 [ Internal.StyleClass Flag.gridPosition
@@ -821,7 +819,7 @@ tableHelper attrs config =
                 }
                 config.data
     in
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asGrid
         Internal.div
         (width fill
@@ -876,7 +874,7 @@ Which will look something like
 -}
 paragraph : List (Attribute msg) -> List (Element msg) -> Element msg
 paragraph attrs children =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asParagraph
         (Internal.NodeName "p")
         (width fill
@@ -908,7 +906,6 @@ Which will result in something like:
 textColumn : List (Attribute msg) -> List (Element msg) -> Element msg
 textColumn attrs children =
     Internal.element
-        Internal.noStyleSheet
         Internal.asTextColumn
         Internal.div
         (width
@@ -948,14 +945,14 @@ image attrs { src, description } =
                                 False
                     )
     in
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asEl
         Internal.div
         (Internal.htmlClass classes.imageContainer
             :: attrs
         )
         (Internal.Unkeyed
-            [ Internal.element Internal.noStyleSheet
+            [ Internal.element
                 Internal.asEl
                 (Internal.NodeName "img")
                 ([ Internal.Attr <| Html.Attributes.src src
@@ -985,7 +982,7 @@ type alias Link msg =
 -}
 link : List (Attribute msg) -> Link msg -> Element msg
 link attrs { url, label } =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asEl
         (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
@@ -1002,7 +999,7 @@ link attrs { url, label } =
 {-| -}
 newTabLink : List (Attribute msg) -> Link msg -> Element msg
 newTabLink attrs { url, label } =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asEl
         (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
@@ -1021,7 +1018,7 @@ newTabLink attrs { url, label } =
 -}
 download : List (Attribute msg) -> Link msg -> Element msg
 download attrs { url, label } =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asEl
         (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
@@ -1039,7 +1036,7 @@ download attrs { url, label } =
 -}
 downloadAs : List (Attribute msg) -> { label : Element msg, filename : String, url : String } -> Element msg
 downloadAs attrs { url, filename, label } =
-    Internal.element Internal.noStyleSheet
+    Internal.element
         Internal.asEl
         (Internal.NodeName "a")
         (Internal.Attr (Html.Attributes.href url)
