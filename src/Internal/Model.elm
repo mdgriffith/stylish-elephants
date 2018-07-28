@@ -345,6 +345,7 @@ embedWith static opts styles children =
             :: (styles
                     |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
                     |> Tuple.second
+                    -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
                     -- |> sortedReduce
                     |> toStyleSheet opts
                )
@@ -353,6 +354,7 @@ embedWith static opts styles children =
         (styles
             |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
             |> Tuple.second
+            -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
             -- |> sortedReduce
             |> toStyleSheet opts
         )
@@ -366,6 +368,7 @@ embedKeyed static opts styles children =
                , styles
                     |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
                     |> Tuple.second
+                    -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
                     -- |> sortedReduce
                     |> toStyleSheet opts
                )
@@ -375,17 +378,65 @@ embedKeyed static opts styles children =
         , styles
             |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
             |> Tuple.second
+            -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
             -- |> sortedReduce
             |> toStyleSheet opts
         )
             :: children
 
 
+reduceStylesRecursive : Set String -> List Style -> List Style -> List Style
+reduceStylesRecursive cache found styles =
+    case styles of
+        [] ->
+            found
+
+        head :: remaining ->
+            let
+                styleName =
+                    getStyleName head
+            in
+            if Set.member styleName cache then
+                reduceStylesRecursive cache found remaining
+            else
+                reduceStylesRecursive (Set.insert styleName cache) (head :: found) remaining
+
+
+reduceStyles : Style -> ( Set String, List Style ) -> ( Set String, List Style )
+reduceStyles style ( cache, existing ) =
+    let
+        styleName =
+            getStyleName style
+    in
+    if Set.member styleName cache then
+        ( cache, existing )
+    else
+        ( Set.insert styleName cache
+        , style :: existing
+        )
+
+
 sortedReduce styles =
     styles
-        |> List.map (\x -> ( getStyleName x, x ))
-        |> List.sortBy Tuple.first
-        |> reduceRecursive []
+        -- |> List.map (\x -> ( getStyleName x, x ))
+        |> List.sortBy getStyleName
+        |> reduceRecursiveCalcName []
+
+
+reduceRecursiveCalcName : List Style -> List Style -> List Style
+reduceRecursiveCalcName found styles =
+    case styles of
+        [] ->
+            found
+
+        headOfList :: [] ->
+            headOfList :: found
+
+        headOfList :: other :: remaining ->
+            if headOfList /= other then
+                reduceRecursiveCalcName (headOfList :: found) (other :: remaining)
+            else
+                reduceRecursiveCalcName found (other :: remaining)
 
 
 reduceRecursive : List Style -> List ( String, Style ) -> List Style
@@ -1452,6 +1503,46 @@ get attrs isAttr =
             []
 
 
+type Spacing
+    = Spaced String Int Int
+
+
+type Padding
+    = Padding String Int Int Int Int
+
+
+extractSpacingAndPadding : List (Attribute aligned msg) -> ( Maybe Padding, Maybe Spacing )
+extractSpacingAndPadding attrs =
+    List.foldr
+        (\attr ( pad, spacing ) ->
+            ( case pad of
+                Just x ->
+                    pad
+
+                Nothing ->
+                    case attr of
+                        StyleClass _ (PaddingStyle name t r b l) ->
+                            Just (Padding name t r b l)
+
+                        _ ->
+                            Nothing
+            , case spacing of
+                Just x ->
+                    spacing
+
+                Nothing ->
+                    case attr of
+                        StyleClass _ (SpacingStyle name x y) ->
+                            Just (Spaced name x y)
+
+                        _ ->
+                            Nothing
+            )
+        )
+        ( Nothing, Nothing )
+        attrs
+
+
 getSpacing : List (Attribute aligned msg) -> ( Int, Int ) -> ( Int, Int )
 getSpacing attrs default =
     attrs
@@ -1787,20 +1878,6 @@ renderFont families =
         |> String.join ", "
 
 
-reduceStyles : Style -> ( Set String, List Style ) -> ( Set String, List Style )
-reduceStyles style ( cache, existing ) =
-    let
-        styleName =
-            getStyleName style
-    in
-    if Set.member styleName cache then
-        ( cache, existing )
-    else
-        ( Set.insert styleName cache
-        , style :: existing
-        )
-
-
 toStyleSheet : OptionRecord -> List Style -> VirtualDom.Node msg
 toStyleSheet options styleSheet =
     VirtualDom.node "style" [] [ VirtualDom.text (toStyleSheetString options styleSheet) ]
@@ -1943,29 +2020,49 @@ toStyleSheetString options stylesheet =
                             String.fromInt y ++ "px"
 
                         row =
-                            "." ++ .row Internal.Style.classes
+                            "." ++ Internal.Style.classes.row
+
+                        wrappedRow =
+                            "." ++ Internal.Style.classes.wrapped ++ row
 
                         column =
-                            "." ++ .column Internal.Style.classes
+                            "." ++ Internal.Style.classes.column
 
                         page =
-                            "." ++ .page Internal.Style.classes
+                            "." ++ Internal.Style.classes.page
 
                         paragraph =
-                            "." ++ .paragraph Internal.Style.classes
+                            "." ++ Internal.Style.classes.paragraph
 
                         left =
-                            "." ++ .alignLeft Internal.Style.classes
+                            "." ++ Internal.Style.classes.alignLeft
 
                         right =
-                            "." ++ .alignRight Internal.Style.classes
+                            "." ++ Internal.Style.classes.alignRight
 
                         any =
-                            "." ++ .any Internal.Style.classes
+                            "." ++ Internal.Style.classes.any
+
+                        single =
+                            "." ++ Internal.Style.classes.single
                     in
-                    List.foldl (++)
-                        ""
-                        [ renderStyle maybePseudo (class ++ row ++ " > " ++ any ++ " + " ++ any) [ Property "margin-left" xPx ]
+                    String.concat
+                        [ renderStyle maybePseudo (class ++ row ++ " > " ++ any) [ Property "margin-right" xPx ]
+
+                        -- margins don't apply to last element of normal, unwrapped rows
+                        , renderStyle maybePseudo (class ++ row ++ " > " ++ any ++ ":last-child") [ Property "margin" "0" ]
+
+                        -- For wrapped rows, margins always apply because we handle "canceling out" the other margins manually in the element.
+                        , renderStyle maybePseudo
+                            (class ++ wrappedRow ++ " > " ++ any)
+                            [ Property "margin" ("0 " ++ xPx ++ " " ++ yPx ++ " 0")
+                            ]
+                        , renderStyle maybePseudo
+                            (class ++ wrappedRow ++ " > " ++ any ++ ":last-child")
+                            [ Property "margin-right" "0"
+                            ]
+
+                        -- columns
                         , renderStyle maybePseudo (class ++ column ++ " > " ++ any ++ " + " ++ any) [ Property "margin-top" yPx ]
                         , renderStyle maybePseudo (class ++ page ++ " > " ++ any ++ " + " ++ any) [ Property "margin-top" yPx ]
                         , renderStyle maybePseudo (class ++ page ++ " > " ++ left) [ Property "margin-right" xPx ]

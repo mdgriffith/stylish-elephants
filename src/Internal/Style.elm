@@ -139,6 +139,7 @@ classes =
     , text = "t"
     , grid = "g"
     , imageContainer = "ic"
+    , wrapped = "wrp"
 
     -- widhts/heights
     , widthFill = "wf"
@@ -743,6 +744,9 @@ rules =
                 -- There's no way to change this.  How crazy is that?
                 , Prop "text-decoration" "none"
                 , Prop "font-style" "inherit"
+                , Descriptor (dot classes.wrapped)
+                    [ Prop "flex-wrap" "wrap"
+                    ]
                 , Descriptor (dot classes.noTextSelection)
                     [ Prop "-moz-user-select" "none"
                     , Prop "-webkit-user-select" "none"
@@ -1017,8 +1021,6 @@ rules =
                         -- Bottom alignment always overrides center alignment
                         [ Prop "flex-grow" "0"
                         ]
-
-                    -- End Working Area
                     , describeAlignment <|
                         \alignment ->
                             case alignment of

@@ -88,6 +88,7 @@ module Element
         , textColumn
         , transparent
         , width
+        , wrappedRow
         )
 
 {-|
@@ -103,6 +104,8 @@ module Element
 Rows and columns are the most common layouts.
 
 @docs row, column
+
+@docs wrappedRow
 
 
 # Text Layout
@@ -581,8 +584,7 @@ row attrs children =
     Internal.element
         Internal.asRow
         Internal.div
-        (Internal.htmlClass classes.contentLeft
-            :: Internal.htmlClass classes.contentCenterY
+        (Internal.htmlClass (classes.contentLeft ++ " " ++ classes.contentCenterY)
             :: width shrink
             :: height shrink
             :: attrs
@@ -606,6 +608,105 @@ column attrs children =
             :: attrs
         )
         (Internal.Unkeyed children)
+
+
+{-| -}
+wrappedRow : List (Attribute msg) -> List (Element msg) -> Element msg
+wrappedRow attrs children =
+    let
+        ( padded, spaced ) =
+            Internal.extractSpacingAndPadding attrs
+    in
+    case spaced of
+        Nothing ->
+            Internal.element
+                Internal.asRow
+                Internal.div
+                (Internal.htmlClass
+                    (classes.contentLeft
+                        ++ " "
+                        ++ classes.contentCenterY
+                        ++ " "
+                        ++ classes.wrapped
+                    )
+                    :: width shrink
+                    :: height shrink
+                    :: attrs
+                )
+                (Internal.Unkeyed children)
+
+        Just (Internal.Spaced spaceName x y) ->
+            let
+                newPadding =
+                    case padded of
+                        Just (Internal.Padding name t r b l) ->
+                            if r >= x && b >= y then
+                                Just <|
+                                    Internal.StyleClass
+                                        Flag.padding
+                                        (Internal.PaddingStyle
+                                            (Internal.paddingName t
+                                                (r - x)
+                                                (b - y)
+                                                l
+                                            )
+                                            t
+                                            (r - x)
+                                            (b - y)
+                                            l
+                                        )
+                            else
+                                Nothing
+
+                        Nothing ->
+                            Nothing
+            in
+            case newPadding of
+                Just pad ->
+                    Internal.element
+                        Internal.asRow
+                        Internal.div
+                        (Internal.htmlClass
+                            (classes.contentLeft
+                                ++ " "
+                                ++ classes.contentCenterY
+                                ++ " "
+                                ++ classes.wrapped
+                            )
+                            :: width shrink
+                            :: height shrink
+                            :: attrs
+                            ++ [ pad ]
+                        )
+                        (Internal.Unkeyed children)
+
+                Nothing ->
+                    -- Not enough space in padding to compensate for spacing
+                    Internal.element
+                        Internal.asEl
+                        Internal.div
+                        attrs
+                        (Internal.Unkeyed
+                            [ Internal.element
+                                Internal.asRow
+                                Internal.div
+                                (Internal.htmlClass
+                                    (classes.contentLeft
+                                        ++ " "
+                                        ++ classes.contentCenterY
+                                        ++ " "
+                                        ++ classes.wrapped
+                                    )
+                                    :: Internal.Attr
+                                        (Html.Attributes.style "margin-bottom" (String.fromInt (negate y) ++ "px"))
+                                    :: width fill
+                                    :: height fill
+                                    :: Internal.StyleClass Flag.spacing (Internal.SpacingStyle spaceName x y)
+                                    :: []
+                                )
+                                (Internal.Unkeyed children)
+                            ]
+                        )
 
 
 {-| -}
