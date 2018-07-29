@@ -276,7 +276,6 @@ finalizeNode has node attributes children embedMode parentContext =
                 html
             else if Flag.present Flag.alignRight has then
                 Html.u
-                    -- "alignRight"
                     [ Html.Attributes.class
                         (String.join " "
                             [ classes.any
@@ -290,7 +289,6 @@ finalizeNode has node attributes children embedMode parentContext =
                     [ html ]
             else if Flag.present Flag.centerX has then
                 Html.s
-                    -- "centerX"
                     [ Html.Attributes.class
                         (String.join " "
                             [ classes.any
@@ -1255,11 +1253,17 @@ createElement context children rendered =
                 Styled styled ->
                     if context == asParagraph then
                         ( styled.html NoStyleSheet context :: space :: htmls
-                        , styled.styles ++ existingStyles
+                        , if List.isEmpty existingStyles then
+                            styled.styles
+                          else
+                            styled.styles ++ existingStyles
                         )
                     else
                         ( styled.html NoStyleSheet context :: htmls
-                        , styled.styles ++ existingStyles
+                        , if List.isEmpty existingStyles then
+                            styled.styles
+                          else
+                            styled.styles ++ existingStyles
                         )
 
                 Text str ->
@@ -1316,11 +1320,17 @@ createElement context children rendered =
                         ( ( key, styled.html NoStyleSheet context )
                             :: ( "sp", space )
                             :: htmls
-                        , styled.styles ++ existingStyles
+                        , if List.isEmpty existingStyles then
+                            styled.styles
+                          else
+                            styled.styles ++ existingStyles
                         )
                     else
                         ( ( key, styled.html NoStyleSheet context ) :: htmls
-                        , styled.styles ++ existingStyles
+                        , if List.isEmpty existingStyles then
+                            styled.styles
+                          else
+                            styled.styles ++ existingStyles
                         )
 
                 Text str ->
@@ -1362,9 +1372,16 @@ createElement context children rendered =
     in
     case children of
         Keyed keyedChildren ->
-            case List.foldr gatherKeyed ( [], rendered.styles ) keyedChildren of
+            case List.foldr gatherKeyed ( [], [] ) keyedChildren of
                 ( keyed, styles ) ->
-                    case styles of
+                    let
+                        newStyles =
+                            if List.isEmpty styles then
+                                rendered.styles
+                            else
+                                rendered.styles ++ styles
+                    in
+                    case newStyles of
                         [] ->
                             Unstyled
                                 (finalizeNode rendered.has
@@ -1374,17 +1391,24 @@ createElement context children rendered =
                                     NoStyleSheet
                                 )
 
-                        _ ->
+                        allStyles ->
                             Styled
-                                { styles = styles
+                                { styles = allStyles
                                 , html =
                                     finalizeNode rendered.has rendered.node rendered.attributes (Keyed (List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed))
                                 }
 
         Unkeyed unkeyedChildren ->
-            case List.foldr gather ( [], rendered.styles ) unkeyedChildren of
+            case List.foldr gather ( [], [] ) unkeyedChildren of
                 ( unkeyed, styles ) ->
-                    case styles of
+                    let
+                        newStyles =
+                            if List.isEmpty styles then
+                                rendered.styles
+                            else
+                                rendered.styles ++ styles
+                    in
+                    case newStyles of
                         [] ->
                             Unstyled
                                 (finalizeNode rendered.has
@@ -1394,9 +1418,9 @@ createElement context children rendered =
                                     NoStyleSheet
                                 )
 
-                        _ ->
+                        allStyles ->
                             Styled
-                                { styles = styles
+                                { styles = allStyles
                                 , html = finalizeNode rendered.has rendered.node rendered.attributes (Unkeyed (rendered.children ++ unkeyed))
                                 }
 
