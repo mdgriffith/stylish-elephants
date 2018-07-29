@@ -2,7 +2,7 @@ module Internal.Model exposing (..)
 
 {-| -}
 
-import Dict exposing (Dict)
+import Dict.LLRB as Dict exposing (Dict)
 import Html
 import Html.Attributes
 import Html.Keyed
@@ -694,7 +694,7 @@ skippable flag style =
                 False
 
 
-gatherAttrRecursive : String -> NodeName -> Flag.Field -> Transformation -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
+gatherAttrRecursive : String -> NodeName -> Flag.Field -> Transformation -> Dict String Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
 gatherAttrRecursive classes node has transform styles attrs children elementAttrs =
     case elementAttrs of
         [] ->
