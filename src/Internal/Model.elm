@@ -2,6 +2,7 @@ module Internal.Model exposing (..)
 
 {-| -}
 
+import Dict exposing (Dict)
 import Html
 import Html.Attributes
 import Html.Keyed
@@ -15,7 +16,7 @@ import VirtualDom
 type Element msg
     = Unstyled (LayoutContext -> VirtualDom.Node msg)
     | Styled
-        { styles : List Style
+        { styles : Dict String Style
         , html : EmbedStyle -> LayoutContext -> VirtualDom.Node msg
         }
     | Text String
@@ -24,8 +25,8 @@ type Element msg
 
 type EmbedStyle
     = NoStyleSheet
-    | StaticRootAndDynamic OptionRecord (List Style)
-    | OnlyDynamic OptionRecord (List Style)
+    | StaticRootAndDynamic OptionRecord (Dict String Style)
+    | OnlyDynamic OptionRecord (Dict String Style)
 
 
 noStyleSheet : EmbedStyle
@@ -198,7 +199,7 @@ div =
 type alias Gathered msg =
     { node : NodeName
     , attributes : List (VirtualDom.Attribute msg)
-    , styles : List Style
+    , styles : Dict String Style
     , children : List (VirtualDom.Node msg)
     , has : Flag.Field
     }
@@ -341,8 +342,9 @@ embedWith static opts styles children =
     if static then
         staticRoot
             :: (styles
-                    |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-                    |> Tuple.second
+                    -- |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+                    -- |> Tuple.second
+                    |> Dict.values
                     -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
                     -- |> sortedReduce
                     |> toStyleSheet opts
@@ -350,8 +352,9 @@ embedWith static opts styles children =
             :: children
     else
         (styles
-            |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-            |> Tuple.second
+            -- |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+            -- |> Tuple.second
+            |> Dict.values
             -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
             -- |> sortedReduce
             |> toStyleSheet opts
@@ -364,8 +367,9 @@ embedKeyed static opts styles children =
         ( "static-stylesheet", staticRoot )
             :: ( "dynamic-stylesheet"
                , styles
-                    |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-                    |> Tuple.second
+                    -- |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+                    -- |> Tuple.second
+                    |> Dict.values
                     -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
                     -- |> sortedReduce
                     |> toStyleSheet opts
@@ -374,10 +378,11 @@ embedKeyed static opts styles children =
     else
         ( "dynamic-stylesheet"
         , styles
-            |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
-            |> Tuple.second
+            -- |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
+            -- |> Tuple.second
             -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
             -- |> sortedReduce
+            |> Dict.values
             |> toStyleSheet opts
         )
             :: children
@@ -642,7 +647,7 @@ composeTransformation transform component =
                     FullTransform moved newScale origin angle
 
 
-gatherAttrRecursive : String -> NodeName -> Flag.Field -> Transformation -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
+gatherAttrRecursive : String -> NodeName -> Flag.Field -> Transformation -> Dict String Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
 gatherAttrRecursive classes node has transform styles attrs children elementAttrs =
     case elementAttrs of
         [] ->
@@ -657,7 +662,7 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
 
                 Just class ->
                     { attributes = Html.Attributes.class (classes ++ " " ++ class) :: attrs
-                    , styles = Transform transform :: styles
+                    , styles = Dict.insert class (Transform transform) styles
                     , node = node
                     , children = children
                     , has = has
@@ -681,11 +686,15 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                     if Flag.present flag has then
                         gatherAttrRecursive classes node has transform styles attrs children remaining
                     else
-                        gatherAttrRecursive (getStyleName style ++ " " ++ classes)
+                        let
+                            styleName =
+                                getStyleName style
+                        in
+                        gatherAttrRecursive (styleName ++ " " ++ classes)
                             node
                             (Flag.add flag has)
                             transform
-                            (style :: styles)
+                            (Dict.insert styleName style styles)
                             attrs
                             children
                             remaining
@@ -710,7 +719,10 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                     node
                                     (Flag.add Flag.width has)
                                     transform
-                                    (Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") :: styles)
+                                    (Dict.insert ("width-px-" ++ String.fromInt px)
+                                        (Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px"))
+                                        styles
+                                    )
                                     attrs
                                     children
                                     remaining
@@ -740,16 +752,19 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                         node
                                         (Flag.add Flag.widthFill (Flag.add Flag.width has))
                                         transform
-                                        (Single
-                                            (Internal.Style.classes.any
-                                                ++ "."
-                                                ++ Internal.Style.classes.row
-                                                ++ " > "
-                                                ++ (Internal.Style.dot <| "width-fill-" ++ String.fromInt portion)
+                                        (Dict.insert
+                                            ("width-fill-" ++ String.fromInt portion)
+                                            (Single
+                                                (Internal.Style.classes.any
+                                                    ++ "."
+                                                    ++ Internal.Style.classes.row
+                                                    ++ " > "
+                                                    ++ (Internal.Style.dot <| "width-fill-" ++ String.fromInt portion)
+                                                )
+                                                "flex-grow"
+                                                (String.fromInt (portion * 100000))
                                             )
-                                            "flex-grow"
-                                            (String.fromInt (portion * 100000))
-                                            :: styles
+                                            styles
                                         )
                                         attrs
                                         children
@@ -764,7 +779,7 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                     node
                                     (Flag.merge addToFlags has)
                                     transform
-                                    (newStyles ++ styles)
+                                    (Dict.union styles newStyles)
                                     attrs
                                     children
                                     remaining
@@ -786,7 +801,7 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                     node
                                     (Flag.add Flag.height has)
                                     transform
-                                    (Single name "height " val :: styles)
+                                    (Dict.insert name (Single name "height" val) styles)
                                     attrs
                                     children
                                     remaining
@@ -816,16 +831,18 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                         node
                                         (Flag.add Flag.heightFill (Flag.add Flag.height has))
                                         transform
-                                        (Single
-                                            (Internal.Style.classes.any
-                                                ++ "."
-                                                ++ Internal.Style.classes.row
-                                                ++ " > "
-                                                ++ (Internal.Style.dot <| "height-fill-" ++ String.fromInt portion)
+                                        (Dict.insert ("height-fill-" ++ String.fromInt portion)
+                                            (Single
+                                                (Internal.Style.classes.any
+                                                    ++ "."
+                                                    ++ Internal.Style.classes.row
+                                                    ++ " > "
+                                                    ++ (Internal.Style.dot <| "height-fill-" ++ String.fromInt portion)
+                                                )
+                                                "flex-grow"
+                                                (String.fromInt (portion * 100000))
                                             )
-                                            "flex-grow"
-                                            (String.fromInt (portion * 100000))
-                                            :: styles
+                                            styles
                                         )
                                         attrs
                                         children
@@ -840,7 +857,7 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                     node
                                     (Flag.merge addToFlags has)
                                     transform
-                                    (newStyles ++ styles)
+                                    (Dict.union styles newStyles)
                                     attrs
                                     children
                                     remaining
@@ -893,7 +910,7 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                     styles
 
                                 Styled styled ->
-                                    styles ++ styled.styles
+                                    Dict.union styles styled.styles
 
                         nearbyElement =
                             Html.div
@@ -1020,25 +1037,27 @@ renderWidth w =
         Px px ->
             ( Flag.none
             , Internal.Style.classes.widthExact ++ " width-px-" ++ String.fromInt px
-            , [ Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px") ]
+            , Dict.singleton ("width-px-" ++ String.fromInt px) (Single ("width-px-" ++ String.fromInt px) "width" (String.fromInt px ++ "px"))
             )
 
         Content ->
             ( Flag.add Flag.widthContent Flag.none
             , Internal.Style.classes.widthContent
-            , []
+            , Dict.empty
             )
 
         Fill portion ->
             if portion == 1 then
                 ( Flag.add Flag.widthFill Flag.none
                 , Internal.Style.classes.widthFill
-                , []
+                , Dict.empty
                 )
             else
                 ( Flag.add Flag.widthFill Flag.none
                 , Internal.Style.classes.widthFillPortion ++ " width-fill-" ++ String.fromInt portion
-                , [ Single
+                , Dict.singleton
+                    ("width-fill-" ++ String.fromInt portion)
+                    (Single
                         (Internal.Style.classes.any
                             ++ "."
                             ++ Internal.Style.classes.row
@@ -1047,7 +1066,7 @@ renderWidth w =
                         )
                         "flex-grow"
                         (String.fromInt (portion * 100000))
-                  ]
+                    )
                 )
 
         Min minSize len ->
@@ -1067,7 +1086,7 @@ renderWidth w =
             in
             ( Flag.add Flag.widthBetween newFlag
             , cls ++ " " ++ newAttrs
-            , style :: newStyle
+            , Dict.insert cls style newStyle
             )
 
         Max maxSize len ->
@@ -1085,7 +1104,7 @@ renderWidth w =
             in
             ( Flag.add Flag.widthBetween newFlag
             , cls ++ " " ++ newAttrs
-            , style :: newStyle
+            , Dict.insert cls style newStyle
             )
 
 
@@ -1101,25 +1120,27 @@ renderHeight h =
             in
             ( Flag.none
             , name
-            , [ Single name "height" (val ++ "px") ]
+            , Dict.singleton name (Single name "height" (val ++ "px"))
             )
 
         Content ->
             ( Flag.add Flag.heightContent Flag.none
             , Internal.Style.classes.heightContent
-            , []
+            , Dict.empty
             )
 
         Fill portion ->
             if portion == 1 then
                 ( Flag.add Flag.heightFill Flag.none
                 , Internal.Style.classes.heightFill
-                , []
+                , Dict.empty
                 )
             else
                 ( Flag.add Flag.heightFill Flag.none
                 , Internal.Style.classes.heightFillPortion ++ " height-fill-" ++ String.fromInt portion
-                , [ Single
+                , Dict.singleton
+                    ("height-fill-" ++ String.fromInt portion)
+                    (Single
                         (Internal.Style.classes.any
                             ++ "."
                             ++ Internal.Style.classes.row
@@ -1128,7 +1149,7 @@ renderHeight h =
                         )
                         "flex-grow"
                         (String.fromInt (portion * 100000))
-                  ]
+                    )
                 )
 
         Min minSize len ->
@@ -1148,7 +1169,7 @@ renderHeight h =
             in
             ( Flag.add Flag.heightBetween newFlag
             , cls ++ " " ++ newAttrs
-            , style :: newStyle
+            , Dict.insert cls style newStyle
             )
 
         Max maxSize len ->
@@ -1166,7 +1187,7 @@ renderHeight h =
             in
             ( Flag.add Flag.heightBetween newFlag
             , cls ++ " " ++ newAttrs
-            , style :: newStyle
+            , Dict.insert cls style newStyle
             )
 
 
@@ -1219,7 +1240,7 @@ element : LayoutContext -> NodeName -> List (Attribute aligned msg) -> Children 
 element context node attributes children =
     attributes
         |> List.reverse
-        |> gatherAttrRecursive (contextClasses context) node Flag.none untransformed [] [] []
+        |> gatherAttrRecursive (contextClasses context) node Flag.none untransformed Dict.empty [] []
         |> createElement context children
 
 
@@ -1253,17 +1274,17 @@ createElement context children rendered =
                 Styled styled ->
                     if context == asParagraph then
                         ( styled.html NoStyleSheet context :: space :: htmls
-                        , if List.isEmpty existingStyles then
+                        , if Dict.isEmpty existingStyles then
                             styled.styles
                           else
-                            styled.styles ++ existingStyles
+                            Dict.union existingStyles styled.styles
                         )
                     else
                         ( styled.html NoStyleSheet context :: htmls
-                        , if List.isEmpty existingStyles then
+                        , if Dict.isEmpty existingStyles then
                             styled.styles
                           else
-                            styled.styles ++ existingStyles
+                            Dict.union existingStyles styled.styles
                         )
 
                 Text str ->
@@ -1320,17 +1341,17 @@ createElement context children rendered =
                         ( ( key, styled.html NoStyleSheet context )
                             :: ( "sp", space )
                             :: htmls
-                        , if List.isEmpty existingStyles then
+                        , if Dict.isEmpty existingStyles then
                             styled.styles
                           else
-                            styled.styles ++ existingStyles
+                            Dict.union existingStyles styled.styles
                         )
                     else
                         ( ( key, styled.html NoStyleSheet context ) :: htmls
-                        , if List.isEmpty existingStyles then
+                        , if Dict.isEmpty existingStyles then
                             styled.styles
                           else
-                            styled.styles ++ existingStyles
+                            Dict.union existingStyles styled.styles
                         )
 
                 Text str ->
@@ -1372,57 +1393,53 @@ createElement context children rendered =
     in
     case children of
         Keyed keyedChildren ->
-            case List.foldr gatherKeyed ( [], [] ) keyedChildren of
+            case List.foldr gatherKeyed ( [], Dict.empty ) keyedChildren of
                 ( keyed, styles ) ->
                     let
                         newStyles =
-                            if List.isEmpty styles then
+                            if Dict.isEmpty styles then
                                 rendered.styles
                             else
-                                rendered.styles ++ styles
+                                Dict.union styles rendered.styles
                     in
-                    case newStyles of
-                        [] ->
-                            Unstyled
-                                (finalizeNode rendered.has
-                                    rendered.node
-                                    rendered.attributes
-                                    (Keyed <| List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
-                                    NoStyleSheet
-                                )
-
-                        allStyles ->
-                            Styled
-                                { styles = allStyles
-                                , html =
-                                    finalizeNode rendered.has rendered.node rendered.attributes (Keyed (List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed))
-                                }
+                    if Dict.isEmpty newStyles then
+                        Unstyled
+                            (finalizeNode rendered.has
+                                rendered.node
+                                rendered.attributes
+                                (Keyed <| List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed)
+                                NoStyleSheet
+                            )
+                    else
+                        Styled
+                            { styles = newStyles
+                            , html =
+                                finalizeNode rendered.has rendered.node rendered.attributes (Keyed (List.map (\x -> ( "nearby-elements-pls", x )) rendered.children ++ keyed))
+                            }
 
         Unkeyed unkeyedChildren ->
-            case List.foldr gather ( [], [] ) unkeyedChildren of
+            case List.foldr gather ( [], Dict.empty ) unkeyedChildren of
                 ( unkeyed, styles ) ->
                     let
                         newStyles =
-                            if List.isEmpty styles then
+                            if Dict.isEmpty styles then
                                 rendered.styles
                             else
-                                rendered.styles ++ styles
+                                Dict.union styles rendered.styles
                     in
-                    case newStyles of
-                        [] ->
-                            Unstyled
-                                (finalizeNode rendered.has
-                                    rendered.node
-                                    rendered.attributes
-                                    (Unkeyed <| rendered.children ++ unkeyed)
-                                    NoStyleSheet
-                                )
-
-                        allStyles ->
-                            Styled
-                                { styles = allStyles
-                                , html = finalizeNode rendered.has rendered.node rendered.attributes (Unkeyed (rendered.children ++ unkeyed))
-                                }
+                    if Dict.isEmpty newStyles then
+                        Unstyled
+                            (finalizeNode rendered.has
+                                rendered.node
+                                rendered.attributes
+                                (Unkeyed <| rendered.children ++ unkeyed)
+                                NoStyleSheet
+                            )
+                    else
+                        Styled
+                            { styles = newStyles
+                            , html = finalizeNode rendered.has rendered.node rendered.attributes (Unkeyed (rendered.children ++ unkeyed))
+                            }
 
 
 unit =
