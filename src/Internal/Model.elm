@@ -343,7 +343,7 @@ embedWith static opts styles children =
             :: (styles
                     |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
                     |> Tuple.second
-                    -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
+                    -- |> reduceStylesRecursive Set.empty [ ]) --renderFocusStyle opts.focus ]
                     -- |> sortedReduce
                     |> toStyleSheet opts
                )
@@ -352,7 +352,7 @@ embedWith static opts styles children =
         (styles
             |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
             |> Tuple.second
-            -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
+            -- |> reduceStylesRecursive Set.empty [ ]) --renderFocusStyle opts.focus ]
             -- |> sortedReduce
             |> toStyleSheet opts
         )
@@ -366,7 +366,7 @@ embedKeyed static opts styles children =
                , styles
                     |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
                     |> Tuple.second
-                    -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
+                    -- |> reduceStylesRecursive Set.empty [ ]) --renderFocusStyle opts.focus ]
                     -- |> sortedReduce
                     |> toStyleSheet opts
                )
@@ -376,7 +376,7 @@ embedKeyed static opts styles children =
         , styles
             |> List.foldl reduceStyles ( Set.empty, [ renderFocusStyle opts.focus ] )
             |> Tuple.second
-            -- |> reduceStylesRecursive Set.empty [ renderFocusStyle opts.focus ]
+            -- |> reduceStylesRecursive Set.empty [ ]) --renderFocusStyle opts.focus ]
             -- |> sortedReduce
             |> toStyleSheet opts
         )
@@ -642,6 +642,53 @@ composeTransformation transform component =
                     FullTransform moved newScale origin angle
 
 
+skippable flag style =
+    if flag == Flag.borderWidth then
+        case style of
+            Single _ _ val ->
+                case val of
+                    "0px" ->
+                        True
+
+                    "1px" ->
+                        True
+
+                    "2px" ->
+                        True
+
+                    "3px" ->
+                        True
+
+                    "4px" ->
+                        True
+
+                    "5px" ->
+                        True
+
+                    "6px" ->
+                        True
+
+                    _ ->
+                        False
+
+            _ ->
+                False
+    else
+        case style of
+            FontSize i ->
+                i >= 8 && i <= 32
+
+            PaddingStyle name t r b l ->
+                t == b && t == r && t == l && t >= 0 && t <= 24
+
+            -- SpacingStyle _ _ _ ->
+            --     True
+            -- FontFamily _ _ ->
+            --     True
+            _ ->
+                False
+
+
 gatherAttrRecursive : String -> NodeName -> Flag.Field -> Transformation -> List Style -> List (VirtualDom.Attribute msg) -> List (VirtualDom.Node msg) -> List (Attribute aligned msg) -> Gathered msg
 gatherAttrRecursive classes node has transform styles attrs children elementAttrs =
     case elementAttrs of
@@ -680,6 +727,15 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                 StyleClass flag style ->
                     if Flag.present flag has then
                         gatherAttrRecursive classes node has transform styles attrs children remaining
+                    else if skippable flag style then
+                        gatherAttrRecursive (getStyleName style ++ " " ++ classes)
+                            node
+                            (Flag.add flag has)
+                            transform
+                            styles
+                            attrs
+                            children
+                            remaining
                     else
                         gatherAttrRecursive (getStyleName style ++ " " ++ classes)
                             node
@@ -1737,7 +1793,9 @@ rootStyle =
     in
     [ StyleClass Flag.bgColor (Colored ("bg-color-" ++ formatColorClass (Rgba 1 1 1 1)) "background-color" (Rgba 1 1 1 1))
     , StyleClass Flag.fontColor (Colored ("font-color-" ++ formatColorClass (Rgba 0 0 0 1)) "color" (Rgba 0 0 0 1))
-    , StyleClass Flag.fontSize (Single "font-size-20" "font-size" "20px")
+
+    -- , StyleClass Flag.fontSize (Single "font-size-20" "font-size" "20px")
+    , StyleClass Flag.fontSize (FontSize 20)
     , StyleClass Flag.fontFamily <|
         FontFamily (List.foldl renderFontClassName "font-" families)
             families
@@ -2537,7 +2595,16 @@ getStyleName style =
                         Active ->
                             "act"
             in
-            List.map (\sty -> getStyleName sty ++ "-" ++ name) subStyle
+            List.map
+                (\sty ->
+                    case getStyleName sty of
+                        "" ->
+                            ""
+
+                        styleName ->
+                            styleName ++ "-" ++ name
+                )
+                subStyle
                 |> String.join " "
 
         Transform x ->
