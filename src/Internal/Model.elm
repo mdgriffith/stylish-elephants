@@ -401,13 +401,13 @@ reduceStylesRecursive cache found styles =
 
 
 reduceStyles : Style -> ( Set String, List Style ) -> ( Set String, List Style )
-reduceStyles style ( cache, existing ) =
+reduceStyles style (( cache, existing ) as nevermind) =
     let
         styleName =
             getStyleName style
     in
     if Set.member styleName cache then
-        ( cache, existing )
+        nevermind
     else
         ( Set.insert styleName cache
         , style :: existing
@@ -680,6 +680,9 @@ skippable flag style =
 
             PaddingStyle name t r b l ->
                 t == b && t == r && t == l && t >= 0 && t <= 24
+
+            Colored _ _ _ ->
+                True
 
             -- SpacingStyle _ _ _ ->
             --     True
