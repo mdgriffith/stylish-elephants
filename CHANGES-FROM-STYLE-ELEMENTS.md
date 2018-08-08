@@ -1,6 +1,9 @@
-# Version 5 Alpha
+# Compared to Style Elements
 
-This was a MAJOR rewrite of the internal html generation, which is one of the reasons it's taken so long to get to the alpha stage :)
+
+This was a MAJOR rewrite of Style Elements.
+
+
 
 * **Major Performance improvement** - Style Elements v5 is much faster than v4 due to a better rendering strategy and generating very minimal html. The rewritten architecture also allows me to explore a few other optimizations, so things may get even faster than they are now.
 
@@ -110,3 +113,90 @@ Also of note, is that if something is `center`, then it will truly be in the cen
 
 **Full, Spacer** - `full` and `spacer` have been removed in order to follow the libraries priority of explicitness.  `full` would override the parents padding, while `spacer` would override the parent's `spacing`.  Both can be achieved with the more common primities of `row`, `column` and `spacing`, and potentially some nesting of layouts.
 
+
+
+# New Version of the Alpha
+
+- `Font.weight` has been removed in favor of `Font.extraBold`, `Font.regular`, `Font.light`, etc.  All weights from 100 - 900 are represented.
+- `Background.image` and `Background.fittedImage` will place a centered background image, instead of anchoring at the top left.
+- `fillBetween { min : Maybe Int, max : Maybe Int}` is now present for `min/max height/width` behavior.  It works like fill, but with an optional top and lower bound.
+- `transparent` - Set an element as transparent.  It will take up space, but otherwise be transparent and unclickable.
+- `alpha` can now be set for an element.
+- `attribute` has been renamed `htmlAttribute` to better convey what it's used for.
+- `Element.Area` has been renamed `Element.Region` to avoid confusion with `WAI ARIA` stuff.
+- `center` has been renamed `centerX`
+
+
+
+# New Default Behavior
+
+The default logic has been made more consistent and hopefully more intuitive.  
+
+Al elements start with `width/height shrink`, which means that they are the size of their contents.
+
+
+# PseudoClass Support
+
+`Element.mouseOver`, `Element.focused`, and `Element.mouseDown` are available to style `:hover`, `:focus` and `:active`.  
+
+Only a small subset of properties are allowed here or else the compiler will give you an error.
+
+This also introduced some new type aliases for attributes.
+
+`Attribute msg` - What you're used to.  This **cannot** be used in a mouseOver/focused/etc.
+
+`Attr decorative msg` - A new attribute alias for attributes that can be used as a normal attribute or in `mouseOver`, `focused`, etc.  I like to think of this as a *Decorative Attribute*.
+
+
+# Input
+
+`Input.select` has been removed.  Ultimately this came down to it being recommended against for most UX purposes. 
+
+If you're looking for a replacement, consider any of these options which will likely create a better experience:
+
+- Input.checkbox
+- Input.radio/Input.radioRow with custom styling
+- Input.text with some sort of suggestion/autocomplete attached to it.
+
+If you still need to have a select menu, you can either:
+
+- *Embed one* using `html` 
+- [Craft one by having a hidden `radio` that is shown on focus.](https://gist.github.com/mdgriffith/b99b7ee04eaabaac042572e328a85345)  You'll have to store some state that indicates if the menu is open or not, but you'd have to do that anyway if this library was directly supporting `select`.
+
+*Input.Notices* have been removed, which includes warnings and errors.  Accessibility is important to this library and this change is actually meant to make it easier to have good form validation feedback.
+
+You can just use `above`/`below` when you need to show a validation message and it will be announced politely to users using screen readers.
+
+Notices were originally annotated as errors or warnings so that `aria-invalid` could be attached.  However, it seems to me that having the changes be announced politely is better than having the screen reader just say "Yo, something's invalid".  You now have more control over the feedback!  Craft your messages well :)
+
+
+Type aliases for the records used for inputs were also removed because it gives a nicer error message which references specific fields instead of the top level type alias.
+
+
+
+# New Testing Capabilities
+
+A test suite of ~1.6k layout tests was written(whew!).  All of these tests pass on Chrome, Firefox, Safari, Edge, and IE11.
+
+# Overview of other changes
+
+- `Font.lineHeight` has been removed.  Instead, `spacing` now works on paragraphs.
+- `Element.empty` has been renamed `Element.none` to be more consistent with other elm libraries.
+- `Device` no longer includes `window.width` and `window.height`.  Previously every view function that depends on `device` was forced to rerender when the window was resized, which meant you couldn't take advantage of lazy.  If you do need the window coordinates you can save them separately.
+- *Fewer nodes rendered* - So, things should be faster!
+- `fillBetween` has been replaced by `Element.minimum` and `Element.maximum`.
+
+So now you can do things like
+
+```elm
+view =
+    el 
+        [ width 
+            (fill
+                |> minimum 20
+                |> maximum 200
+            )
+        ]
+        (text "woohoo, I have a min and max")
+
+```
