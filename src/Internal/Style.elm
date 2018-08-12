@@ -688,6 +688,14 @@ input[type=range] {
   -webkit-appearance: none; /* Hides the slider so that custom slider can be made */
   /* width: 100%;  Specific width is required for Firefox. */
   background: transparent; /* Otherwise white in Chrome */
+  position:absolute;
+  left:0;
+  top:0;
+  z-index:10;
+  width: 100%;
+  outline: dashed 1px;
+  height: 100%;
+  opacity: 0;
 }
 
 /* Hide all syling for track */
@@ -732,7 +740,7 @@ input[type=range]::-ms-thumb {
 }
 input[type=range][orient=vertical]{
     writing-mode: bt-lr; /* IE */
-    -webkit-appearance: slider-vertical; /* WebKit */
+    -webkit-appearance: slider-vertical;  /* WebKit */
 }
 
 

@@ -347,6 +347,11 @@ slider attributes input =
                    Everything else
 
 
+
+
+            The `<input>`
+
+
         -}
         className =
             "thmb-" ++ thumbWidthString ++ "-" ++ thumbHeightString
@@ -387,19 +392,11 @@ slider attributes input =
         ]
         input.label
         (Element.row
-            ([ Element.width Element.fill
-             , Element.height
-                (Maybe.withDefault (Element.px 20) height)
-             ]
-                ++ attributes
-                ++ [ Element.behindContent
-                        (if vertical then
-                            viewVerticalThumb factor thumbAttributes trackWidth
-                         else
-                            viewHorizontalThumb factor thumbAttributes trackHeight
-                        )
-                   ]
-            )
+            [ Element.width
+                (Maybe.withDefault Element.fill trackWidth)
+            , Element.height
+                (Maybe.withDefault (Element.px 20) trackHeight)
+            ]
             [ Internal.element
                 Internal.asEl
                 (Internal.NodeName "input")
@@ -418,7 +415,7 @@ slider attributes input =
                         ("input[type=\"range\"]." ++ className ++ "::-ms-thumb")
                         thumbShadowStyle
                     )
-                , Internal.Attr (Html.Attributes.class className)
+                , Internal.Attr (Html.Attributes.class (className ++ " focusable-parent"))
                 , Internal.Attr
                     (Html.Events.onInput
                         (\str ->
@@ -438,6 +435,12 @@ slider attributes input =
                     Html.Attributes.step
                         (case input.step of
                             Nothing ->
+                                -- Note: If we set `any` here,
+                                -- Firefox makes a single press of the arrows keys equal to 1
+                                -- We could set the step manually to the effective range / 100
+                                -- String.fromFloat ((input.max - input.min) / 100)
+                                -- Which matches Chrome's default behavior
+                                -- HOWEVER, that means manually moving a slider with the mouse will snap to that interval.
                                 "any"
 
                             Just step ->
@@ -454,16 +457,33 @@ slider attributes input =
                         Html.Attributes.attribute "orient" "vertical"
                   else
                     Internal.NoAttribute
-                , Element.width
-                    (Maybe.withDefault Element.fill trackWidth)
-                , Element.height
-                    (Maybe.withDefault (Element.px 20) trackHeight)
-                , if vertical then
-                    Element.centerX
-                  else
-                    Element.centerY
+                , Element.width <|
+                    if vertical then
+                        Maybe.withDefault (Element.px 20) trackHeight
+                    else
+                        Maybe.withDefault Element.fill trackWidth
+                , Element.height <|
+                    if vertical then
+                        Maybe.withDefault Element.fill trackWidth
+                    else
+                        Maybe.withDefault (Element.px 20) trackHeight
                 ]
                 (Internal.Unkeyed [])
+            , Element.el
+                (Element.width
+                    (Maybe.withDefault Element.fill trackWidth)
+                    :: Element.height
+                        (Maybe.withDefault (Element.px 20) trackHeight)
+                    :: attributes
+                    -- This is after `attributes` because the thumb should be in front of everything.
+                    ++ [ Element.behindContent <|
+                            if vertical then
+                                viewVerticalThumb factor thumbAttributes trackWidth
+                            else
+                                viewHorizontalThumb factor thumbAttributes trackHeight
+                       ]
+                )
+                Element.none
             ]
         )
 
