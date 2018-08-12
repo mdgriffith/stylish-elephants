@@ -681,9 +681,6 @@ skippable flag style =
             PaddingStyle name t r b l ->
                 t == b && t == r && t == l && t >= 0 && t <= 24
 
-            Colored _ _ _ ->
-                True
-
             -- SpacingStyle _ _ _ ->
             --     True
             -- FontFamily _ _ ->
@@ -878,7 +875,7 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                                         (Single
                                             (Internal.Style.classes.any
                                                 ++ "."
-                                                ++ Internal.Style.classes.row
+                                                ++ Internal.Style.classes.column
                                                 ++ " > "
                                                 ++ (Internal.Style.dot <| "height-fill-" ++ String.fromInt portion)
                                             )
@@ -1647,8 +1644,8 @@ getSpacing attrs default =
         |> Maybe.withDefault default
 
 
-getSpacingAttribute : List (Attribute aligned msg) -> ( Int, Int ) -> Attribute aligned msg1
-getSpacingAttribute attrs default =
+getWidth : List (Attribute aligned msg) -> Maybe Length
+getWidth attrs =
     attrs
         |> List.foldr
             (\attr acc ->
@@ -1658,15 +1655,33 @@ getSpacingAttribute attrs default =
 
                     Nothing ->
                         case attr of
-                            StyleClass _ (SpacingStyle _ x y) ->
-                                Just ( x, y )
+                            Width len ->
+                                Just len
 
                             _ ->
                                 Nothing
             )
             Nothing
-        |> Maybe.withDefault default
-        |> (\( x, y ) -> StyleClass Flag.spacing (SpacingStyle (spacingName x y) x y))
+
+
+getHeight : List (Attribute aligned msg) -> Maybe Length
+getHeight attrs =
+    attrs
+        |> List.foldr
+            (\attr acc ->
+                case acc of
+                    Just x ->
+                        Just x
+
+                    Nothing ->
+                        case attr of
+                            Height len ->
+                                Just len
+
+                            _ ->
+                                Nothing
+            )
+            Nothing
 
 
 textElement : String -> VirtualDom.Node msg
