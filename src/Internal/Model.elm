@@ -1851,7 +1851,7 @@ renderFocusStyle :
     FocusStyle
     -> Style
 renderFocusStyle focus =
-    Style (classes.any ++ ":focus .focusable, " ++ Internal.Style.dot classes.any ++ ".focusable:focus")
+    Style (Internal.Style.dot classes.any ++ ":focus .focusable, " ++ Internal.Style.dot classes.any ++ ".focusable:focus")
         (List.filterMap identity
             [ Maybe.map (\color -> Property "border-color" (formatColor color)) focus.borderColor
             , Maybe.map (\color -> Property "background-color" (formatColor color)) focus.backgroundColor
@@ -2040,14 +2040,26 @@ toStyleSheetString options stylesheet =
                                     ++ "-fs:focus {"
                                     ++ renderedProps
                                     ++ "\n}"
-                                , ".se:focus ~ "
+                                , "."
+                                    ++ classes.any
+                                    ++ ":focus ~ "
                                     ++ selector
                                     ++ "-fs:not(.focus)  {"
                                     ++ renderedProps
                                     ++ "\n}"
-                                , ".se:focus "
+                                , "."
+                                    ++ classes.any
+                                    ++ ":focus "
                                     ++ selector
                                     ++ "-fs  {"
+                                    ++ renderedProps
+                                    ++ "\n}"
+                                , ".focusable-parent:focus ~ "
+                                    ++ "."
+                                    ++ classes.any
+                                    ++ " "
+                                    ++ selector
+                                    ++ "-fs {"
                                     ++ renderedProps
                                     ++ "\n}"
                                 ]
