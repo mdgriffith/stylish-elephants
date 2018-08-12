@@ -5,6 +5,8 @@ module Element.Input
         , OptionState(..)
         , Placeholder
         , Radio
+        , Slider
+        , Thumb
         , button
         , checkbox
         , currentPassword
@@ -22,15 +24,17 @@ module Element.Input
         , radio
         , radioRow
         , search
+        , slider
         , spellChecked
         , text
+        , thumb
         , username
         )
 
 {-|
 
 
-## Inputs
+# Inputs
 
 @docs button
 
@@ -40,10 +44,12 @@ module Element.Input
 
 @docs multiline
 
+@docs Slider, slider, Thumb, thumb
+
 @docs Radio, radio, radioRow, Option, option, optionWith, OptionState
 
 
-## Labels
+# Labels
 
 @docs Label, labelAbove, labelBelow, labelLeft, labelRight
 
@@ -262,70 +268,248 @@ checkbox attrs { label, icon, checked, onChange } =
         )
 
 
+{-| -}
+type alias Slider msg =
+    { onChange : Float -> msg
+    , label : Label msg
+    , min : Float
+    , max : Float
+    , value : Float
+    , thumb : Thumb
+    , step : Maybe Float
+    }
 
--- {-| -}
--- type alias Slider msg =
---     { onChange : Maybe (Int -> msg)
---     , range : ( Int, Int )
---     , value : Int
---     , label : Label msg
---     , notice : Maybe (Notice msg)
---     }
--- sliderX : List (Attribute msg) -> Slider msg -> Element msg
--- sliderX attributes input =
---     let
---         behavior =
---             case input.onChange of
---                 Nothing ->
---                     [ Internal.Attr (Html.Attributes.disabled True) ]
---                 Just changeCoord ->
---                     [ Events.onMouseCoords (\{ x, y } -> changeCoord x)
---                     ]
---         min =
---             Tuple.first input.range
---         max =
---             Tuple.second input.range
---         percentage =
---             ((toFloat input.value - toFloat min) / (toFloat max - toFloat min)) + toFloat min
---         icon =
---             Element.el
---                 [ Element.width (Element.px 10)
---                 , Element.height (Element.px 10)
---                 , Background.color lightBlue
---                 , Border.rounded 5
---                 , Element.alignLeft
---                 , Element.moveUp 5
---                 , Element.pointer
---                 , Element.moveRight percentage
---                 ]
---                 Element.none
---         controls =
---             Internal.el
---                 Nothing
---                 ([ Background.color grey
---                  , Element.width Element.fill
---                  , Element.height (Element.px 1)
---                  ]
---                     ++ behavior
---                     ++ attributes
---                 )
---                 (Internal.Unkeyed [ icon ])
---     in
---     positionLabels
---         [ Element.width Element.fill ]
---         input.label
---         input.notice
---         controls
--- type TextType
---     = Plain
---     | Username
---     | NewPassword
---     | CurrentPassword
---     | Email
---     | Search
---     | SpellChecked
---     | Multiline
---     | SpellCheckedMultiline
+
+{-| -}
+type Thumb
+    = Thumb (List (Attribute Never))
+
+
+{-| -}
+thumb : List (Attribute Never) -> Thumb
+thumb =
+    Thumb
+
+
+{-| -}
+slider : List (Attribute msg) -> Slider msg -> Element msg
+slider attributes input =
+    let
+        (Thumb thumbAttributes) =
+            input.thumb
+
+        width =
+            Internal.getWidth thumbAttributes
+
+        height =
+            Internal.getHeight thumbAttributes
+
+        vertical =
+            case ( trackWidth, trackHeight ) of
+                ( Nothing, Nothing ) ->
+                    False
+
+                ( Just (Internal.Px w), Just (Internal.Px h) ) ->
+                    h > w
+
+                ( Just (Internal.Px _), Just (Internal.Fill _) ) ->
+                    True
+
+                _ ->
+                    False
+
+        trackHeight =
+            Internal.getHeight attributes
+
+        trackWidth =
+            Internal.getWidth attributes
+
+        ( spacingX, spacingY ) =
+            Internal.getSpacing attributes ( 5, 5 )
+
+        factor =
+            (input.value - input.min)
+                / (input.max - input.min)
+
+        {- Needed attributes
+
+           Thumb Attributes
+              - Width/Height of thumb so that the input can shadow it.
+
+
+           Attributes
+
+               OnParent ->
+                   Spacing
+
+
+               On track ->
+                   Everything else
+
+
+        -}
+        className =
+            "thmb-" ++ thumbWidthString ++ "-" ++ thumbHeightString
+
+        thumbWidthString =
+            case width of
+                Nothing ->
+                    "20px"
+
+                Just (Internal.Px px) ->
+                    String.fromInt px ++ "px"
+
+                _ ->
+                    "100%"
+
+        thumbHeightString =
+            case height of
+                Nothing ->
+                    "20px"
+
+                Just (Internal.Px px) ->
+                    String.fromInt px ++ "px"
+
+                _ ->
+                    "100%"
+
+        thumbShadowStyle =
+            [ Internal.Property "width"
+                thumbWidthString
+            , Internal.Property "height"
+                thumbHeightString
+            ]
+    in
+    applyLabel
+        [ Element.spacingXY spacingX spacingY
+        , Region.announce
+        , Element.width Element.fill
+        ]
+        input.label
+        (Element.row
+            ([ Element.width Element.fill
+             , Element.height
+                (Maybe.withDefault (Element.px 20) height)
+             ]
+                ++ attributes
+                ++ [ Element.behindContent
+                        (if vertical then
+                            viewVerticalThumb factor thumbAttributes trackWidth
+                         else
+                            viewHorizontalThumb factor thumbAttributes trackHeight
+                        )
+                   ]
+            )
+            [ Internal.element
+                Internal.asEl
+                (Internal.NodeName "input")
+                [ Internal.StyleClass Flag.active
+                    (Internal.Style
+                        ("input[type=\"range\"]." ++ className ++ "::-moz-range-thumb")
+                        thumbShadowStyle
+                    )
+                , Internal.StyleClass Flag.hover
+                    (Internal.Style
+                        ("input[type=\"range\"]." ++ className ++ "::-webkit-slider-thumb")
+                        thumbShadowStyle
+                    )
+                , Internal.StyleClass Flag.focus
+                    (Internal.Style
+                        ("input[type=\"range\"]." ++ className ++ "::-ms-thumb")
+                        thumbShadowStyle
+                    )
+                , Internal.Attr (Html.Attributes.class className)
+                , Internal.Attr
+                    (Html.Events.onInput
+                        (\str ->
+                            case String.toFloat str of
+                                Nothing ->
+                                    -- This should never happen because the browser
+                                    -- should always provide a Float.
+                                    input.onChange 0
+
+                                Just val ->
+                                    input.onChange val
+                        )
+                    )
+                , Internal.Attr <|
+                    Html.Attributes.type_ "range"
+                , Internal.Attr <|
+                    Html.Attributes.step
+                        (case input.step of
+                            Nothing ->
+                                "any"
+
+                            Just step ->
+                                String.fromFloat step
+                        )
+                , Internal.Attr <|
+                    Html.Attributes.min (String.fromFloat input.min)
+                , Internal.Attr <|
+                    Html.Attributes.max (String.fromFloat input.max)
+                , Internal.Attr <|
+                    Html.Attributes.value (String.fromFloat input.value)
+                , if vertical then
+                    Internal.Attr <|
+                        Html.Attributes.attribute "orient" "vertical"
+                  else
+                    Internal.NoAttribute
+                , Element.width
+                    (Maybe.withDefault Element.fill trackWidth)
+                , Element.height
+                    (Maybe.withDefault (Element.px 20) trackHeight)
+                , if vertical then
+                    Element.centerX
+                  else
+                    Element.centerY
+                ]
+                (Internal.Unkeyed [])
+            ]
+        )
+
+
+viewHorizontalThumb factor thumbAttributes trackHeight =
+    Element.row
+        [ Element.width Element.fill
+        , Element.height (Maybe.withDefault Element.fill trackHeight)
+        , Element.centerY
+        ]
+        [ Element.el
+            [ Element.width (Element.fillPortion (round <| factor * 10000))
+            ]
+            Element.none
+        , Element.el
+            (Element.centerY
+                :: List.map (Internal.mapAttr Basics.never) thumbAttributes
+            )
+            Element.none
+        , Element.el
+            [ Element.width (Element.fillPortion (round <| (abs <| 1 - factor) * 10000))
+            ]
+            Element.none
+        ]
+
+
+viewVerticalThumb factor thumbAttributes trackWidth =
+    Element.column
+        [ Element.height Element.fill
+        , Element.width (Maybe.withDefault Element.fill trackWidth)
+        , Element.centerX
+        ]
+        [ Element.el
+            [ Element.height (Element.fillPortion (round <| (abs <| 1 - factor) * 10000))
+            ]
+            Element.none
+        , Element.el
+            (Element.centerX
+                :: List.map (Internal.mapAttr Basics.never) thumbAttributes
+            )
+            Element.none
+        , Element.el
+            [ Element.height (Element.fillPortion (round <| factor * 10000))
+            ]
+            Element.none
+        ]
 
 
 type alias TextInput =
