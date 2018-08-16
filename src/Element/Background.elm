@@ -92,7 +92,7 @@ step : Color -> Step
 step =
     ColorStep
 
-
+{-|-}
 percent : Float -> Color -> Step
 percent =
     PercentStep
@@ -111,12 +111,19 @@ First you need to specify what direction the gradient is going by providing an a
 The colors will be evenly spaced.
 
 -}
-gradient : Float -> List Color -> Attr decorative msg
-gradient angle colors =
+gradient :
+    { angle : Float
+    , steps : List Color
+    }
+    -> Attr decorative msg
+gradient { angle, steps } =
     Internal.StyleClass Flag.bgGradient <|
         Internal.Single ("bg-grad-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass colors))
             "background-image"
             ("linear-gradient(" ++ (String.join ", " <| (String.fromFloat angle ++ "rad") :: List.map Internal.formatColor colors) ++ ")")
+
+
+
 
 
 
@@ -127,16 +134,23 @@ gradient angle colors =
 --         Single ("bg-gradient-" ++ (String.join "-" <| renderDirectionClass direction :: List.map renderStepClass steps))
 --             "background"
 --             ("linear-gradient(" ++ (String.join ", " <| renderDirection direction :: List.map renderStep steps) ++ ")")
+
+
 -- {-| -}
 -- renderStep : Step -> String
 -- renderStep step =
 --     case step of
 --         ColorStep color ->
 --             formatColor color
+
 --         PercentStep percent color ->
 --             formatColor color ++ " " ++ toString percent ++ "%"
+
 --         PxStep px color ->
 --             formatColor color ++ " " ++ toString px ++ "px"
+
+
+
 -- {-| -}
 -- renderStepClass : Step -> String
 -- renderStepClass step =
