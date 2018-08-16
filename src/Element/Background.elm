@@ -92,7 +92,8 @@ step : Color -> Step
 step =
     ColorStep
 
-{-|-}
+
+{-| -}
 percent : Float -> Color -> Step
 percent =
     PercentStep
@@ -117,13 +118,19 @@ gradient :
     }
     -> Attr decorative msg
 gradient { angle, steps } =
-    Internal.StyleClass Flag.bgGradient <|
-        Internal.Single ("bg-grad-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass colors))
-            "background-image"
-            ("linear-gradient(" ++ (String.join ", " <| (String.fromFloat angle ++ "rad") :: List.map Internal.formatColor colors) ++ ")")
+    case steps of
+        [] ->
+            Internal.NoAttribute
 
+        one :: [] ->
+            Internal.StyleClass Flag.bgColor
+                (Internal.Colored ("bg-" ++ Internal.formatColorClass clr) "background-color" clr)
 
-
+        _ ->
+            Internal.StyleClass Flag.bgGradient <|
+                Internal.Single ("bg-grad-" ++ (String.join "-" <| Internal.floatClass angle :: List.map Internal.formatColorClass steps))
+                    "background-image"
+                    ("linear-gradient(" ++ (String.join ", " <| (String.fromFloat angle ++ "rad") :: List.map Internal.formatColor steps) ++ ")")
 
 
 
@@ -134,23 +141,16 @@ gradient { angle, steps } =
 --         Single ("bg-gradient-" ++ (String.join "-" <| renderDirectionClass direction :: List.map renderStepClass steps))
 --             "background"
 --             ("linear-gradient(" ++ (String.join ", " <| renderDirection direction :: List.map renderStep steps) ++ ")")
-
-
 -- {-| -}
 -- renderStep : Step -> String
 -- renderStep step =
 --     case step of
 --         ColorStep color ->
 --             formatColor color
-
 --         PercentStep percent color ->
 --             formatColor color ++ " " ++ toString percent ++ "%"
-
 --         PxStep px color ->
 --             formatColor color ++ " " ++ toString px ++ "px"
-
-
-
 -- {-| -}
 -- renderStepClass : Step -> String
 -- renderStepClass step =
