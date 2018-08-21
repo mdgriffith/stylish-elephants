@@ -678,6 +678,7 @@ overrides =
         ++ dot classes.container
         ++ " { flex-basis: auto !important; }}"
         ++ sliderOverrides
+        ++ explainer
 
 
 sliderOverrides =
@@ -742,6 +743,32 @@ input[type=range][orient=vertical]{
     writing-mode: bt-lr; /* IE */
     -webkit-appearance: slider-vertical;  /* WebKit */
 }
+"""
+
+
+explainer =
+    """
+.explain {
+    outline: 6px dotted #DDD;
+}
+
+.explain > .""" ++ classes.any ++ """ {
+    outline: 4px dashed red;
+}
+.explain > .""" ++ classes.any ++ """ > .""" ++ classes.any ++ """ {
+    outline: 2px solid green;
+}
+
+.ctr {
+    outline: none !important;
+}
+.explain > .ctr > .""" ++ classes.any ++ """ {
+    outline: 4px dashed red;
+}
+.explain > .ctr > .""" ++ classes.any ++ """ > .""" ++ classes.any ++ """ {
+    outline: 2px solid green
+}
+
 
 
 """
@@ -1331,7 +1358,7 @@ baseSheet =
                         Right ->
                             ( []
                             , [ Prop "float" "right"
-                              , Descriptor ":after:"
+                              , Descriptor "::after"
                                     [ Prop "content" "\"\""
                                     , Prop "display" "table"
                                     , Prop "clear" "both"
@@ -1342,7 +1369,7 @@ baseSheet =
                         Left ->
                             ( []
                             , [ Prop "float" "left"
-                              , Descriptor ":after:"
+                              , Descriptor "::after"
                                     [ Prop "content" "\"\""
                                     , Prop "display" "table"
                                     , Prop "clear" "both"

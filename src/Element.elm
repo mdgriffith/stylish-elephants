@@ -34,6 +34,7 @@ module Element
         , download
         , downloadAs
         , el
+        , explain
         , fill
         , fillPortion
         , focusStyle
@@ -707,6 +708,29 @@ wrappedRow attrs children =
                                 (Internal.Unkeyed children)
                             ]
                         )
+
+
+{-| This is just an alias for `Debug.todo`
+-}
+type alias Todo =
+    String -> Never
+
+
+{-| Highlight the borders of an element and the two levels of children below it. This can really help if you're running into some issue with your layout!
+
+This attribute needs to be handed `Debug.todo` in order to work, which is the case so that you don't accidently ship code with `explain` in it.
+
+(If you try to compile Elm code with `--optimize`, the compilation will fail if any functions from `Debug` are used.)
+
+    el
+        [ Element.explain Debug.todo
+        ]
+        (text "Help!  I'm being debugged!")
+
+-}
+explain : Todo -> Attribute msg
+explain =
+    Internal.htmlClass "explain"
 
 
 {-| -}
