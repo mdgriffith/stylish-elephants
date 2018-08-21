@@ -10,6 +10,7 @@ module Element.Input
         , button
         , checkbox
         , currentPassword
+        , defaultThumb
         , email
         , focusedOnLoad
         , labelAbove
@@ -44,7 +45,7 @@ module Element.Input
 
 @docs multiline
 
-@docs Slider, slider, Thumb, thumb
+@docs Slider, slider, Thumb, thumb, defaultThumb
 
 @docs Radio, radio, radioRow, Option, option, optionWith, OptionState
 
@@ -289,6 +290,19 @@ type Thumb
 thumb : List (Attribute Never) -> Thumb
 thumb =
     Thumb
+
+
+{-| -}
+defaultThumb : Thumb
+defaultThumb =
+    Thumb
+        [ Element.width (Element.px 16)
+        , Element.height (Element.px 16)
+        , Border.rounded 8
+        , Border.width 1
+        , Border.color (Element.rgb 0.5 0.5 0.5)
+        , Background.color (Element.rgb 1 1 1)
+        ]
 
 
 {-| -}
