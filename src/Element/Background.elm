@@ -122,7 +122,7 @@ gradient { angle, steps } =
         [] ->
             Internal.NoAttribute
 
-        one :: [] ->
+        clr :: [] ->
             Internal.StyleClass Flag.bgColor
                 (Internal.Colored ("bg-" ++ Internal.formatColorClass clr) "background-color" clr)
 
