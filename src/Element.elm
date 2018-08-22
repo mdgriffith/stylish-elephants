@@ -1294,7 +1294,14 @@ paddingXY x y =
     if x == y then
         Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x) x x x x)
     else
-        Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x ++ "-" ++ String.fromInt y) y x y x)
+        Internal.StyleClass Flag.padding
+            (Internal.PaddingStyle
+                ("p-" ++ String.fromInt x ++ "-" ++ String.fromInt y)
+                y
+                x
+                y
+                x
+            )
 
 
 {-| If you find yourself defining unique paddings all the time, you might consider defining
@@ -1313,7 +1320,17 @@ And then just do
 -}
 paddingEach : { top : Int, right : Int, bottom : Int, left : Int } -> Attribute msg
 paddingEach { top, right, bottom, left } =
-    Internal.StyleClass Flag.padding (Internal.PaddingStyle (Internal.paddingName top right bottom left) top right bottom left)
+    if top == right && top == bottom && top == left then
+        Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt top) top top top top)
+    else
+        Internal.StyleClass Flag.padding
+            (Internal.PaddingStyle
+                (Internal.paddingName top right bottom left)
+                top
+                right
+                bottom
+                left
+            )
 
 
 {-| -}

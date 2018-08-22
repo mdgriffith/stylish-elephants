@@ -11,7 +11,7 @@ This means:
 * Writing and designing your layout and `view` should be as **simple and as fun** as possible.
 * Many layout errors (like you'd run into using CSS) **are just not possible to write** in the first place!
 * Everything should just **run fast.**
-* **Layout and style are explicit and easy to modify.**  CSS and HTML as tools for a layout language are hard to modify because there's no central place that represents your layout.  You're generally forced to bounce back and forth between multiple definitions in multiple files in order to adjust layout, even though it's probably the most common thing you'll do.
+* **Layout and style are explicit and easy to modify.** CSS and HTML as tools for a layout language are hard to modify because there's no central place that represents your layout. You're generally forced to bounce back and forth between multiple definitions in multiple files in order to adjust layout, even though it's probably the most common thing you'll do.
 
 
 ```elm
