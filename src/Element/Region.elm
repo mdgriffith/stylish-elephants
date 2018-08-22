@@ -10,12 +10,7 @@ module Element.Region
         , navigation
         )
 
-{-|
-
-
-# Region Annotations
-
-This module is meant to make accessibility easy! They're sign posts that accessibility software like screen readers can use to navigate your app.
+{-| This module is meant to make accessibility easy! They're sign posts that accessibility software like screen readers can use to navigate your app.
 
 All you have to do is add them to elements in your app where you see fit.
 

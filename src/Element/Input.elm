@@ -33,23 +33,32 @@ module Element.Input
 
 {-|
 
-
-# Inputs
-
 @docs button
 
 @docs checkbox, defaultCheckbox
 
+
+## Text Input
+
 @docs text, Placeholder, placeholder, username, newPassword, currentPassword, email, search, spellChecked
+
+
+## Multiline Text
 
 @docs multiline
 
+
+## Slider
+
 @docs slider, Thumb, thumb, defaultThumb
+
+
+## Radio Buttons
 
 @docs radio, radioRow, Option, option, optionWith, OptionState
 
 
-# Labels
+## Labels
 
 @docs Label, labelAbove, labelBelow, labelLeft, labelRight
 
@@ -279,7 +288,7 @@ defaultThumb =
         ]
 
 
-{-| A slider input, good for receiving float values.
+{-| A slider input, good for capturing float values.
 
     Input.slider
         [ Element.height (Element.px 30)
@@ -309,9 +318,15 @@ The `thumb` is the icon that you can move around.
 
 The slider can be vertical or horizontal depending on the width/height of the slider.
 
-    - `height fill` and `width (px someWidth)` will cause the slider to be vertical.
-    - `height (px someHeight)` and `width (px someWidth)` where `someHeight` > `someWidth` will also do it.
-    - otherwise, the sldier will be horizontal.
+  - `height fill` and `width (px someWidth)` will cause the slider to be vertical.
+  - `height (px someHeight)` and `width (px someWidth)` where `someHeight` > `someWidth` will also do it.
+  - otherwise, the slider will be horizontal.
+
+**Note:** If you want a slider for an `Int` value:
+
+  - set `step` to be `Just 1`, or some other whole value
+  - `value = toFloat model.myInt`
+  - And finally, round the value before making a message `onChange = round >> AdjustValue`
 
 -}
 slider :

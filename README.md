@@ -1,4 +1,4 @@
-# A New Languge for Layout and Interface
+# A New Language for Layout and Interface
 
 CSS and HTML are actually quite difficult to use when you're trying to do the layout and styling of a web page.
 
@@ -8,10 +8,10 @@ The high level goal of this library is to be a **design toolkit** that draws ins
 
 This means:
 
-* Making writing layout and designing your `view` as **simple and fun** as possible.
-* Making many layout errors (like you'd run into using CSS) **just not possible to write** in the first place!
-* **Run Fast.**
-* **Make designs explicit and easy to modify.**  CSS and HTML as tools for a layout language are hard to modify because there's no central place that represents your layout.  You're generally forced to bounce back and forth between multiple definitions in multiple files in order to adjust layout, even though it's probably the most common thing you'll do.
+* Writing and designing your layout and `view` should be as **simple and as fun** as possible.
+* Many layout errors (like you'd run into using CSS) **are just not possible to write** in the first place!
+* Everything should just **run fast.**
+* **Layout and style are explicit and easy to modify.**  CSS and HTML as tools for a layout language are hard to modify because there's no central place that represents your layout.  You're generally forced to bounce back and forth between multiple definitions in multiple files in order to adjust layout, even though it's probably the most common thing you'll do.
 
 
 ```elm

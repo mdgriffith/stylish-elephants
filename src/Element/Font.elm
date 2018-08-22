@@ -34,9 +34,6 @@ module Element.Font
 
 {-|
 
-
-# Style your fonts!
-
     import Color exposing (blue)
     import Element
     import Element.Font as Font

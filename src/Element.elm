@@ -92,38 +92,36 @@ module Element
 {-|
 
 
-# Basic Elements
+## Basic Elements
 
 @docs Element, none, text, el
 
 
-# Rows and Columns
+## Rows and Columns
 
 Rows and columns are the most common layouts.
 
-@docs row, column
-
-@docs wrappedRow
+@docs row, wrappedRow, column
 
 
-# Text Layout
+## Text Layout
 
 Text needs it's own layout primitives.
 
 @docs paragraph, textColumn
 
 
-# Data Table
+## Data Table
 
-@docs table, Column, indexedTable, IndexedColumn
+@docs Column, table, IndexedColumn, indexedTable
 
 
-# Size
+## Size
 
 @docs Attribute, width, height, Length, px, shrink, fill, fillPortion, maximum, minimum
 
 
-# Debugging
+## Debugging
 
 @docs explain
 
@@ -423,7 +421,7 @@ maximum i l =
 
 So, two elements, one with `width (fillPortion 2)` and one with `width (fillPortion 3)`. The first would get 2 portions of the available space, while the second would get 3.
 
-Also: `fill == fillPortion 1`
+**Also:** `fill == fillPortion 1`
 
 -}
 fillPortion : Int -> Length
@@ -988,12 +986,12 @@ This makes it particularly easy to do something like a [dropped capital](https:/
             , Font.lineHeight 1
             ]
             (text "S")
-        , text "lots of text ...."
+        , text "o much text ...."
         ]
 
 Which will look something like
 
-<img src="https://mdgriffith.gitbooks.io/style-elements/content/assets/Screen%20Shot%202017-08-25%20at%209.41.52%20PM.png" />
+![A paragraph where the first letter is twice the height of the others](https://mdgriffith.gitbooks.io/style-elements/content/assets/Screen%20Shot%202017-08-25%20at%209.41.52%20PM.png)
 
 -}
 paragraph : List (Attribute msg) -> List (Element msg) -> Element msg
@@ -1008,7 +1006,7 @@ paragraph attrs children =
         (Internal.Unkeyed children)
 
 
-{-| Now that we have a paragraph, we need someway to attach a bunch of paragraph's together.
+{-| Now that we have a paragraph, we need some way to attach a bunch of paragraph's together.
 
 To do that we can use a `textColumn`.
 
@@ -1024,7 +1022,7 @@ In the following example, we have a `textColumn` where one child has `alignLeft`
 
 Which will result in something like:
 
-<img src="https://mdgriffith.gitbooks.io/style-elements/content/assets/Screen%20Shot%202017-08-25%20at%208.42.39%20PM.png" />
+![A text layout where an image is on the left.](https://mdgriffith.gitbooks.io/style-elements/content/assets/Screen%20Shot%202017-08-25%20at%208.42.39%20PM.png)
 
 -}
 textColumn : List (Attribute msg) -> List (Element msg) -> Element msg
@@ -1046,7 +1044,7 @@ textColumn attrs children =
 
 The description is used for people using screen readers.
 
-Leaving leaving the description blank will cause the image to be ignored by assistive technology. This can make sense for images that are purely decorative and add no additional information.
+Leaving the description blank will cause the image to be ignored by assistive technology. This can make sense for images that are purely decorative and add no additional information.
 
 So, take a moment to describe your image as you would to someone who has a harder time seeing.
 
@@ -1092,8 +1090,8 @@ image attrs { src, description } =
 {-|
 
     link []
-        { url = "http://google.com"
-        , label = text "My Link to Google"
+        { url = "http://fruits.com"
+        , label = text "A link to my favorite fruit provider."
         }
 
 -}
@@ -1220,7 +1218,7 @@ onLeft element =
 
 {-| This will place an element in front of another.
 
-If you use this on a `layout` element, it will place the element as fixed to the viewport which can be useful for modals and overlays.
+**Note:** If you use this on a `layout` element, it will place the element as fixed to the viewport which can be useful for modals and overlays.
 
 -}
 inFront : Element msg -> Attribute msg
@@ -1293,11 +1291,27 @@ padding x =
 -}
 paddingXY : Int -> Int -> Attribute msg
 paddingXY x y =
-    Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x ++ "-" ++ String.fromInt y) y x y x)
+    if x == y then
+        Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x) x x x x)
+    else
+        Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x ++ "-" ++ String.fromInt y) y x y x)
 
 
-{-| -}
-paddingEach : { bottom : Int, left : Int, right : Int, top : Int } -> Attribute msg
+{-| If you find yourself defining unique paddings all the time, you might consider defining
+
+    edges =
+        { top = 0
+        , right = 0
+        , bottom = 0
+        , left = 0
+        }
+
+And then just do
+
+    paddingEach { edges | right 5 }
+
+-}
+paddingEach : { top : Int, right : Int, bottom : Int, left : Int } -> Attribute msg
 paddingEach { top, right, bottom, left } =
     Internal.StyleClass Flag.padding (Internal.PaddingStyle (Internal.paddingName top right bottom left) top right bottom left)
 
@@ -1483,21 +1497,22 @@ classifyDevice window =
 
 
 {-| When designing it's nice to use a modular scale to set spacial rythms.
-scaled =
-Scale.modular 16 1.25
+
+    scaled =
+        Scale.modular 16 1.25
 
 A modular scale starts with a number, and multiplies it by a ratio a number of times.
 Then, when setting font sizes you can use:
 
-       Font.size (scaled 1) -- results in 16
+    Font.size (scaled 1) -- results in 16
 
-       Font.size (scaled 2) -- 16 * 1.25 results in 20
+    Font.size (scaled 2) -- 16 * 1.25 results in 20
 
-       Font.size (scaled 4) -- 16 * 1.25 ^ (4 - 1) results in 31.25
+    Font.size (scaled 4) -- 16 * 1.25 ^ (4 - 1) results in 31.25
 
 We can also provide negative numbers to scale below 16px.
 
-       Font.size (scaled -1) -- 16 * 1.25 ^ (-1) results in 12.8
+    Font.size (scaled -1) -- 16 * 1.25 ^ (-1) results in 12.8
 
 -}
 modular : Float -> Float -> Int -> Float

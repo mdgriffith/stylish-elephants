@@ -15,27 +15,27 @@ module Element.Border
         , widthXY
         )
 
-{-| Border Properties
+{-|
 
 @docs color
 
 
-# Border Widths
+## Border Widths
 
 @docs width, widthXY, widthEach
 
 
-# Border Styles
+## Border Styles
 
 @docs solid, dashed, dotted
 
 
-# Rounded Corners
+## Rounded Corners
 
 @docs rounded, roundEach
 
 
-# Shadows
+## Shadows
 
 @docs glow, innerGlow, shadow, innerShadow
 

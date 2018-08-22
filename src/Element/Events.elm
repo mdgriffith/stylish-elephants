@@ -20,12 +20,12 @@ module Element.Events
 {-|
 
 
-# Mouse Events
+## Mouse Events
 
 @docs onClick, onDoubleClick, onMouseDown, onMouseUp, onMouseEnter, onMouseLeave, onMouseMove
 
 
-# Focus Events
+## Focus Events
 
 @docs onFocus, onLoseFocus
 

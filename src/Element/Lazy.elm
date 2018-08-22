@@ -2,17 +2,21 @@ module Element.Lazy exposing (lazy, lazy2, lazy3, lazy4, lazy5)
 
 {-| Same as `Html.lazy`. In case you're unfamiliar, here's a note from the `Html` library!
 
-    Since all Elm functions are pure we have a guarantee that the same input
-    will always result in the same output. This module gives us tools to be lazy
-    about building `Html` that utilize this fact.
+---
 
-    Rather than immediately applying functions to their arguments, the `lazy`
-    functions just bundle the function and arguments up for later. When diffing
-    the old and new virtual DOM, it checks to see if all the arguments are equal
-    by reference. If so, it skips calling the function!
+Since all Elm functions are pure we have a guarantee that the same input
+will always result in the same output. This module gives us tools to be lazy
+about building `Html` that utilize this fact.
 
-    This is a really cheap test and often makes things a lot faster, but definitely
-    benchmark to be sure!
+Rather than immediately applying functions to their arguments, the `lazy`
+functions just bundle the function and arguments up for later. When diffing
+the old and new virtual DOM, it checks to see if all the arguments are equal
+by reference. If so, it skips calling the function!
+
+This is a really cheap test and often makes things a lot faster, but definitely
+benchmark to be sure!
+
+---
 
 @docs lazy, lazy2, lazy3, lazy4, lazy5
 
