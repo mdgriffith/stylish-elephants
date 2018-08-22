@@ -279,7 +279,41 @@ defaultThumb =
         ]
 
 
-{-| -}
+{-| A slider input, good for receiving float values.
+
+    Input.slider
+        [ Element.height (Element.px 30)
+        -- Here is where we're creating/styling the "track"
+        , Element.behindContent
+            (Element.el
+                [ Element.width Element.fill
+                , Element.height (Element.px 2)
+                , Element.centerY
+                , Background.color grey
+                , Border.rounded 2
+                ]
+                Element.none
+            )
+        ]
+        { onChange = AdjustValue
+        , label = Input.labelAbove [] (text "My Slider Value")
+        , min = 0
+        , max = 75
+        , step = Nothing
+        , value = model.sliderValue
+        , thumb =
+            Input.defaultThumb
+        }
+
+The `thumb` is the icon that you can move around.
+
+The slider can be vertical or horizontal depending on the width/height of the slider.
+
+    - `height fill` and `width (px someWidth)` will cause the slider to be vertical.
+    - `height (px someHeight)` and `width (px someWidth)` where `someHeight` > `someWidth` will also do it.
+    - otherwise, the sldier will be horizontal.
+
+-}
 slider :
     List (Attribute msg)
     ->

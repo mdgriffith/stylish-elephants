@@ -123,6 +123,11 @@ Text needs it's own layout primitives.
 @docs Attribute, width, height, Length, px, shrink, fill, fillPortion, maximum, minimum
 
 
+# Debugging
+
+@docs explain
+
+
 ## Padding and Spacing
 
 There's no concept of margin in `style-elements`, instead we have padding and spacing.
