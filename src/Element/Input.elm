@@ -4,12 +4,11 @@ module Element.Input
         , Option
         , OptionState(..)
         , Placeholder
-        , Radio
-        , Slider
         , Thumb
         , button
         , checkbox
         , currentPassword
+        , defaultCheckbox
         , defaultThumb
         , email
         , focusedOnLoad
@@ -39,15 +38,15 @@ module Element.Input
 
 @docs button
 
-@docs checkbox
+@docs checkbox, defaultCheckbox
 
 @docs text, Placeholder, placeholder, username, newPassword, currentPassword, email, search, spellChecked
 
 @docs multiline
 
-@docs Slider, slider, Thumb, thumb, defaultThumb
+@docs slider, Thumb, thumb, defaultThumb
 
-@docs Radio, radio, radioRow, Option, option, optionWith, OptionState
+@docs radio, radioRow, Option, option, optionWith, OptionState
 
 
 # Labels
@@ -209,8 +208,8 @@ type alias Checkbox msg =
 checkbox :
     List (Attribute msg)
     ->
-        { onChange : Maybe (Bool -> msg)
-        , icon : Maybe (Element msg)
+        { onChange : Bool -> msg
+        , icon : Bool -> Element msg
         , checked : Bool
         , label : Label msg
         }
@@ -219,25 +218,17 @@ checkbox attrs { label, icon, checked, onChange } =
     let
         attributes =
             Element.spacing 6
-                :: (case onChange of
-                        Nothing ->
-                            [ Internal.Attr (Html.Attributes.disabled True)
-                            , Region.announce
-                            ]
-
-                        Just checkMsg ->
-                            [ Internal.Attr (Html.Events.onClick (checkMsg (not checked)))
-                            , Region.announce
-                            , onKeyLookup <|
-                                \code ->
-                                    if code == enter then
-                                        Just <| checkMsg (not checked)
-                                    else if code == space then
-                                        Just <| checkMsg (not checked)
-                                    else
-                                        Nothing
-                            ]
-                   )
+                :: [ Internal.Attr (Html.Events.onClick (onChange (not checked)))
+                   , Region.announce
+                   , onKeyLookup <|
+                        \code ->
+                            if code == enter then
+                                Just <| onChange (not checked)
+                            else if code == space then
+                                Just <| onChange (not checked)
+                            else
+                                Nothing
+                   ]
                 ++ (tabindex 0 :: Element.pointer :: Element.alignLeft :: Element.width Element.fill :: attrs)
     in
     applyLabel attributes
@@ -258,27 +249,10 @@ checkbox attrs { label, icon, checked, onChange } =
             , Element.width Element.shrink
             ]
             (Internal.Unkeyed
-                [ case icon of
-                    Nothing ->
-                        defaultCheckbox checked
-
-                    Just actualIcon ->
-                        actualIcon
+                [ icon checked
                 ]
             )
         )
-
-
-{-| -}
-type alias Slider msg =
-    { onChange : Float -> msg
-    , label : Label msg
-    , min : Float
-    , max : Float
-    , value : Float
-    , thumb : Thumb
-    , step : Maybe Float
-    }
 
 
 {-| -}
@@ -306,7 +280,18 @@ defaultThumb =
 
 
 {-| -}
-slider : List (Attribute msg) -> Slider msg -> Element msg
+slider :
+    List (Attribute msg)
+    ->
+        { onChange : Float -> msg
+        , label : Label msg
+        , min : Float
+        , max : Float
+        , value : Float
+        , thumb : Thumb
+        , step : Maybe Float
+        }
+    -> Element msg
 slider attributes input =
     let
         (Thumb thumbAttributes) =
@@ -560,7 +545,7 @@ type TextKind
 
 {-| -}
 type alias Text msg =
-    { onChange : Maybe (String -> msg)
+    { onChange : String -> msg
     , text : String
     , placeholder : Maybe (Placeholder msg)
     , label : Label msg
@@ -604,12 +589,7 @@ textHelper textInput attrs textOptions =
             Element.width Element.fill :: (defaultTextBoxStyle ++ attrs)
 
         behavior =
-            case textOptions.onChange of
-                Nothing ->
-                    [ Internal.Attr (Html.Attributes.disabled True) ]
-
-                Just checkMsg ->
-                    [ Internal.Attr (Html.Events.onInput checkMsg) ]
+            [ Internal.Attr (Html.Events.onInput textOptions.onChange) ]
 
         noNearbys =
             List.filter (not << forNearby) attributes
@@ -868,7 +848,7 @@ textHelper textInput attrs textOptions =
 text :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -886,7 +866,7 @@ text =
 spellChecked :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -904,7 +884,7 @@ spellChecked =
 search :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -928,7 +908,7 @@ A password takes all the arguments a normal `Input.text` would, and also `show`,
 newPassword :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -958,7 +938,7 @@ newPassword attrs pass =
 currentPassword :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -988,7 +968,7 @@ currentPassword attrs pass =
 username :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -1006,7 +986,7 @@ username =
 email :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -1024,7 +1004,7 @@ email =
 multiline :
     List (Attribute msg)
     ->
-        { onChange : Maybe (String -> msg)
+        { onChange : String -> msg
         , text : String
         , placeholder : Maybe (Placeholder msg)
         , label : Label msg
@@ -1102,15 +1082,6 @@ applyLabel attrs label input =
                         (Internal.Unkeyed [ labelElement, input ])
 
 
-{-| -}
-type alias Radio option msg =
-    { onChange : Maybe (option -> msg)
-    , options : List (Option option msg)
-    , selected : Maybe option
-    , label : Label msg
-    }
-
-
 {-| Add choices to your radio and select menus.
 -}
 type Option value msg
@@ -1142,7 +1113,7 @@ optionWith val view =
         [ padding 10
         , spacing 20
         ]
-        { onChange = Just ChooseLunch
+        { onChange = ChooseLunch
         , selected = Just model.lunch
         , label = Input.labelAbove (text "Lunch")
         , options =
@@ -1163,14 +1134,30 @@ optionWith val view =
         }
 
 -}
-radio : List (Attribute msg) -> Radio option msg -> Element msg
+radio :
+    List (Attribute msg)
+    ->
+        { onChange : option -> msg
+        , options : List (Option option msg)
+        , selected : Maybe option
+        , label : Label msg
+        }
+    -> Element msg
 radio =
     radioHelper Column
 
 
 {-| Same as radio, but displayed as a row
 -}
-radioRow : List (Attribute msg) -> Radio option msg -> Element msg
+radioRow :
+    List (Attribute msg)
+    ->
+        { onChange : option -> msg
+        , options : List (Option option msg)
+        , selected : Maybe option
+        , label : Label msg
+        }
+    -> Element msg
 radioRow =
     radioHelper Row
 
@@ -1240,7 +1227,16 @@ defaultRadioOption optionLabel status =
         ]
 
 
-radioHelper : Orientation -> List (Attribute msg) -> Radio option msg -> Element msg
+radioHelper :
+    Orientation
+    -> List (Attribute msg)
+    ->
+        { onChange : option -> msg
+        , options : List (Option option msg)
+        , selected : Maybe option
+        , label : Label msg
+        }
+    -> Element msg
 radioHelper orientation attrs input =
     let
         renderOption (Option val view) =
@@ -1259,12 +1255,7 @@ radioHelper orientation attrs input =
 
                     Column ->
                         Element.width Element.fill
-                , case input.onChange of
-                    Nothing ->
-                        Internal.NoAttribute
-
-                    Just send ->
-                        Events.onClick (send val)
+                , Events.onClick (input.onChange val)
                 , case status of
                     Selected ->
                         Internal.Attr <|
@@ -1426,48 +1417,43 @@ radioHelper orientation attrs input =
                             False
     in
     applyLabel
-        (case input.onChange of
-            Nothing ->
-                Element.alignLeft :: Region.announce :: hideIfEverythingisInvisible ++ events
+        (List.filterMap identity
+            [ Just Element.alignLeft
+            , Just (tabindex 0)
+            , Just (Internal.htmlClass "focus")
+            , Just Region.announce
+            , Just <|
+                Internal.Attr <|
+                    Html.Attributes.attribute "role" "radiogroup"
+            , case prevNext of
+                Nothing ->
+                    Nothing
 
-            Just onChange ->
-                List.filterMap identity
-                    [ Just Element.alignLeft
-                    , Just (tabindex 0)
-                    , Just (Internal.htmlClass "focus")
-                    , Just Region.announce
-                    , Just <|
-                        Internal.Attr <|
-                            Html.Attributes.attribute "role" "radiogroup"
-                    , case prevNext of
-                        Nothing ->
-                            Nothing
+                Just ( prev, next ) ->
+                    Just
+                        (onKeyLookup <|
+                            \code ->
+                                if code == leftArrow then
+                                    Just (input.onChange prev)
+                                else if code == upArrow then
+                                    Just (input.onChange prev)
+                                else if code == rightArrow then
+                                    Just (input.onChange next)
+                                else if code == downArrow then
+                                    Just (input.onChange next)
+                                else if code == space then
+                                    case input.selected of
+                                        Nothing ->
+                                            Just (input.onChange prev)
 
-                        Just ( prev, next ) ->
-                            Just
-                                (onKeyLookup <|
-                                    \code ->
-                                        if code == leftArrow then
-                                            Just (onChange prev)
-                                        else if code == upArrow then
-                                            Just (onChange prev)
-                                        else if code == rightArrow then
-                                            Just (onChange next)
-                                        else if code == downArrow then
-                                            Just (onChange next)
-                                        else if code == space then
-                                            case input.selected of
-                                                Nothing ->
-                                                    Just (onChange prev)
-
-                                                _ ->
-                                                    Nothing
-                                        else
+                                        _ ->
                                             Nothing
-                                )
-                    ]
-                    ++ events
-                    ++ hideIfEverythingisInvisible
+                                else
+                                    Nothing
+                        )
+            ]
+            ++ events
+            ++ hideIfEverythingisInvisible
         )
         input.label
         optionArea
@@ -1739,6 +1725,7 @@ defaultTextPadding =
     Element.paddingXY 12 12
 
 
+{-| -}
 defaultCheckbox : Bool -> Element msg
 defaultCheckbox checked =
     Element.el
