@@ -37,6 +37,7 @@ module Element
         , focusStyle
         , focused
         , forceHover
+        , fromRgb
         , height
         , html
         , htmlAttribute
@@ -213,7 +214,7 @@ Add a scrollbar if the content is larger than the element.
 
 In order to use attributes like `Font.color` and `Background.color`, you'll need to make some colors!
 
-@docs Color, rgba, rgb
+@docs Color, rgba, rgb, fromRgb
 
 
 # Nearby Elements
@@ -248,7 +249,7 @@ This is very useful for things like dropdown menus or tooltips.
 
 The main technique for responsiveness is to store window size information in your model.
 
-Install the `Window` package, and set up a subscription to `Window.resizes`.
+Install the `Browser` package, and set up a subscription for [`Browser.Events.onResize`](https://package.elm-lang.org/packages/elm/browser/latest/Browser-Events#onResize).
 
 You'll also need to retrieve the initial window size. You can either run the following task:
 
@@ -301,6 +302,24 @@ Each channel takes a value between 0 and 1.
 rgb : Float -> Float -> Float -> Color
 rgb r g b =
     Internal.Rgba r g b 1
+
+
+{-| Deconstruct a `Color` into it's channels.
+-}
+fromRgb :
+    Color
+    ->
+        { red : Float
+        , green : Float
+        , blue : Float
+        , alpha : Float
+        }
+fromRgb (Internal.Rgba r g b a) =
+    { red = r
+    , green = g
+    , blue = b
+    , alpha = a
+    }
 
 
 {-| The basic building block of your layout. Here we create a
@@ -714,7 +733,7 @@ type alias Todo =
     String -> Never
 
 
-{-| Highlight the borders of an element and the two levels of children below it. This can really help if you're running into some issue with your layout!
+{-| Highlight the borders of an element and it's children below. This can really help if you're running into some issue with your layout!
 
 **Note** This attribute needs to be handed `Debug.todo` in order to work, even though it won't do anything with it. This is a safety measure so you don't accidently ship code with `explain` in it, as Elm won't compile with `--optimize` if you still have a `Debug` statement in your code.
 
