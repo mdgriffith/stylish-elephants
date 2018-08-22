@@ -10,12 +10,9 @@ module Element
         , Element
         , FocusStyle
         , IndexedColumn
-        , IndexedTable
         , Length
-        , Link
         , Option
         , Orientation(..)
-        , Table
         , above
         , alignBottom
         , alignLeft
@@ -118,9 +115,7 @@ Text needs it's own layout primitives.
 
 # Data Table
 
-@docs Table, Column, table
-
-@docs IndexedTable, IndexedColumn, indexedTable
+@docs table, Column, indexedTable, IndexedColumn
 
 
 # Size
@@ -203,7 +198,7 @@ Add a scrollbar if the content is larger than the element.
 
 # Links
 
-@docs Link, link, newTabLink, download, downloadAs
+@docs link, newTabLink, download, downloadAs
 
 
 # Images
@@ -718,9 +713,7 @@ type alias Todo =
 
 {-| Highlight the borders of an element and the two levels of children below it. This can really help if you're running into some issue with your layout!
 
-This attribute needs to be handed `Debug.todo` in order to work, which is the case so that you don't accidently ship code with `explain` in it.
-
-(If you try to compile Elm code with `--optimize`, the compilation will fail if any functions from `Debug` are used.)
+**Note** This attribute needs to be handed `Debug.todo` in order to work, even though it won't do anything with it. This is a safety measure so you don't accidently ship code with `explain` in it, as Elm won't compile with `--optimize` if you still have a `Debug` statement in your code.
 
     el
         [ Element.explain Debug.todo
@@ -731,13 +724,6 @@ This attribute needs to be handed `Debug.todo` in order to work, which is the ca
 explain : Todo -> Attribute msg
 explain _ =
     Internal.htmlClass "explain"
-
-
-{-| -}
-type alias Table records msg =
-    { data : List records
-    , columns : List (Column records msg)
-    }
 
 
 {-| -}
@@ -794,20 +780,19 @@ We could render it using
 **Note:** Sometimes you might not have a list of records directly in your model. In this case it can be really nice to write a function that transforms some part of your model into a list of records before feeding it into `Element.table`.
 
 -}
-table : List (Attribute msg) -> Table data msg -> Element msg
+table :
+    List (Attribute msg)
+    ->
+        { data : List records
+        , columns : List (Column records msg)
+        }
+    -> Element msg
 table attrs config =
     tableHelper attrs
         { data = config.data
         , columns =
             List.map InternalColumn config.columns
         }
-
-
-{-| -}
-type alias IndexedTable records msg =
-    { data : List records
-    , columns : List (IndexedColumn records msg)
-    }
 
 
 {-| -}
@@ -820,7 +805,13 @@ type alias IndexedColumn record msg =
 
 {-| Same as `Element.table` except the `view` for each column will also receive the row index as well as the record.
 -}
-indexedTable : List (Attribute msg) -> IndexedTable data msg -> Element msg
+indexedTable :
+    List (Attribute msg)
+    ->
+        { data : List records
+        , columns : List (IndexedColumn records msg)
+        }
+    -> Element msg
 indexedTable attrs config =
     tableHelper attrs
         { data = config.data
@@ -1093,13 +1084,6 @@ image attrs { src, description } =
         )
 
 
-{-| -}
-type alias Link msg =
-    { url : String
-    , label : Element msg
-    }
-
-
 {-|
 
     link []
@@ -1108,7 +1092,13 @@ type alias Link msg =
         }
 
 -}
-link : List (Attribute msg) -> Link msg -> Element msg
+link :
+    List (Attribute msg)
+    ->
+        { url : String
+        , label : Element msg
+        }
+    -> Element msg
 link attrs { url, label } =
     Internal.element
         Internal.asEl
@@ -1128,7 +1118,13 @@ link attrs { url, label } =
 
 
 {-| -}
-newTabLink : List (Attribute msg) -> Link msg -> Element msg
+newTabLink :
+    List (Attribute msg)
+    ->
+        { url : String
+        , label : Element msg
+        }
+    -> Element msg
 newTabLink attrs { url, label } =
     Internal.element
         Internal.asEl
@@ -1146,7 +1142,13 @@ newTabLink attrs { url, label } =
 
 {-| A link to download a file.
 -}
-download : List (Attribute msg) -> Link msg -> Element msg
+download :
+    List (Attribute msg)
+    ->
+        { url : String
+        , label : Element msg
+        }
+    -> Element msg
 download attrs { url, label } =
     Internal.element
         Internal.asEl
@@ -1164,7 +1166,14 @@ download attrs { url, label } =
 
 {-| A link to download a file, but you can specify the filename.
 -}
-downloadAs : List (Attribute msg) -> { label : Element msg, filename : String, url : String } -> Element msg
+downloadAs :
+    List (Attribute msg)
+    ->
+        { label : Element msg
+        , filename : String
+        , url : String
+        }
+    -> Element msg
 downloadAs attrs { url, filename, label } =
     Internal.element
         Internal.asEl
