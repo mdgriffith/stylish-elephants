@@ -3,7 +3,7 @@
     "name": "mdgriffith/stylish-elephants",
     "summary": "Layout and style that's easy to refactor, all without thinking about CSS.",
     "license": "BSD-3-Clause",
-    "version": "8.0.1",
+    "version": "8.0.2",
     "exposed-modules": [
         "Element",
         "Element.Input",
