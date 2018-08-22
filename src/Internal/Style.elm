@@ -749,27 +749,18 @@ input[type=range][orient=vertical]{
 explainer =
     """
 .explain {
-    outline: 6px dotted #DDD;
+    border: 6px solid rgb(174, 121, 15) !important;
 }
-
 .explain > .""" ++ classes.any ++ """ {
-    outline: 4px dashed red;
-}
-.explain > .""" ++ classes.any ++ """ > .""" ++ classes.any ++ """ {
-    outline: 2px solid green;
+    border: 4px dashed rgb(0, 151, 167) !important;
 }
 
 .ctr {
-    outline: none !important;
+    border: none !important;
 }
 .explain > .ctr > .""" ++ classes.any ++ """ {
-    outline: 4px dashed red;
+    border: 4px dashed rgb(0, 151, 167) !important;
 }
-.explain > .ctr > .""" ++ classes.any ++ """ > .""" ++ classes.any ++ """ {
-    outline: 2px solid green
-}
-
-
 
 """
 

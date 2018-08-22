@@ -729,7 +729,7 @@ This attribute needs to be handed `Debug.todo` in order to work, which is the ca
 
 -}
 explain : Todo -> Attribute msg
-explain =
+explain _ =
     Internal.htmlClass "explain"
 
 
