@@ -1,9 +1,9 @@
 {
     "type": "package",
     "name": "mdgriffith/stylish-elephants",
-    "summary": "Encode and decode JSON values",
+    "summary": "Layout and style that's easy to refactor, all without thinking about CSS.",
     "license": "BSD-3-Clause",
-    "version": "8.0.1",
+    "version": "8.0.0",
     "exposed-modules": [
         "Element",
         "Element.Input",
