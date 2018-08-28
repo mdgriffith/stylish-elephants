@@ -1017,8 +1017,9 @@ paragraph : List (Attribute msg) -> List (Element msg) -> Element msg
 paragraph attrs children =
     Internal.element
         Internal.asParagraph
-        (Internal.NodeName "p")
-        (width fill
+        Internal.div
+        (Internal.Describe Internal.Paragraph
+            :: width fill
             :: spacing 5
             :: attrs
         )

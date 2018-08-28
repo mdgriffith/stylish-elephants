@@ -155,6 +155,7 @@ type Description
     | LivePolite
     | LiveAssertive
     | Button
+    | Paragraph
 
 
 type Length
@@ -923,6 +924,28 @@ gatherAttrRecursive classes node has transform styles attrs children elementAttr
                             else
                                 gatherAttrRecursive classes (addNodeName "h6" node) has transform styles attrs children remaining
 
+                        Paragraph ->
+                            let
+                                newNode =
+                                    case node of
+                                        Generic ->
+                                            NodeName "p"
+
+                                        NodeName name ->
+                                            NodeName name
+
+                                        Embedded x y ->
+                                            Embedded x y
+                            in
+                            gatherAttrRecursive classes
+                                newNode
+                                has
+                                transform
+                                styles
+                                attrs
+                                children
+                                remaining
+
                         Button ->
                             gatherAttrRecursive classes node has transform styles (VirtualDom.attribute "role" "button" :: attrs) children remaining
 
@@ -1283,12 +1306,11 @@ untransformed =
     Untransformed
 
 
-space =
-    VirtualDom.text " "
 
-
-keyedSpace =
-    ( " ", space )
+-- space =
+--     VirtualDom.text " "
+-- keyedSpace =
+--     ( " ", space )
 
 
 createElement : LayoutContext -> Children (Element msg) -> Gathered msg -> Element msg
@@ -1298,7 +1320,7 @@ createElement context children rendered =
             case child of
                 Unstyled html ->
                     if context == asParagraph then
-                        ( html context :: space :: htmls
+                        ( html context :: htmls
                         , existingStyles
                         )
                     else
@@ -1308,7 +1330,7 @@ createElement context children rendered =
 
                 Styled styled ->
                     if context == asParagraph then
-                        ( styled.html NoStyleSheet context :: space :: htmls
+                        ( styled.html NoStyleSheet context :: htmls
                         , if List.isEmpty existingStyles then
                             styled.styles
                           else
@@ -1363,7 +1385,7 @@ createElement context children rendered =
             case child of
                 Unstyled html ->
                     if context == asParagraph then
-                        ( ( key, html context ) :: ( "sp", space ) :: htmls
+                        ( ( key, html context ) :: htmls
                         , existingStyles
                         )
                     else
@@ -1374,7 +1396,6 @@ createElement context children rendered =
                 Styled styled ->
                     if context == asParagraph then
                         ( ( key, styled.html NoStyleSheet context )
-                            :: ( "sp", space )
                             :: htmls
                         , if List.isEmpty existingStyles then
                             styled.styles

@@ -1593,6 +1593,11 @@ baseSheet =
             , Prop "text-decoration-skip-ink" "auto"
             , Prop "text-decoration-skip" "ink"
             ]
+        , Descriptor (dot classes.underline ++ dot classes.strike)
+            [ Prop "text-decoration" "line-through underline"
+            , Prop "text-decoration-skip-ink" "auto"
+            , Prop "text-decoration-skip" "ink"
+            ]
         , Descriptor (dot classes.textUnitalicized)
             [ Prop "font-style" "normal"
             ]
