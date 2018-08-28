@@ -1,94 +1,28 @@
-module Element
-    exposing
-        ( Attr
-        , Attribute
-        , Color
-        , Column
-        , Decoration
-        , Device
-        , DeviceClass(..)
-        , Element
-        , FocusStyle
-        , IndexedColumn
-        , Length
-        , Option
-        , Orientation(..)
-        , above
-        , alignBottom
-        , alignLeft
-        , alignRight
-        , alignTop
-        , alpha
-        , behindContent
-        , below
-        , centerX
-        , centerY
-        , classifyDevice
-        , clip
-        , clipX
-        , clipY
-        , column
-        , download
-        , downloadAs
-        , el
-        , explain
-        , fill
-        , fillPortion
-        , focusStyle
-        , focused
-        , forceHover
-        , fromRgb
-        , height
-        , html
-        , htmlAttribute
-        , image
-        , inFront
-        , indexedTable
-        , layout
-        , layoutWith
-        , link
-        , map
-        , mapAttribute
-        , maximum
-        , minimum
-        , modular
-        , mouseDown
-        , mouseOver
-        , moveDown
-        , moveLeft
-        , moveRight
-        , moveUp
-        , newTabLink
-        , noHover
-        , noStaticStyleSheet
-        , none
-        , onLeft
-        , onRight
-        , padding
-        , paddingEach
-        , paddingXY
-        , paragraph
-        , pointer
-        , px
-        , rgb
-        , rgba
-        , rotate
-        , row
-        , scale
-        , scrollbarX
-        , scrollbarY
-        , scrollbars
-        , shrink
-        , spaceEvenly
-        , spacing
-        , spacingXY
-        , table
-        , text
-        , textColumn
-        , transparent
-        , width
-        , wrappedRow
-        )
+module Element exposing
+    ( Element, none, text, el
+    , row, wrappedRow, column
+    , paragraph, textColumn
+    , Column, table, IndexedColumn, indexedTable
+    , Attribute, width, height, Length, px, shrink, fill, fillPortion, maximum, minimum
+    , explain
+    , padding, paddingXY, paddingEach
+    , spacing, spacingXY, spaceEvenly
+    , centerX, centerY, alignLeft, alignRight, alignTop, alignBottom
+    , transparent, alpha, pointer
+    , moveUp, moveDown, moveRight, moveLeft, rotate, scale
+    , clip, clipX, clipY
+    , scrollbars, scrollbarX, scrollbarY
+    , layout, layoutWith, Option, noStaticStyleSheet, forceHover, noHover, focusStyle, FocusStyle
+    , link, newTabLink, download, downloadAs
+    , image
+    , Color, rgba, rgb, rgb255, rgba255, fromRgb, fromRgb255, toRgb
+    , above, below, onRight, onLeft, inFront, behindContent
+    , Attr, Decoration, mouseOver, mouseDown, focused
+    , Device, DeviceClass(..), Orientation(..), classifyDevice
+    , modular
+    , map, mapAttribute
+    , html, htmlAttribute
+    )
 
 {-|
 
@@ -214,7 +148,7 @@ Add a scrollbar if the content is larger than the element.
 
 In order to use attributes like `Font.color` and `Background.color`, you'll need to make some colors!
 
-@docs Color, rgba, rgb, fromRgb
+@docs Color, rgba, rgb, rgb255, rgba255, fromRgb, fromRgb255, toRgb
 
 
 # Nearby Elements
@@ -288,6 +222,16 @@ type alias Color =
     Internal.Color
 
 
+{-| Provide the red, green, and blue channels for the color.
+
+Each channel takes a value between 0 and 1.
+
+-}
+rgb : Float -> Float -> Float -> Color
+rgb r g b =
+    Internal.Rgba r g b 1
+
+
 {-| -}
 rgba : Float -> Float -> Float -> Float -> Color
 rgba =
@@ -299,14 +243,61 @@ rgba =
 Each channel takes a value between 0 and 1.
 
 -}
-rgb : Float -> Float -> Float -> Color
-rgb r g b =
-    Internal.Rgba r g b 1
+rgb255 : Int -> Int -> Int -> Color
+rgb255 red green blue =
+    Internal.Rgba
+        (toFloat red / 255)
+        (toFloat green / 255)
+        (toFloat blue / 255)
+        1
 
 
-{-| Deconstruct a `Color` into it's channels.
+{-| -}
+rgba255 : Int -> Int -> Int -> Float -> Color
+rgba255 red green blue a =
+    Internal.Rgba
+        (toFloat red / 255)
+        (toFloat green / 255)
+        (toFloat blue / 255)
+        a
+
+
+{-| Create a color from an RGB record.
 -}
 fromRgb :
+    { red : Float
+    , green : Float
+    , blue : Float
+    , alpha : Float
+    }
+    -> Color
+fromRgb clr =
+    Internal.Rgba
+        clr.red
+        clr.green
+        clr.blue
+        clr.alpha
+
+
+{-| -}
+fromRgb255 :
+    { red : Int
+    , green : Int
+    , blue : Int
+    , alpha : Float
+    }
+    -> Color
+fromRgb255 clr =
+    Internal.Rgba
+        (toFloat clr.red / 255)
+        (toFloat clr.green / 255)
+        (toFloat clr.blue / 255)
+        clr.alpha
+
+
+{-| Deconstruct a `Color` into it's rgb channels.
+-}
+toRgb :
     Color
     ->
         { red : Float
@@ -314,7 +305,7 @@ fromRgb :
         , blue : Float
         , alpha : Float
         }
-fromRgb (Internal.Rgba r g b a) =
+toRgb (Internal.Rgba r g b a) =
     { red = r
     , green = g
     , blue = b
@@ -426,7 +417,6 @@ minimum i l =
             (fill
                 |> maximum 300
             )
-
         ]
         (text "I will stop at 300px")
 
@@ -673,6 +663,7 @@ wrappedRow attrs children =
                                             (b - y)
                                             l
                                         )
+
                             else
                                 Nothing
 
@@ -785,16 +776,14 @@ We could render it using
             [ { header = Element.text "First Name"
               , width = fill
               , view =
-                    (\person ->
+                    \person ->
                         Element.text person.firstName
-                    )
               }
             , { header = Element.text "Last Name"
               , width = fill
               , view =
-                     (\person ->
+                    \person ->
                         Element.text person.lastName
-                     )
               }
             ]
         }
@@ -882,6 +871,7 @@ tableHelper attrs config =
                 |> (\headers ->
                         if List.all ((==) Internal.Empty) headers then
                             Nothing
+
                         else
                             Just (List.indexedMap (\col header -> onGrid 1 (col + 1) header) headers)
                    )
@@ -919,6 +909,7 @@ tableHelper attrs config =
                                 (col.view
                                     (if maybeHeaders == Nothing then
                                         cursor.row - 1
+
                                      else
                                         cursor.row - 2
                                     )
@@ -954,6 +945,7 @@ tableHelper attrs config =
                 , row =
                     if maybeHeaders == Nothing then
                         1
+
                     else
                         2
                 , column = 1
@@ -1313,6 +1305,7 @@ paddingXY : Int -> Int -> Attribute msg
 paddingXY x y =
     if x == y then
         Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt x) x x x x)
+
     else
         Internal.StyleClass Flag.padding
             (Internal.PaddingStyle
@@ -1342,6 +1335,7 @@ paddingEach : { top : Int, right : Int, bottom : Int, left : Int } -> Attribute 
 paddingEach { top, right, bottom, left } =
     if top == right && top == bottom && top == left then
         Internal.StyleClass Flag.padding (Internal.PaddingStyle ("p-" ++ String.fromInt top) top top top top)
+
     else
         Internal.StyleClass Flag.padding
             (Internal.PaddingStyle
@@ -1417,6 +1411,7 @@ transparent : Bool -> Attr decorative msg
 transparent on =
     if on then
         Internal.StyleClass Flag.transparency (Internal.Transparency "transparent" 1.0)
+
     else
         Internal.StyleClass Flag.transparency (Internal.Transparency "visible" 0.0)
 
@@ -1519,15 +1514,19 @@ classifyDevice window =
     { class =
         if window.width <= 600 then
             Phone
+
         else if window.width > 600 && window.width <= 1200 then
             Tablet
+
         else if window.width > 1200 && window.width <= 1800 then
             Desktop
+
         else
             BigDesktop
     , orientation =
         if window.width < window.height then
             Portrait
+
         else
             Landscape
     }
@@ -1556,8 +1555,10 @@ modular : Float -> Float -> Int -> Float
 modular normal ratio rescale =
     if rescale == 0 then
         normal
+
     else if rescale < 0 then
         normal * ratio ^ toFloat rescale
+
     else
         normal * ratio ^ (toFloat rescale - 1)
 
