@@ -132,7 +132,7 @@ Also of note, is that if something is `center`, then it will truly be in the cen
 
 The default logic has been made more consistent and hopefully more intuitive.  
 
-Al elements start with `width/height shrink`, which means that they are the size of their contents.
+All elements start with `width/height shrink`, which means that they are the size of their contents.
 
 
 # PseudoClass Support
